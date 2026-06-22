@@ -1,21 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../primarySupabaseClient";
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
-
-import { supabase } from "../services/primarySupabaseClient";
 
 function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) navigate("/dashboard");
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) navigate("/dashboard");
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else {
+      navigate("/dashboard");
+    }
+
+    setLoading(false);
+  };
+
+  const handleOAuthLogin = async (provider) => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (error) setError(error.message);
+  };
 
   return (
     <div
-      className="w-screen h-screen flex items-center bg-cover bg-center bg-no-repeat pr-4"
+      className="w-screen h-screen flex items-center bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="w-full h-full flex items-center justify-between px-10 md:px-16 lg:px-24 xl:ml-50">
+      <div className="w-full h-full flex items-center justify-between px-10 md:px-16 lg:px-24">
         <div className="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md flex flex-col gap-5">
           <div className="flex items-center gap-2">
             <img
@@ -37,7 +87,13 @@ function Login() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-4">
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div>
               <label className="text-sm font-semibold text-gray-700 mb-1 block">
                 Correo electrónico
@@ -59,6 +115,9 @@ function Login() {
                 <input
                   type="email"
                   placeholder="ejemplo@correo.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="flex-1 outline-none text-sm text-gray-700 bg-transparent placeholder-gray-400"
                 />
               </div>
@@ -90,12 +149,15 @@ function Login() {
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Ingresa tu contraseña"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                   className="flex-1 outline-none text-sm text-gray-700 bg-transparent placeholder-gray-400"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   {showPassword ? (
                     <svg
@@ -135,46 +197,49 @@ function Login() {
                 </button>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              id="remember"
-              type="checkbox"
-              checked={remember}
-              onChange={() => setRemember(!remember)}
-              className="w-4 h-4 accent-[#c9a227] cursor-pointer"
-            />
-            <label
-              htmlFor="remember"
-              className="text-sm text-gray-700 cursor-pointer select-none"
-            >
-              Recordarme
-            </label>
-          </div>
-
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:opacity-80 cursor-pointer"
-            style={{
-              background: "linear-gradient(90deg, #c9a227 0%, #e6bb45 100%)",
-            }}
-          >
-            Iniciar sesión
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M17 8l4 4m0 0l-4 4m4-4H3"
+            <div className="flex items-center gap-2">
+              <input
+                id="remember"
+                type="checkbox"
+                checked={remember}
+                onChange={() => setRemember(!remember)}
+                className="w-4 h-4 accent-[#c9a227] cursor-pointer"
               />
-            </svg>
-          </button>
+              <label
+                htmlFor="remember"
+                className="text-sm text-gray-700 cursor-pointer select-none"
+              >
+                Recordarme
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{
+                background: "linear-gradient(90deg, #c9a227 0%, #e6bb45 100%)",
+              }}
+            >
+              {loading ? "Cargando..." : "Iniciar sesión"}
+              {!loading && (
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
+                </svg>
+              )}
+            </button>
+          </form>
 
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200" />
@@ -183,7 +248,10 @@ function Login() {
           </div>
 
           <div className="flex justify-center gap-4">
-            <button className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer">
+            <button
+              onClick={() => handleOAuthLogin("google")}
+              className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
@@ -203,7 +271,10 @@ function Login() {
                 />
               </svg>
             </button>
-            <button className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer">
+            <button
+              onClick={() => handleOAuthLogin("azure")}
+              className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+            >
               <svg className="w-5 h-5" viewBox="0 0 23 23">
                 <path fill="#f3f3f3" d="M0 0h23v23H0z" />
                 <path fill="#f35325" d="M1 1h10v10H1z" />
@@ -212,7 +283,10 @@ function Login() {
                 <path fill="#ffba08" d="M12 12h10v10H12z" />
               </svg>
             </button>
-            <button className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer">
+            <button
+              onClick={() => handleOAuthLogin("linkedin_oidc")}
+              className="w-12 h-12 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+            >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#0A66C2">
                 <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
               </svg>
@@ -226,12 +300,12 @@ function Login() {
             </a>
           </p>
         </div>
-        {/* Logo de Grupo Víquez S.A del lado derecho */}
+
         <div className="hidden lg:flex items-center justify-center flex-1">
           <img
             src={logoImage}
             alt="Logo Grupo Víquez"
-            className="w-[500px] h-auto drop-shadow-2xl xl:ml-70"
+            className="w-[300px] h-auto drop-shadow-2xl"
           />
         </div>
       </div>
