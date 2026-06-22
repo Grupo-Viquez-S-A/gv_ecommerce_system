@@ -1,6 +1,6 @@
 function Dashboard() {
   return (
-    <div className="w-screen h-screen flex flex justify-center items-centers">
+    <div className="w-screen h-screen flex flex justify-center items-center">
       <h1>Dashboard</h1>
     </div>
   );
