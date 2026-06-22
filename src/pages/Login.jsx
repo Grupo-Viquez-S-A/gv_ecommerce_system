@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
+import { supabase } from "../services/primarySupabaseClient";
+
 function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -224,7 +226,7 @@ function Login() {
             </a>
           </p>
         </div>
-
+        {/* Logo de Grupo Víquez S.A del lado derecho */}
         <div className="hidden lg:flex items-center justify-center flex-1">
           <img
             src={logoImage}
