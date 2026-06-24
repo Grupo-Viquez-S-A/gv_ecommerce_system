@@ -13,6 +13,7 @@ import {
   RiStoreFill,
   RiFileListFill,
   RiBarChartFill,
+  RiShoppingBagFill,
 } from "react-icons/ri";
 import { useAuth } from "../context/AuthContext.js";
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
