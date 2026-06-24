@@ -118,10 +118,9 @@ function Dashboard() {
   );
 
   return (
-    <div className="w-full bg-[#0a0e1a] text-white flex" style={{ height: '100vh', minHeight: '100vh' }}>
+    <div className="w-full h-[100dvh] bg-[#0a0e1a] text-white overflow-hidden">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "fixed inset-y-0 left-0 z-50 w-64" : "hidden lg:flex lg:w-64"} flex-col bg-[#0f1623] border-r border-[#1f2a40] flex-shrink-0`}
-        style={{ height: '100vh', minHeight: '100vh' }}>
+      <aside className={`${sidebarOpen ? "fixed top-0 left-0 z-50 w-64 h-[100dvh]" : "hidden lg:fixed lg:top-0 lg:left-0 lg:w-64 lg:h-[100dvh]"} flex flex-col bg-[#0f1623] border-r border-[#1f2a40]`}>
         <div className="p-5 flex items-center gap-3 border-b border-[#1f2a40]">
           <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center">
             <span className="font-bold text-[#0a0e1a] text-sm">GV</span>
@@ -138,7 +137,7 @@ function Dashboard() {
           <div className="text-xs text-gray-500 mt-1">Vista Consolidada</div>
         </div>
 
-        <nav className="py-4 overflow-y-auto">
+        <nav className="flex-1 py-4 overflow-y-auto">
           <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-white bg-[#1e3a5f] border-r-2 border-[#3b82f6]">
             <RiDashboardFill size={18} className="text-[#3b82f6]" />
             Dashboard
@@ -179,7 +178,7 @@ function Dashboard() {
           </a>
         </nav>
 
-        <div className="mt-auto p-5 border-t border-[#1f2a40]">
+        <div className="p-5 border-t border-[#1f2a40]">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">JC</div>
             <div>
