@@ -96,7 +96,7 @@ const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e"];
 function Dashboard() {
   const { user } = useAuth();
   const [currentCompany, setCurrentCompany] = useState(() =>
-    user?.activeCompany ? { ...user.activeCompany, color: user.activeCompany.color || "#c9a227" } : companies[0]
+    user?.activeCompany ? { ...user.activeCompany, color: user.activeCompany.color || "#c9a227" } : (user?.companies?.[0] ? { ...user.companies[0], color: "#c9a227" } : companies[0])
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -154,13 +154,13 @@ function Dashboard() {
               </button>
               {companyDropdown && (
                 <div className="absolute top-full left-0 mt-1 w-56 bg-[#141a2a] border border-[#1f2a40] rounded-lg shadow-xl z-50 py-1">
-                  {companies.map((c) => (
+                  {(user?.companies || companies).map((c, i) => (
                     <button
                       key={c.id}
-                      onClick={() => { setCurrentCompany(c); setCompanyDropdown(false); }}
+                      onClick={() => { setCurrentCompany({ ...c, color: c.color || avatarColors[i % avatarColors.length] }); setCompanyDropdown(false); }}
                       className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#1e3a5f] transition-colors"
                     >
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color || avatarColors[i % avatarColors.length] }} />
                       {c.name}
                     </button>
                   ))}
