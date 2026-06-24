@@ -18,6 +18,11 @@ import {
   RiMenuFill,
   RiArrowRightSLine,
   RiBarChartBoxFill,
+  RiArrowLeftSLine,
+  RiExchangeFill,
+  RiStoreFill,
+  RiFileListFill,
+  RiBarChartFill,
 } from "react-icons/ri";
 import {
   BarChart,
@@ -95,9 +100,11 @@ const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e"];
 function Dashboard() {
   const [currentCompany, setCurrentCompany] = useState(companies[0]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [companyDropdown, setCompanyDropdown] = useState(false);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const toggleCollapse = () => setSidebarCollapsed(!sidebarCollapsed);
 
   const StatCard = ({ icon, label, value, growth, colorClass }) => (
     <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5 flex-1 min-w-[200px]">
