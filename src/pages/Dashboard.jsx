@@ -138,7 +138,7 @@ function Dashboard() {
           <div className="text-xs text-gray-500 mt-1">Vista Consolidada</div>
         </div>
 
-        <nav className="flex-1 py-4 overflow-y-auto">
+        <nav className="py-4 overflow-y-auto">
           <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-white bg-[#1e3a5f] border-r-2 border-[#3b82f6]">
             <RiDashboardFill size={18} className="text-[#3b82f6]" />
             Dashboard
@@ -179,7 +179,7 @@ function Dashboard() {
           </a>
         </nav>
 
-        <div className="p-5 border-t border-[#1f2a40]">
+        <div className="mt-auto p-5 border-t border-[#1f2a40]">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">JC</div>
             <div>
