@@ -122,6 +122,11 @@ function DashSideBar({
             <div className="my-1 mx-3 border-t border-[#1f2a40]" />
           )}
           <NavItem
+            icon={<RiShoppingBagFill size={18} />}
+            label="Catálogo"
+            collapsed={sidebarCollapsed}
+          />
+          <NavItem
             icon={<RiGroupFill size={18} />}
             label="Clientes"
             collapsed={sidebarCollapsed}
