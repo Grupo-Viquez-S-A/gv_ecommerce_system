@@ -109,14 +109,12 @@ export async function getCorporateUserData(userId, authEmail) {
   // Obtener departamento
   if (memberships && memberships.length > 0) {
     const deptId = memberships[0].department_id;
-    console.log("[getCorporateUserData] deptId:", deptId, "memberships:", memberships);
     if (deptId) {
-      const { data: deptData, error: deptError } = await supabase
+      const { data: deptData } = await supabase
         .from("departments")
         .select("department_id, name, email")
         .eq("department_id", deptId)
         .maybeSingle();
-      console.log("[getCorporateUserData] deptData:", deptData, "deptError:", deptError);
       if (deptData) {
         department = {
           id: deptData.department_id,
