@@ -56,11 +56,9 @@ export async function getCorporateUserData(userId, authEmail) {
   // Perfil base
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("email, name, surname, identification, phone, avatar_url, is_active")
+    .select("email, name, surname, identification, phone, is_active")
     .eq("user_id", userId)
     .maybeSingle();
-
-  console.log("[getCorporateUserData] userId:", userId, "profile:", profile, "profileError:", profileError);
 
   if (profileError && !profileError.message.includes("does not exist")) {
     return { data: null, error: profileError };
