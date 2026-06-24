@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext.js";
 import DashSideBar from "../components/dashSideBar.jsx";
 import {
   RiShoppingBagFill,
@@ -93,7 +94,10 @@ const activities = [
 const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e"];
 
 function Dashboard() {
-  const [currentCompany, setCurrentCompany] = useState(companies[0]);
+  const { user } = useAuth();
+  const [currentCompany, setCurrentCompany] = useState(() =>
+    user?.activeCompany ? { ...user.activeCompany, color: user.activeCompany.color || "#c9a227" } : companies[0]
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [companyDropdown, setCompanyDropdown] = useState(false);
@@ -182,8 +186,8 @@ function Dashboard() {
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {/* Greeting */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-white mb-1">Bienvenido, Jean Carlo</h1>
-            <p className="text-sm text-gray-400">Director Comercial · Vista: Todas las Empresas</p>
+            <h1 className="text-2xl font-bold text-white mb-1">Bienvenido, {user?.fullName || "Usuario"}</h1>
+            <p className="text-sm text-gray-400">{user?.role?.name || "Usuario"} · Vista: {user?.activeCompany?.name || "Todas las Empresas"}</p>
             <p className="text-sm text-gray-500 mt-1">Resumen general del desempeño comercial del grupo, equipos y cumplimiento de metas.</p>
           </div>
 

@@ -1,0 +1,280 @@
+Necesito que implementes correctamente la carga de datos del usuario autenticado con Supabase dentro de esta aplicación React.
+
+No cambies el diseño visual actual del Dashboard, Sidebar, Navbar ni Login. Debes conservar la interfaz existente y reemplazar únicamente los datos estáticos del usuario por los datos reales de la sesión.
+
+## Objetivo
+
+Cuando un usuario inicia sesión con correo y contraseña mediante Supabase Auth, el sistema debe:
+
+1. Validar las credenciales con `supabase.auth.signInWithPassword`.
+2. Obtener el usuario autenticado desde Supabase Auth.
+3. Consultar en Supabase los datos corporativos asociados al usuario:
+
+   * Nombre completo
+   * Correo electrónico
+   * Rol
+   * Departamento
+   * Compañías a las que pertenece
+4. Guardar esos datos en un estado global reutilizable para toda la aplicación.
+5. Mostrar los datos reales en el Dashboard, Navbar y Sidebar.
+6. Mantener la sesión al recargar la página.
+7. Redirigir al Login si no existe una sesión válida.
+8. Cerrar la sesión correctamente al presionar “Cerrar sesión”.
+
+## Estructura actual que debes respetar
+
+Ya existe este archivo:
+
+```text
+src/services/loginService.js
+```
+
+Actualmente contiene funciones similares a:
+
+```javascript
+signInWithEmail
+signInWithOAuth
+getActiveSession
+onAuthStateChange
+```
+
+También existe el cliente de Supabase en:
+
+```text
+src/services/primarySupabaseClient.js
+```
+
+No crees una segunda conexión de Supabase. Usa la existente.
+
+## Tablas esperadas en Supabase
+
+Antes de modificar código, inspecciona la estructura real de las tablas y sus columnas para confirmar los nombres exactos.
+
+La estructura esperada es similar a esta:
+
+```text
+profiles
+- user_id
+- full_name
+- email
+- role_id
+- department_id
+- is_active
+
+roles
+- id
+- name
+
+departments
+- id
+- name
+
+companies
+- id
+- name
+
+user_memberships
+- user_id
+- company_id
+```
+
+Las compañías asociadas al usuario se deben obtener desde `user_memberships`.
+
+No modifiques ni elimines tablas, columnas, políticas RLS ni datos de Supabase sin avisar. Si detectas que una relación, columna o política necesaria no existe, indícalo claramente al final en vez de inventar nombres o alterar la base de datos.
+
+## Implementación requerida
+
+### 1. Mejorar `loginService.js`
+
+Amplía el archivo existente para que, después de autenticar al usuario, obtenga también su información corporativa.
+
+Crea una función reutilizable, por ejemplo:
+
+```javascript
+getCorporateUserData(authUser)
+```
+
+Esta función debe retornar un objeto limpio con esta estructura:
+
+```javascript
+{
+  id: "uuid-del-usuario",
+  email: "correo@empresa.com",
+  fullName: "Nombre completo",
+
+  role: {
+    id: "uuid-del-rol",
+    name: "Nombre del rol"
+  },
+
+  department: {
+    id: "uuid-del-departamento",
+    name: "Nombre del departamento"
+  },
+
+  companies: [
+    {
+      id: "uuid-empresa",
+      name: "Nombre de empresa"
+    }
+  ],
+
+  activeCompany: {
+    id: "uuid-empresa",
+    name: "Nombre de empresa"
+  }
+}
+```
+
+La primera compañía de la lista puede utilizarse inicialmente como `activeCompany`.
+
+La función `signInWithEmail(email, password)` debe devolver:
+
+```javascript
+{
+  data: {
+    session,
+    user
+  },
+  error: null
+}
+```
+
+Donde `user` es el objeto corporativo completo.
+
+Si el usuario logra autenticarse, pero no tiene perfil corporativo, está inactivo o no tiene compañías asignadas:
+
+* Cierra su sesión automáticamente.
+* Devuelve un error claro para mostrar en el Login.
+* No permitas que ingrese al Dashboard.
+
+La función `getActiveSession()` también debe recuperar la sesión ya existente y devolver los datos corporativos completos del usuario. Esto debe funcionar cuando el usuario actualice el navegador o entre directamente a una ruta protegida.
+
+### 2. Crear un contexto global de autenticación
+
+Crea:
+
+```text
+src/context/AuthContext.jsx
+```
+
+El contexto debe exponer como mínimo:
+
+```javascript
+{
+  user,
+  session,
+  loading,
+  error,
+  login,
+  logout,
+  refreshUser
+}
+```
+
+Requisitos:
+
+* `user` debe contener el perfil corporativo completo.
+* `loading` debe ser `true` mientras se valida o restaura la sesión.
+* Al iniciar la aplicación, el contexto debe llamar a `getActiveSession()`.
+* Debe escuchar cambios de autenticación sin ejecutar consultas pesadas directamente dentro del callback de `onAuthStateChange`.
+* Debe limpiar correctamente la suscripción al desmontar el componente.
+* Debe exponer una función `logout()` que cierre sesión y limpie el estado local.
+
+### 3. Envolver la aplicación con el proveedor
+
+Modifica `main.jsx` o el archivo correspondiente para envolver toda la aplicación con:
+
+```jsx
+<AuthProvider>
+  <App />
+</AuthProvider>
+```
+
+Respeta los proveedores existentes y no rompas React Router.
+
+### 4. Actualizar el Login
+
+Modifica `Login.jsx` para que use el `AuthContext` o el servicio centralizado.
+
+Después de un login exitoso:
+
+* Guardar la sesión y el usuario mediante el contexto.
+* Redirigir a `/dashboard`.
+* No hacer consultas repetidas a Supabase desde el componente.
+* Mostrar errores claros de autenticación, perfil faltante, usuario inactivo o falta de compañías asignadas.
+* Mantener intacto el diseño visual actual del Login.
+
+### 5. Actualizar el Dashboard
+
+Reemplaza los datos estáticos del usuario por los datos reales de la sesión.
+
+Actualmente se muestran datos como:
+
+```text
+Bienvenido, Jean Carlo
+Director Comercial · Vista: Todas las Empresas
+```
+
+Deben cambiar dinámicamente a algo como:
+
+```text
+Bienvenido, {user.fullName}
+{user.role?.name} · {user.department?.name}
+```
+
+También muestra la empresa activa:
+
+```text
+Empresa activa: {user.activeCompany?.name}
+```
+
+Si el usuario pertenece a varias compañías, prepara la estructura para poder agregar después un selector de empresa, pero por ahora no cambies el diseño ni agregues una interfaz compleja si no es necesaria.
+
+### 6. Actualizar el Sidebar
+
+En la sección inferior del Sidebar, donde actualmente aparece un usuario estático, mostrar:
+
+```text
+{user.fullName}
+{user.role?.name}
+```
+
+El botón “Cerrar sesión” debe usar `logout()` del contexto y redirigir a la ruta de Login.
+
+### 7. Protección de rutas
+
+Crea un componente reutilizable, por ejemplo:
+
+```text
+src/components/ProtectedRoute.jsx
+```
+
+Debe:
+
+* Mostrar un estado de carga mientras se valida la sesión.
+* Redirigir al Login si no hay usuario o sesión válida.
+* Permitir ver el Dashboard solo cuando exista una sesión válida y un usuario corporativo cargado.
+
+No debe haber parpadeos visuales ni mostrar brevemente el Dashboard antes de validar la sesión.
+
+## Reglas importantes
+
+* No usar datos falsos, hardcodeados ni nombres como “Jean Carlo”.
+* No usar `service_role`, `secret key` ni claves privadas en el frontend.
+* Usar únicamente el cliente de Supabase existente.
+* No duplicar consultas innecesarias en Dashboard, Navbar y Sidebar.
+* El Dashboard, Sidebar y Navbar deben leer la información desde `AuthContext`.
+* Mantener el estilo, TailwindCSS, rutas y diseño actual.
+* Manejar valores nulos con textos como “Sin rol asignado” o “Sin departamento asignado”.
+* Agregar comentarios breves solo en la lógica importante.
+* No modificar la estructura de base de datos sin confirmarlo primero.
+
+## Al finalizar
+
+Muéstrame:
+
+1. Los archivos creados y modificados.
+2. La estructura final de los datos del usuario en sesión.
+3. Cualquier tabla, relación, política RLS o columna faltante que impida completar la funcionalidad.
+4. Confirmación de que los datos estáticos del Dashboard y Sidebar fueron reemplazados por datos reales de Supabase.

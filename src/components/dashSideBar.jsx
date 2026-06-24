@@ -14,6 +14,7 @@ import {
   RiFileListFill,
   RiBarChartFill,
 } from "react-icons/ri";
+import { useAuth } from "../context/AuthContext.js";
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
 function DashSideBar({
@@ -24,6 +25,7 @@ function DashSideBar({
   toggleSidebar,
   setSidebarOpen,
 }) {
+  const { user, signOut } = useAuth();
   const NavItem = ({ icon, label, active = false, collapsed }) => (
     <a
       href="#"
@@ -83,32 +85,6 @@ function DashSideBar({
             </button>
           )}
         </div>
-
-        {/* Company selector */}
-        {!sidebarCollapsed && (
-          <div className="px-4 py-3 border-b border-[#1f2a40]">
-            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-              Vista activa
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-200 cursor-pointer hover:text-white">
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: currentCompany.color }}
-              />
-              <span className="truncate">{currentCompany.name}</span>
-              <RiArrowDownSFill size={15} className="ml-auto flex-shrink-0" />
-            </div>
-          </div>
-        )}
-        {sidebarCollapsed && (
-          <div className="py-3 flex justify-center border-b border-[#1f2a40]">
-            <div
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: currentCompany.color }}
-            />
-          </div>
-        )}
-
         {/* Nav sections */}
         <nav className="flex-1 overflow-y-auto py-3">
           {/* COMERCIAL */}
@@ -222,10 +198,11 @@ function DashSideBar({
           {sidebarCollapsed ? (
             <>
               <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">
-                JC
+                {user?.fullName ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "U"}
               </div>
               <button
-                className="text-gray-500 hover:text-red-400 transition-colors"
+                onClick={signOut}
+                className="text-gray-500 hover:text-red-400 transition-colors cursor-pointer"
                 title="Cerrar sesión"
               >
                 <RiLogoutBoxLine size={16} />
@@ -235,22 +212,22 @@ function DashSideBar({
             <>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  JC
+                  {user?.fullName ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "U"}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">Jean Carlo</div>
+                  <div className="text-sm font-medium truncate">{user?.fullName || "Usuario"}</div>
                   <div className="text-xs text-gray-500 truncate">
-                    Director Comercial
+                    {user?.role?.name || "Usuario"}
                   </div>
                 </div>
               </div>
-              <a
-                href="#"
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors"
+              <button
+                onClick={signOut}
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
               >
                 <RiLogoutBoxLine size={16} />
                 Cerrar sesión
-              </a>
+              </button>
             </>
           )}
         </div>
@@ -361,20 +338,20 @@ function DashSideBar({
           <div className="p-4 border-t border-[#1f2a40]">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">
-                JC
+                {user?.fullName ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "U"}
               </div>
               <div>
-                <div className="text-sm font-medium">Jean Carlo</div>
-                <div className="text-xs text-gray-500">Director Comercial</div>
+                <div className="text-sm font-medium">{user?.fullName || "Usuario"}</div>
+                <div className="text-xs text-gray-500">{user?.role?.name || "Usuario"}</div>
               </div>
             </div>
-            <a
-              href="#"
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors"
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
             >
               <RiLogoutBoxLine size={16} />
               Cerrar sesión
-            </a>
+            </button>
           </div>
         </aside>
       )}

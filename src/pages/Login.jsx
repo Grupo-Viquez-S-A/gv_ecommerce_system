@@ -1,32 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.js";
 import { signInWithEmail, signInWithOAuth, getActiveSession, onAuthStateChange } from "../services/loginService";
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
 function Login() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [session, setSession] = useState(null);
 
   useEffect(() => {
-    getActiveSession().then(({ session }) => {
-      setSession(session);
-      if (session) navigate("/dashboard");
-    });
-
-    const subscription = onAuthStateChange((session) => {
-      setSession(session);
-      if (session) navigate("/dashboard");
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -57,11 +50,7 @@ function Login() {
       <div className="w-full h-full flex items-center justify-between px-10 md:px-16 lg:px-24 ml-50">
         <div className="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md flex flex-col gap-5">
           <div className="flex items-center gap-2">
-            <img
-              src={logoImage}
-              alt="Logo Grupo Víquez"
-              className="h-9 w-auto"
-            />
+            <img src={logoImage} alt="Logo Grupo Víquez" className="h-9 w-auto" />
             <span className="text-[#1a2f5e] font-bold text-sm tracking-widest uppercase">
               Grupo Víquez.
             </span>
@@ -282,12 +271,20 @@ function Login() {
             </button>
           </div>
 
-          <p className="text-xs text-center text-gray-400">
-            Al iniciar sesión, aceptas nuestros{" "}
-            <a href="#" className="text-[#c9a227] hover:underline">
-              Términos y Condiciones
-            </a>
-          </p>
+          <div className="flex flex-col gap-2 text-center">
+            <p className="text-xs text-gray-400">
+              ¿No tienes cuenta?{" "}
+              <a href="/signup" className="text-[#c9a227] hover:underline font-medium">
+                Crear cuenta
+              </a>
+            </p>
+            <p className="text-xs text-gray-400">
+              Al iniciar sesión, aceptas nuestros{" "}
+              <a href="#" className="text-[#c9a227] hover:underline">
+                Términos y Condiciones
+              </a>
+            </p>
+          </div>
         </div>
 
         <div className="hidden lg:flex items-center justify-center flex-1">
