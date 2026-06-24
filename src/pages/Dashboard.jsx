@@ -106,6 +106,23 @@ function Dashboard() {
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const toggleCollapse = () => setSidebarCollapsed(!sidebarCollapsed);
 
+  const NavItem = ({ icon, label, active = false, collapsed }) => (
+    <a
+      href="#"
+      title={collapsed ? label : undefined}
+      className={`flex items-center gap-3 py-2.5 text-sm transition-colors ${
+        collapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4"
+      } ${
+        active
+          ? "text-white bg-[#1e3a5f] border-r-2 border-[#3b82f6]"
+          : "text-gray-400 hover:text-white hover:bg-[#141a2a] " + (collapsed ? "rounded-lg" : "")
+      }`}
+    >
+      <span className={active ? "text-[#3b82f6]" : ""}>{icon}</span>
+      {!collapsed && <span className="whitespace-nowrap">{label}</span>}
+    </a>
+  );
+
   const StatCard = ({ icon, label, value, growth, colorClass }) => (
     <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5 flex-1 min-w-[200px]">
       <div className="flex items-center gap-3 mb-3">
@@ -126,79 +143,184 @@ function Dashboard() {
 
   return (
     <div className="w-full h-screen bg-[#0a0e1a] text-white flex overflow-hidden">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "fixed inset-y-0 left-0 z-50 w-64" : "hidden lg:flex lg:w-64 lg:flex-shrink-0"} flex-col bg-[#0f1623] border-r border-[#1f2a40] h-full`}>
-        <div className="p-5 flex items-center gap-3 border-b border-[#1f2a40]">
-          <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center">
+      {/* Desktop Sidebar */}
+      <aside
+        className={`hidden lg:flex flex-col bg-[#0f1623] border-r border-[#1f2a40] h-full flex-shrink-0 transition-all duration-300 overflow-hidden ${
+          sidebarCollapsed ? "w-[64px]" : "w-64"
+        }`}
+      >
+        {/* Logo + collapse toggle */}
+        <div className={`flex items-center border-b border-[#1f2a40] h-14 flex-shrink-0 ${sidebarCollapsed ? "justify-center px-0" : "px-4 gap-3"}`}>
+          <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center flex-shrink-0">
             <span className="font-bold text-[#0a0e1a] text-sm">GV</span>
           </div>
-          <span className="font-bold text-sm tracking-wider">Grupo Víquez</span>
+          {!sidebarCollapsed && (
+            <span className="font-bold text-sm tracking-wider flex-1 whitespace-nowrap">Grupo Víquez</span>
+          )}
+          {!sidebarCollapsed && (
+            <button
+              onClick={toggleCollapse}
+              className="ml-auto text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-[#141a2a]"
+              title="Colapsar menú"
+            >
+              <RiArrowLeftSLine size={18} />
+            </button>
+          )}
+          {sidebarCollapsed && (
+            <button
+              onClick={toggleCollapse}
+              className="text-gray-500 hover:text-white transition-colors"
+              title="Expandir menú"
+            >
+              <RiArrowRightSLine size={18} />
+            </button>
+          )}
         </div>
 
-        <div className="px-5 py-4 border-b border-[#1f2a40]">
-          <div className="text-xs text-gray-500 mb-1">Vista</div>
-          <div className="flex items-center gap-2 text-sm text-gray-300">
-            <span>Todas las Empresas</span>
-            <RiArrowDownSFill size={16} />
+        {/* Company selector */}
+        {!sidebarCollapsed && (
+          <div className="px-4 py-3 border-b border-[#1f2a40]">
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Vista activa</div>
+            <div className="flex items-center gap-2 text-sm text-gray-200 cursor-pointer hover:text-white">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: currentCompany.color }} />
+              <span className="truncate">{currentCompany.name}</span>
+              <RiArrowDownSFill size={15} className="ml-auto flex-shrink-0" />
+            </div>
           </div>
-          <div className="text-xs text-gray-500 mt-1">Vista Consolidada</div>
-        </div>
+        )}
+        {sidebarCollapsed && (
+          <div className="py-3 flex justify-center border-b border-[#1f2a40]">
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color }} />
+          </div>
+        )}
 
-        <nav className="flex-1 py-4 overflow-y-auto">
-          <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-white bg-[#1e3a5f] border-r-2 border-[#3b82f6]">
-            <RiDashboardFill size={18} className="text-[#3b82f6]" />
-            Dashboard
-          </a>
-          <div className="px-5 py-3">
-            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              <RiShoppingBagFill size={14} />
-              <span className="font-semibold uppercase tracking-wider">Catálogo</span>
+        {/* Nav sections */}
+        <nav className="flex-1 overflow-y-auto py-3">
+
+          {/* COMERCIAL */}
+          {!sidebarCollapsed && (
+            <div className="px-4 pb-1 pt-2">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Comercial</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-white">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color }} />
-              {currentCompany.name}
+          )}
+          {sidebarCollapsed && <div className="my-1 mx-3 border-t border-[#1f2a40]" />}
+
+          <NavItem icon={<RiDashboardFill size={18} />} label="Dashboard" active collapsed={sidebarCollapsed} />
+          <NavItem icon={<RiBarChartFill size={18} />} label="Reportes" collapsed={sidebarCollapsed} />
+
+          {/* VENTAS */}
+          {!sidebarCollapsed && (
+            <div className="px-4 pb-1 pt-4">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Ventas</span>
             </div>
-          </div>
-          <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#141a2a] transition-colors">
-            <RiGroupFill size={18} />
-            Clientes
-          </a>
-          <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#141a2a] transition-colors">
-            <RiUserFill size={18} />
-            Agentes
-          </a>
-          <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#141a2a] transition-colors">
-            <RiClipboardFill size={18} />
-            Cotizaciones
-          </a>
-          <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#141a2a] transition-colors">
-            <RiShoppingBagFill size={18} />
-            Ventas
-          </a>
-          <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#141a2a] transition-colors">
-            <RiCalendarFill size={18} />
-            Agenda
-          </a>
-          <a href="#" className="flex items-center gap-3 px-5 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-[#141a2a] transition-colors">
-            <RiSettings4Fill size={18} />
-            Configuración
-          </a>
+          )}
+          {sidebarCollapsed && <div className="my-1 mx-3 border-t border-[#1f2a40]" />}
+
+          <NavItem icon={<RiGroupFill size={18} />} label="Clientes" collapsed={sidebarCollapsed} />
+          <NavItem icon={<RiUserFill size={18} />} label="Agentes" collapsed={sidebarCollapsed} />
+          <NavItem icon={<RiClipboardFill size={18} />} label="Cotizaciones" collapsed={sidebarCollapsed} />
+          <NavItem icon={<RiStoreFill size={18} />} label="Ventas" collapsed={sidebarCollapsed} />
+          <NavItem icon={<RiFileListFill size={18} />} label="Pedidos" collapsed={sidebarCollapsed} />
+
+          {/* OPERACIONES */}
+          {!sidebarCollapsed && (
+            <div className="px-4 pb-1 pt-4">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Operaciones</span>
+            </div>
+          )}
+          {sidebarCollapsed && <div className="my-1 mx-3 border-t border-[#1f2a40]" />}
+
+          <NavItem icon={<RiCalendarFill size={18} />} label="Agenda" collapsed={sidebarCollapsed} />
+          <NavItem icon={<RiExchangeFill size={18} />} label="Transferencias" collapsed={sidebarCollapsed} />
+
+          {/* SISTEMA */}
+          {!sidebarCollapsed && (
+            <div className="px-4 pb-1 pt-4">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Sistema</span>
+            </div>
+          )}
+          {sidebarCollapsed && <div className="my-1 mx-3 border-t border-[#1f2a40]" />}
+
+          <NavItem icon={<RiSettings4Fill size={18} />} label="Configuración" collapsed={sidebarCollapsed} />
         </nav>
 
-        <div className="p-5 border-t border-[#1f2a40]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">JC</div>
-            <div>
-              <div className="text-sm font-medium">Jean Carlo</div>
-              <div className="text-xs text-gray-500">Director Comercial</div>
-            </div>
-          </div>
-          <a href="#" className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors">
-            <RiLogoutBoxLine size={16} />
-            Cerrar sesión
-          </a>
+        {/* User profile */}
+        <div className={`border-t border-[#1f2a40] flex-shrink-0 ${sidebarCollapsed ? "py-3 flex flex-col items-center gap-2" : "p-4"}`}>
+          {sidebarCollapsed ? (
+            <>
+              <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">JC</div>
+              <button className="text-gray-500 hover:text-red-400 transition-colors" title="Cerrar sesión">
+                <RiLogoutBoxLine size={16} />
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold flex-shrink-0">JC</div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">Jean Carlo</div>
+                  <div className="text-xs text-gray-500 truncate">Director Comercial</div>
+                </div>
+              </div>
+              <a href="#" className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors">
+                <RiLogoutBoxLine size={16} />
+                Cerrar sesión
+              </a>
+            </>
+          )}
         </div>
       </aside>
+
+      {/* Mobile Sidebar (overlay) */}
+      {sidebarOpen && (
+        <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[#0f1623] border-r border-[#1f2a40]">
+          <div className="flex items-center gap-3 px-4 h-14 border-b border-[#1f2a40]">
+            <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center flex-shrink-0">
+              <span className="font-bold text-[#0a0e1a] text-sm">GV</span>
+            </div>
+            <span className="font-bold text-sm tracking-wider">Grupo Víquez</span>
+            <button onClick={toggleSidebar} className="ml-auto text-gray-500 hover:text-white">
+              <RiArrowLeftSLine size={20} />
+            </button>
+          </div>
+          <div className="px-4 py-3 border-b border-[#1f2a40]">
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Vista activa</div>
+            <div className="flex items-center gap-2 text-sm text-gray-200">
+              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color }} />
+              <span>{currentCompany.name}</span>
+            </div>
+          </div>
+          <nav className="flex-1 overflow-y-auto py-3">
+            <div className="px-4 pb-1 pt-2"><span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Comercial</span></div>
+            <NavItem icon={<RiDashboardFill size={18} />} label="Dashboard" active collapsed={false} />
+            <NavItem icon={<RiBarChartFill size={18} />} label="Reportes" collapsed={false} />
+            <div className="px-4 pb-1 pt-4"><span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Ventas</span></div>
+            <NavItem icon={<RiGroupFill size={18} />} label="Clientes" collapsed={false} />
+            <NavItem icon={<RiUserFill size={18} />} label="Agentes" collapsed={false} />
+            <NavItem icon={<RiClipboardFill size={18} />} label="Cotizaciones" collapsed={false} />
+            <NavItem icon={<RiStoreFill size={18} />} label="Ventas" collapsed={false} />
+            <NavItem icon={<RiFileListFill size={18} />} label="Pedidos" collapsed={false} />
+            <div className="px-4 pb-1 pt-4"><span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Operaciones</span></div>
+            <NavItem icon={<RiCalendarFill size={18} />} label="Agenda" collapsed={false} />
+            <NavItem icon={<RiExchangeFill size={18} />} label="Transferencias" collapsed={false} />
+            <div className="px-4 pb-1 pt-4"><span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Sistema</span></div>
+            <NavItem icon={<RiSettings4Fill size={18} />} label="Configuración" collapsed={false} />
+          </nav>
+          <div className="p-4 border-t border-[#1f2a40]">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">JC</div>
+              <div>
+                <div className="text-sm font-medium">Jean Carlo</div>
+                <div className="text-xs text-gray-500">Director Comercial</div>
+              </div>
+            </div>
+            <a href="#" className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors">
+              <RiLogoutBoxLine size={16} />
+              Cerrar sesión
+            </a>
+          </div>
+        </aside>
+      )}
 
       {/* Overlay for mobile */}
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
