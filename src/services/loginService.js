@@ -29,3 +29,4 @@ export function onAuthStateChange(callback) {
   });
   return subscription;
 }
+
