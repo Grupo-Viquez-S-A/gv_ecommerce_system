@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
       setUser({
         id: session.user.id,
         email: session.user.email,
-        fullName: session.user.email?.split("@")[0] || "Usuario",
+        fullName: "Usuario",
         role: null,
         department: null,
         companies: [],

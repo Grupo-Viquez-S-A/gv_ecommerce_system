@@ -68,7 +68,7 @@ export async function getCorporateUserData(userId, authEmail) {
   const fullName =
     (profile?.name && profile?.surname)
       ? `${profile.name} ${profile.surname}`
-      : profile?.name || (typeof userEmail === "string" && userEmail.includes("@") ? userEmail.split("@")[0] : "Usuario");
+      : profile?.name || "Usuario";
   const avatarUrl = profile?.avatar_url || null;
   const isActive = profile?.is_active ?? true;
 
