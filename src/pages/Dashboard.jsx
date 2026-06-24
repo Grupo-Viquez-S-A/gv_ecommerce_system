@@ -118,9 +118,9 @@ function Dashboard() {
   );
 
   return (
-    <div className="w-full h-[100dvh] bg-[#0a0e1a] text-white overflow-hidden">
+    <div className="w-full h-screen bg-[#0a0e1a] text-white flex overflow-hidden">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "fixed top-0 left-0 z-50 w-64 h-[100dvh]" : "hidden lg:fixed lg:top-0 lg:left-0 lg:w-64 lg:h-[100dvh]"} flex flex-col bg-[#0f1623] border-r border-[#1f2a40]`}>
+      <aside className={`${sidebarOpen ? "fixed inset-y-0 left-0 z-50 w-64" : "hidden lg:flex lg:w-64 lg:flex-shrink-0"} flex-col bg-[#0f1623] border-r border-[#1f2a40] h-full`}>
         <div className="p-5 flex items-center gap-3 border-b border-[#1f2a40]">
           <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center">
             <span className="font-bold text-[#0a0e1a] text-sm">GV</span>
@@ -197,7 +197,7 @@ function Dashboard() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:ml-64">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Navbar */}
         <header className="h-14 bg-[#0f1623] border-b border-[#1f2a40] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
