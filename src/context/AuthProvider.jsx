@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       return;
     }
-    const { data, error } = await getCorporateUserData(session.user.id);
+    const { data, error } = await getCorporateUserData(session.user.id, session.user.email);
     if (error) {
       console.error("Error cargando datos corporativos:", error);
       setUser({

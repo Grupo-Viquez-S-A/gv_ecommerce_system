@@ -19,12 +19,17 @@ export async function signInWithOAuth(provider) {
 }
 
 export async function getActiveSession() {
-  const { data: { session }, error } = await supabase.auth.getSession();
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
   return { session, error };
 }
 
 export function onAuthStateChange(callback) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
     callback(session);
   });
   return subscription;
@@ -47,11 +52,11 @@ export async function signOut() {
   return { error };
 }
 
-export async function getCorporateUserData(userId) {
+export async function getCorporateUserData(userId, authEmail) {
   // Perfil base
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("email, full_name, identification, phone, avatar_url, is_active")
+    .select("email, name, surname, identification, phone, avatar_url, is_active")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -59,8 +64,11 @@ export async function getCorporateUserData(userId) {
     return { data: null, error: profileError };
   }
 
-  const userEmail = profile?.email || userId;
-  const fullName = profile?.full_name || (typeof userEmail === "string" ? userEmail.split("@")[0] : "Usuario");
+  const userEmail = profile?.email || authEmail;
+  const fullName =
+    (profile?.name && profile?.surname)
+      ? `${profile.name} ${profile.surname}`
+      : profile?.name || (typeof userEmail === "string" && userEmail.includes("@") ? userEmail.split("@")[0] : "Usuario");
   const avatarUrl = profile?.avatar_url || null;
   const isActive = profile?.is_active ?? true;
 
@@ -118,7 +126,8 @@ export async function getCorporateUserData(userId) {
   }
 
   // Obtener empresas
-  const companyIds = memberships?.map((m) => m.company_id).filter(Boolean) || [];
+  const companyIds =
+    memberships?.map((m) => m.company_id).filter(Boolean) || [];
   if (companyIds.length > 0) {
     const { data: companyData } = await supabase
       .from("companies")
@@ -145,7 +154,8 @@ export async function getCorporateUserData(userId) {
     { id: "pet-food", name: "Pacific Pet Food" },
   ];
 
-  const effectiveCompanies = companies.length > 0 ? companies : defaultCompanies;
+  const effectiveCompanies =
+    companies.length > 0 ? companies : defaultCompanies;
   const activeCompany = effectiveCompanies[0];
 
   return {
@@ -155,8 +165,17 @@ export async function getCorporateUserData(userId) {
       fullName,
       identification: profile?.identification || null,
       phone: profile?.phone || null,
-      role: role || { id: "director-comercial", name: "Director Comercial", code: null, description: null },
-      department: department || { id: "comercial", name: "Comercial", email: null },
+      role: role || {
+        id: "director-comercial",
+        name: "Director Comercial",
+        code: null,
+        description: null,
+      },
+      department: department || {
+        id: "comercial",
+        name: "Comercial",
+        email: null,
+      },
       companies: effectiveCompanies,
       activeCompany,
       avatarUrl,
