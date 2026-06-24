@@ -60,6 +60,8 @@ export async function getCorporateUserData(userId, authEmail) {
     .eq("user_id", userId)
     .maybeSingle();
 
+  console.log("[getCorporateUserData] userId:", userId, "profile:", profile, "profileError:", profileError);
+
   if (profileError && !profileError.message.includes("does not exist")) {
     return { data: null, error: profileError };
   }
