@@ -118,9 +118,10 @@ function Dashboard() {
   );
 
   return (
-    <div className="w-full min-h-screen bg-[#0a0e1a] text-white flex overflow-hidden">
+    <div className="w-full bg-[#0a0e1a] text-white flex" style={{ height: '100vh', minHeight: '100vh' }}>
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? "fixed inset-0 z-50 w-64" : "hidden lg:flex w-64"} flex-col bg-[#0f1623] border-r border-[#1f2a40] h-screen flex-shrink-0`}>
+      <aside className={`${sidebarOpen ? "fixed inset-y-0 left-0 z-50 w-64" : "hidden lg:flex lg:w-64"} flex-col bg-[#0f1623] border-r border-[#1f2a40] flex-shrink-0`}
+        style={{ height: '100vh', minHeight: '100vh' }}>
         <div className="p-5 flex items-center gap-3 border-b border-[#1f2a40]">
           <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center">
             <span className="font-bold text-[#0a0e1a] text-sm">GV</span>
@@ -197,7 +198,7 @@ function Dashboard() {
       {sidebarOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden lg:ml-64">
         {/* Navbar */}
         <header className="h-14 bg-[#0f1623] border-b border-[#1f2a40] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -247,7 +248,7 @@ function Dashboard() {
         <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {/* Greeting */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-white mb-1">Hola, Jean Carlo 👋</h1>
+            <h1 className="text-2xl font-bold text-white mb-1">Bienvenido, Jean Carlo</h1>
             <p className="text-sm text-gray-400">Director Comercial · Vista: Todas las Empresas</p>
             <p className="text-sm text-gray-500 mt-1">Resumen general del desempeño comercial del grupo, equipos y cumplimiento de metas.</p>
           </div>
