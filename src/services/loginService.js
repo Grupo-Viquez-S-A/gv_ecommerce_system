@@ -136,8 +136,8 @@ export async function getCorporateUserData(userId, authEmail) {
     if (companyData) {
       companies = companyData.map((c) => ({
         id: c.company_id,
-        name: c.company_name,
-        commercialName: c.commercial_name,
+        name: c.commercial_name,
+        companyName: c.company_name,
         email: c.email,
         address: c.address,
       }));
