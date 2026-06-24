@@ -51,7 +51,7 @@ export async function getCorporateUserData(userId) {
   // Perfil base
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("email, full_name, avatar_url, is_active")
+    .select("email, full_name, identification, phone, avatar_url, is_active")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -59,16 +59,15 @@ export async function getCorporateUserData(userId) {
     return { data: null, error: profileError };
   }
 
-  // Si la tabla profiles está vacía o no existe, usar fallback
   const userEmail = profile?.email || userId;
   const fullName = profile?.full_name || (typeof userEmail === "string" ? userEmail.split("@")[0] : "Usuario");
   const avatarUrl = profile?.avatar_url || null;
   const isActive = profile?.is_active ?? true;
 
-  // Membresías (roles + empresas)
+  // Membresías (roles + empresas + departamento)
   const { data: memberships, error: memError } = await supabase
     .from("user_memberships")
-    .select("company_id, role_id")
+    .select("company_id, department_id, role_id")
     .eq("user_id", userId);
 
   if (memError && !memError.message.includes("does not exist")) {
@@ -77,6 +76,7 @@ export async function getCorporateUserData(userId) {
 
   let role = null;
   let companies = [];
+  let department = null;
 
   // Obtener roles
   if (memberships && memberships.length > 0) {
@@ -84,11 +84,35 @@ export async function getCorporateUserData(userId) {
     if (roleId) {
       const { data: roleData } = await supabase
         .from("roles")
-        .select("role_id, role_name")
+        .select("role_id, role_name, role_code, description")
         .eq("role_id", roleId)
         .maybeSingle();
       if (roleData) {
-        role = { id: roleData.role_id, name: roleData.role_name };
+        role = {
+          id: roleData.role_id,
+          name: roleData.role_name,
+          code: roleData.role_code,
+          description: roleData.description,
+        };
+      }
+    }
+  }
+
+  // Obtener departamento
+  if (memberships && memberships.length > 0) {
+    const deptId = memberships[0].department_id;
+    if (deptId) {
+      const { data: deptData } = await supabase
+        .from("departments")
+        .select("department_id, name, email")
+        .eq("department_id", deptId)
+        .maybeSingle();
+      if (deptData) {
+        department = {
+          id: deptData.department_id,
+          name: deptData.name,
+          email: deptData.email,
+        };
       }
     }
   }
@@ -98,12 +122,15 @@ export async function getCorporateUserData(userId) {
   if (companyIds.length > 0) {
     const { data: companyData } = await supabase
       .from("companies")
-      .select("company_id, company_name")
+      .select("company_id, company_name, commercial_name, email, address")
       .in("company_id", companyIds);
     if (companyData) {
       companies = companyData.map((c) => ({
         id: c.company_id,
         name: c.company_name,
+        commercialName: c.commercial_name,
+        email: c.email,
+        address: c.address,
       }));
     }
   }
@@ -126,8 +153,10 @@ export async function getCorporateUserData(userId) {
       id: userId,
       email: userEmail,
       fullName,
-      role: role || { id: "director-comercial", name: "Director Comercial" },
-      department: null,
+      identification: profile?.identification || null,
+      phone: profile?.phone || null,
+      role: role || { id: "director-comercial", name: "Director Comercial", code: null, description: null },
+      department: department || { id: "comercial", name: "Comercial", email: null },
       companies: effectiveCompanies,
       activeCompany,
       avatarUrl,
