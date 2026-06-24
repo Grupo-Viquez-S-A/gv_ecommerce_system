@@ -217,7 +217,7 @@ function DashSideBar({
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{user?.fullName || "Usuario"}</div>
                   <div className="text-xs text-gray-500 truncate">
-                    {user?.role?.name || "Usuario"}
+                    {user?.role?.name || "Usuario"}{user?.department?.name ? ` - ${user.department.name}` : ""}
                   </div>
                 </div>
               </div>
@@ -342,7 +342,7 @@ function DashSideBar({
               </div>
               <div>
                 <div className="text-sm font-medium">{user?.fullName || "Usuario"}</div>
-                <div className="text-xs text-gray-500">{user?.role?.name || "Usuario"}</div>
+                <div className="text-xs text-gray-500">{user?.role?.name || "Usuario"}{user?.department?.name ? ` - ${user.department.name}` : ""}</div>
               </div>
             </div>
             <button
