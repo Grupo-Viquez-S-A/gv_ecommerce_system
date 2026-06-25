@@ -28,8 +28,6 @@ import {
   RiTimeLine,
   RiShieldCheckFill,
   RiEyeFill,
-  RiMailSendFill,
-  RiRefreshLine,
   RiCheckLine,
   RiLockPasswordFill,
   RiSmartphoneFill,
@@ -76,17 +74,6 @@ const MOCK_ACTIVITY = [
     { user: "José González", initials: "JG", color: "#3b82f6", action: "creó un nuevo usuario", time: "22 Jun · 9:45 AM", icon: "create" },
     { user: "María Castillo", initials: "MC", color: "#ec4899", action: "aprobó una orden de compra", time: "22 Jun · 8:20 AM", icon: "approve" },
   ]},
-];
-
-const MOCK_INVITATIONS = [
-  { id: 1, email: "carla.mora@grupoviquez.com", sent: "20 Jun 2025", status: "Pendiente" },
-  { id: 2, email: "andres.salas@constructoraviquez.com", sent: "21 Jun 2025", status: "Pendiente" },
-  { id: 3, email: "karina.vargas@textiles.com", sent: "22 Jun 2025", status: "Pendiente" },
-  { id: 4, email: "pablo.rojas@pacificpet.com", sent: "23 Jun 2025", status: "Pendiente" },
-  { id: 5, email: "lucia.fernandez@grupoviquez.com", sent: "24 Jun 2025", status: "Vencida" },
-  { id: 6, email: "mario.jimenez@occidente.com", sent: "19 Jun 2025", status: "Vencida" },
-  { id: 7, email: "sofia.arce@textiles.com", sent: "18 Jun 2025", status: "Pendiente" },
-  { id: 8, email: "carlos.herrera@constructora.com", sent: "17 Jun 2025", status: "Pendiente" },
 ];
 
 const COMPANIES = ["Grupo Víquez S.A", "Textiles de Occidente", "Pacific Pet Food", "Constructora Víquez"];
@@ -289,7 +276,6 @@ export default function AdminConfig() {
     { label: "Roles Registrados", value: "6", icon: <RiShieldUserFill size={20} />, color: "bg-[#2d200a]", iconColor: "text-[#fbbf24]", growth: "+2%", growthColor: "text-green-400" },
     { label: "Acceso Reciente", value: "38", icon: <RiTimeLine size={20} />, color: "bg-[#0d2030]", iconColor: "text-[#38bdf8]", growth: "+5%", growthColor: "text-green-400" },
     { label: "Usuarios Bloqueados", value: "3", icon: <RiAlertFill size={20} />, color: "bg-[#2d1818]", iconColor: "text-[#f87171]", growth: "+1", growthColor: "text-red-400" },
-    { label: "Invitaciones Pendientes", value: "8", icon: <RiMailSendFill size={20} />, color: "bg-[#2d220a]", iconColor: "text-[#fbbf24]", growth: "+3", growthColor: "text-yellow-400" },
     { label: "Usuarios con 2FA", value: "67", icon: <RiShieldCheckFill size={20} />, color: "bg-[#132813]", iconColor: "text-[#4ade80]", growth: "+12%", growthColor: "text-green-400" },
   ];
 
@@ -628,72 +614,6 @@ export default function AdminConfig() {
                 ))}
               </div>
 
-              {/* Pending invitations section */}
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f2a40]">
-                  <div className="flex items-center gap-2">
-                    <RiMailSendFill size={16} className="text-[#fbbf24]" />
-                    <h3 className="text-sm font-semibold text-white">Invitaciones Pendientes</h3>
-                    <span className="bg-[#2d200a] text-[#fbbf24] text-xs font-bold px-2 py-0.5 rounded-full">8</span>
-                  </div>
-                  <button className="flex items-center gap-1.5 text-xs text-[#60a5fa] hover:text-white font-medium transition-colors">
-                    <RiAddFill size={14} /> Invitar usuario
-                  </button>
-                </div>
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-[#1f2a40]">
-                        {["CORREO", "FECHA DE ENVÍO", "ESTADO", "ACCIONES"].map((col) => (
-                          <th key={col} className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-5 py-3">{col}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {MOCK_INVITATIONS.map((inv) => (
-                        <tr key={inv.id} className="border-b border-[#1f2a40] last:border-0 hover:bg-[#141a2a] transition-colors">
-                          <td className="px-5 py-3 text-gray-300 text-sm">{inv.email}</td>
-                          <td className="px-5 py-3 text-gray-500 text-xs">{inv.sent}</td>
-                          <td className="px-5 py-3">
-                            {inv.status === "Pendiente"
-                              ? <span className="bg-[#2d200a] text-[#fbbf24] text-xs font-medium px-2.5 py-1 rounded-full">{inv.status}</span>
-                              : <span className="bg-[#3b1a1a] text-[#f87171] text-xs font-medium px-2.5 py-1 rounded-full">{inv.status}</span>
-                            }
-                          </td>
-                          <td className="px-5 py-3">
-                            <div className="flex items-center gap-1">
-                              <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-[#60a5fa] px-2 py-1 rounded hover:bg-[#1e3a5f] transition-colors">
-                                <RiRefreshLine size={12} /> Reenviar
-                              </button>
-                              <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-400 px-2 py-1 rounded hover:bg-red-500/10 transition-colors">
-                                <RiCloseLine size={12} /> Cancelar
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {/* Mobile invitations */}
-                <div className="md:hidden divide-y divide-[#1f2a40]">
-                  {MOCK_INVITATIONS.map((inv) => (
-                    <div key={inv.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-sm text-gray-300">{inv.email}</div>
-                        <div className="text-xs text-gray-600 mt-0.5">{inv.sent}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {inv.status === "Pendiente"
-                          ? <span className="bg-[#2d200a] text-[#fbbf24] text-xs font-medium px-2 py-0.5 rounded-full">{inv.status}</span>
-                          : <span className="bg-[#3b1a1a] text-[#f87171] text-xs font-medium px-2 py-0.5 rounded-full">{inv.status}</span>
-                        }
-                        <button className="text-gray-500 hover:text-red-400 transition-colors"><RiCloseLine size={14} /></button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </>
           )}
 
