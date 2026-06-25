@@ -1,0 +1,349 @@
+CONTEXTO
+
+Necesito que trabajes sobre una página existente del proyecto ubicada en:
+
+src/pages/adminConfig
+
+El proyecto utiliza:
+
+* React
+* Vite
+* Javascript
+* TailwindCSS
+
+IMPORTANTE:
+
+* NO crees un nuevo proyecto.
+* NO modifiques la arquitectura general existente.
+* Reutiliza todos los componentes ya disponibles en el proyecto.
+* El Sidebar ya existe y debe ser reutilizado mediante importación.
+* Si existe un Header, Layout, Card, Modal, Drawer, Table o componentes similares, reutilízalos antes de crear nuevos.
+* Corrige cualquier error de compilación, importación, tipado, rutas o dependencias que encuentres durante el proceso.
+* Si detectas componentes obsoletos o código que genera warnings, refactorízalo manteniendo la funcionalidad actual.
+
+OBJETIVO
+
+Recrear el frontend de una pantalla de "Gestión de Usuarios" con el mismo lenguaje visual del dashboard actual.
+
+La interfaz debe mantener:
+
+* Tema oscuro corporativo.
+* Colores azul oscuro similares al dashboard.
+* Tarjetas con bordes sutiles.
+* Sombras suaves.
+* Tipografía moderna.
+* Espaciados consistentes.
+* Diseño responsive.
+* Apariencia premium estilo SaaS administrativo.
+
+NO IMPLEMENTAR BACKEND.
+
+Toda la información puede utilizar datos mockeados.
+
+==================================================
+ESTRUCTURA GENERAL
+==================
+
+Mantener:
+
+* Sidebar existente.
+* Layout existente.
+* Navegación actual.
+
+Dentro del contenido principal crear:
+
+1. Breadcrumb
+2. Encabezado
+3. Barra de acciones
+4. Tarjetas de métricas
+5. Tabla de usuarios
+6. Menú contextual de acciones
+7. Drawer lateral para crear usuario
+8. Modal de confirmación para eliminar usuario
+
+==================================================
+BREADCRUMB
+==========
+
+Configuración > Usuarios
+
+Texto pequeño y discreto.
+
+==================================================
+ENCABEZADO
+==========
+
+Título:
+
+Gestión de Usuarios
+
+Subtítulo:
+
+Administra los accesos y permisos de los usuarios del sistema.
+
+==================================================
+BARRA SUPERIOR DE ACCIONES
+==========================
+
+Lado derecho:
+
+Botón principal:
+
+* Nuevo Usuario
+
+Color azul principal del sistema.
+
+Además incluir:
+
+* Input de búsqueda
+* Filtro por estado
+
+Diseño horizontal.
+
+==================================================
+TARJETAS DE MÉTRICAS
+====================
+
+Crear una cuadrícula responsive de 4 cards.
+
+Card 1:
+Usuarios Totales
+124
+
+Card 2:
+Usuarios Activos
+112
+
+Card 3:
+Usuarios Inactivos
+12
+
+Card 4:
+Roles Registrados
+6
+
+Características:
+
+* Fondo oscuro.
+* Bordes sutiles.
+* Icono en la parte superior izquierda.
+* Número grande.
+* Indicador de crecimiento debajo.
+
+Responsive:
+4 columnas desktop
+2 columnas tablet
+1 columna móvil
+
+==================================================
+TABLA DE USUARIOS
+=================
+
+Crear una tabla moderna con:
+
+Columnas:
+
+* Usuario
+* Correo
+* Rol
+* Empresa
+* Estado
+* Último acceso
+* Acciones
+
+Agregar al menos 6 usuarios mock.
+
+Ejemplo:
+
+José González
+[jose@grupoviquez.com](mailto:jose@grupoviquez.com)
+Administrador
+Grupo Víquez S.A
+Activo
+Hace 2 horas
+
+==================================================
+BADGES
+======
+
+Roles:
+
+Administrador
+Supervisor
+Vendedor
+Contabilidad
+
+Cada rol debe tener un color visual diferente.
+
+Estados:
+
+Activo:
+Verde
+
+Inactivo:
+Rojo
+
+Utilizar badges modernos.
+
+==================================================
+ACCIONES POR FILA
+=================
+
+Cada fila debe mostrar:
+
+* Editar
+* Desactivar
+* Menú de tres puntos
+
+Al abrir el menú contextual mostrar:
+
+* Editar usuario
+* Restablecer contraseña
+* Duplicar usuario
+* Desactivar usuario
+* Eliminar usuario
+
+Eliminar usuario debe mostrarse en color rojo.
+
+==================================================
+DRAWER LATERAL
+==============
+
+Al hacer clic en:
+
+* Nuevo Usuario
+
+Abrir un panel lateral derecho.
+
+Título:
+
+Nuevo Usuario
+
+Descripción:
+
+Completa la información para crear un nuevo usuario.
+
+Campos:
+
+* Nombre Completo
+* Correo Electrónico
+* Teléfono
+* Empresa
+* Rol
+
+Estado:
+
+Radio buttons:
+
+○ Activo
+○ Inactivo
+
+Botones inferiores:
+
+Cancelar
+Guardar Usuario
+
+El drawer debe tener:
+
+* Animación suave.
+* Overlay oscuro.
+* Scroll independiente.
+
+==================================================
+MODAL ELIMINAR USUARIO
+======================
+
+Crear modal de confirmación.
+
+Título:
+
+Eliminar Usuario
+
+Mensaje:
+
+¿Desea eliminar este usuario?
+
+Esta acción no puede deshacerse.
+
+Botones:
+
+Cancelar
+Eliminar
+
+Botón eliminar en rojo.
+
+==================================================
+RESPONSIVE
+==========
+
+Móvil:
+
+La tabla debe transformarse en tarjetas.
+
+Cada tarjeta debe mostrar:
+
+* Nombre
+* Correo
+* Rol
+* Estado
+* Botones de acción
+
+Evitar scroll horizontal.
+
+==================================================
+ESTILOS
+=======
+
+Tomar como referencia visual el dashboard actual.
+
+Usar una paleta similar:
+
+Background principal:
+#0F172A
+
+Cards:
+#111827
+
+Bordes:
+#1F2937
+
+Texto principal:
+#F8FAFC
+
+Texto secundario:
+#94A3B8
+
+Azul principal:
+#2563EB
+
+Verde:
+#22C55E
+
+Rojo:
+#EF4444
+
+Amarillo:
+#F59E0B
+
+==================================================
+CALIDAD DE IMPLEMENTACIÓN
+=========================
+
+* Código limpio.
+* Componentes reutilizables.
+* Sin duplicación innecesaria.
+* Imports ordenados.
+* Buenas prácticas React.
+* Tailwind consistente.
+* Sin errores de consola.
+* Sin errores de compilación.
+* Corregir cualquier error encontrado durante la implementación.
+* Verificar que npm run dev compile correctamente al finalizar.
+
+ENTREGABLE
+
+Actualizar la página existente en:
+
+src/pages/adminConfig
+
+para que reproduzca completamente la interfaz de Gestión de Usuarios descrita arriba utilizando únicamente frontend y datos mock.
