@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext.js";
 import DashSideBar from "../components/dashSideBar.jsx";
 import {
@@ -15,18 +15,15 @@ import {
   RiShieldUserFill,
   RiSearchLine,
   RiFilterLine,
-  RiPencilFill,
-  RiMoreFill,
   RiAddFill,
   RiCloseLine,
-  RiLockPasswordFill,
-  RiFileCopyFill,
-  RiUserForbidFill,
   RiDeleteBinFill,
   RiArrowLeftSLine,
   RiArrowRightSFill,
   RiCheckboxCircleFill,
   RiCloseCircleFill,
+  RiEditFill,
+  RiUserSharedFill,
 } from "react-icons/ri";
 
 const MOCK_USERS = [
@@ -117,9 +114,11 @@ function AdminConfig() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
-  const [openMenu, setOpenMenu] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState("create"); // "create" | "edit"
+  const [editUser, setEditUser] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
+  const [deactivateModal, setDeactivateModal] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -130,17 +129,41 @@ function AdminConfig() {
     status: "Activo",
   });
 
-  const menuRef = useRef(null);
+  const openCreateDrawer = () => {
+    setDrawerMode("create");
+    setEditUser(null);
+    setForm({
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
+      role: "",
+      status: "Activo",
+    });
+    setDrawerOpen(true);
+  };
 
-  useEffect(() => {
-    function handleClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setOpenMenu(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  const openEditDrawer = (user) => {
+    setDrawerMode("edit");
+    setEditUser(user);
+    setForm({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || "",
+      company: user.company,
+      role: user.role,
+      status: user.status,
+    });
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setTimeout(() => {
+      setDrawerMode("create");
+      setEditUser(null);
+    }, 300);
+  };
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const toggleCollapse = () => setSidebarCollapsed(!sidebarCollapsed);
@@ -266,11 +289,11 @@ function AdminConfig() {
             <div>
               <h1 className="text-2xl font-bold text-white">Gestión de Usuarios</h1>
               <p className="text-sm text-gray-400 mt-1">
-                Administra los accesos y permisos de los usuarios del sistema.
+                Administra los accesos y permisos de los usuarios del sistema. Adicionalmente puedes crear, editar o eliminar usuarios.
               </p>
             </div>
             <button
-              onClick={() => setDrawerOpen(true)}
+              onClick={openCreateDrawer}
               className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex-shrink-0"
             >
               <RiAddFill size={18} />
@@ -297,7 +320,7 @@ function AdminConfig() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer min-w-[160px]"
               >
-                <option>Todos los estados</option>
+                <option value="Todos">Todos los estados</option>
                 <option value="Activo">Activo</option>
                 <option value="Inactivo">Inactivo</option>
               </select>
@@ -381,36 +404,28 @@ function AdminConfig() {
                     <td className="px-5 py-3 text-gray-500 text-xs">{u.lastAccess}</td>
                     {/* Acciones */}
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-1" ref={openMenu === u.id ? menuRef : null}>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors">
-                          <RiPencilFill size={14} />
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEditDrawer(u)}
+                          className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"
+                          title="Editar usuario"
+                        >
+                          <RiEditFill size={14} />
                         </button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors">
-                          <RiUserForbidFill size={14} />
+                        <button
+                          onClick={() => setDeactivateModal(u)}
+                          className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"
+                          title="Desactivar usuario"
+                        >
+                          <RiUserSharedFill size={14} />
                         </button>
-                        <div className="relative">
-                          <button
-                            onClick={() => setOpenMenu(openMenu === u.id ? null : u.id)}
-                            className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"
-                          >
-                            <RiMoreFill size={14} />
-                          </button>
-                          {openMenu === u.id && (
-                            <div className="absolute right-0 top-full mt-1 w-52 bg-[#1a2235] border border-[#1f2a40] rounded-xl shadow-2xl z-50 py-1 overflow-hidden">
-                              <ContextMenuItem icon={<RiPencilFill size={14} />} label="Editar usuario" />
-                              <ContextMenuItem icon={<RiLockPasswordFill size={14} />} label="Restablecer contraseña" />
-                              <ContextMenuItem icon={<RiFileCopyFill size={14} />} label="Duplicar usuario" />
-                              <ContextMenuItem icon={<RiUserForbidFill size={14} />} label="Desactivar usuario" />
-                              <div className="my-1 border-t border-[#1f2a40]" />
-                              <ContextMenuItem
-                                icon={<RiDeleteBinFill size={14} />}
-                                label="Eliminar usuario"
-                                danger
-                                onClick={() => { setDeleteModal(u); setOpenMenu(null); }}
-                              />
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          onClick={() => setDeleteModal(u)}
+                          className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors"
+                          title="Eliminar usuario"
+                        >
+                          <RiDeleteBinFill size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -465,12 +480,24 @@ function AdminConfig() {
                     <span className="text-xs text-gray-500">{u.company}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors">
-                      <RiPencilFill size={13} />
+                    <button
+                      onClick={() => openEditDrawer(u)}
+                      className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"
+                      title="Editar usuario"
+                    >
+                      <RiEditFill size={13} />
+                    </button>
+                    <button
+                      onClick={() => setDeactivateModal(u)}
+                      className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"
+                      title="Desactivar usuario"
+                    >
+                      <RiUserSharedFill size={13} />
                     </button>
                     <button
                       onClick={() => setDeleteModal(u)}
                       className="w-7 h-7 rounded-lg text-red-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors"
+                      title="Eliminar usuario"
                     >
                       <RiDeleteBinFill size={13} />
                     </button>
@@ -487,7 +514,7 @@ function AdminConfig() {
       {drawerOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-          onClick={() => setDrawerOpen(false)}
+          onClick={closeDrawer}
         />
       )}
 
@@ -501,13 +528,26 @@ function AdminConfig() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <RiUserAddFill size={20} className="text-[#2563eb]" />
-              Nuevo Usuario
+              {drawerMode === "create" ? (
+                <>
+                  <RiUserAddFill size={20} className="text-[#2563eb]" />
+                  Nuevo Usuario
+                </>
+              ) : (
+                <>
+                  <RiEditFill size={20} className="text-[#2563eb]" />
+                  Editar Usuario
+                </>
+              )}
             </h2>
-            <p className="text-sm text-gray-400 mt-0.5">Completa la información para crear un nuevo usuario.</p>
+            <p className="text-sm text-gray-400 mt-0.5">
+              {drawerMode === "create"
+                ? "Completa la información para crear un nuevo usuario."
+                : "Modifica la información del usuario seleccionado."}
+            </p>
           </div>
           <button
-            onClick={() => setDrawerOpen(false)}
+            onClick={closeDrawer}
             className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors flex-shrink-0 mt-0.5"
           >
             <RiCloseLine size={18} />
@@ -615,13 +655,13 @@ function AdminConfig() {
         {/* Drawer footer */}
         <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
           <button
-            onClick={() => setDrawerOpen(false)}
+            onClick={closeDrawer}
             className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
           >
             Cancelar
           </button>
           <button className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-            Guardar Usuario
+            {drawerMode === "create" ? "Guardar Usuario" : "Guardar Cambios"}
           </button>
         </div>
       </div>
@@ -664,23 +704,46 @@ function AdminConfig() {
           </div>
         </>
       )}
-    </div>
-  );
-}
 
-function ContextMenuItem({ icon, label, danger = false, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
-        danger
-          ? "text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          : "text-gray-300 hover:text-white hover:bg-[#1e3a5f]"
-      }`}
-    >
-      <span className={danger ? "text-red-400" : "text-gray-500"}>{icon}</span>
-      {label}
-    </button>
+      {/* Deactivate Modal */}
+      {deactivateModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+            onClick={() => setDeactivateModal(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl w-full max-w-sm shadow-2xl">
+              <div className="p-6">
+                <div className="w-12 h-12 rounded-full bg-yellow-500/15 flex items-center justify-center mx-auto mb-4">
+                  <RiUserSharedFill size={22} className="text-yellow-400" />
+                </div>
+                <h3 className="text-lg font-bold text-white text-center mb-1">Desactivar Usuario</h3>
+                <p className="text-sm text-gray-400 text-center mb-1">
+                  ¿Desea desactivar a{" "}
+                  <span className="text-white font-medium">{deactivateModal.name}</span>?
+                </p>
+                <p className="text-xs text-gray-500 text-center">El usuario perderá acceso al sistema hasta ser reactivado.</p>
+              </div>
+              <div className="flex gap-3 px-6 pb-6">
+                <button
+                  onClick={() => setDeactivateModal(null)}
+                  className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => setDeactivateModal(null)}
+                  className="flex-1 bg-[#f59e0b] hover:bg-[#d97706] text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+                >
+                  Desactivar
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 
