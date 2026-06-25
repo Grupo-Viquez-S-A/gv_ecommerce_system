@@ -29,6 +29,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/clientes-dev" element={<Clients />} />
         <Route
           path="/agentes"
           element={
@@ -37,6 +38,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/agentes-dev" element={<Agents />} />
         <Route
           path="/admin/usuarios"
           element={

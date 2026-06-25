@@ -28,6 +28,8 @@ import {
   RiTeamFill,
   RiBarChartFill,
   RiStarFill,
+  RiClipboardFill,
+  RiDeleteBinFill,
 } from "react-icons/ri";
 
 /* ─── MOCK DATA: AGENTES ─────────────────────────────────────────── */
@@ -89,6 +91,8 @@ export default function Agents() {
   const [editAgent, setEditAgent] = useState(null);
   const [viewAgent, setViewAgent] = useState(null);
   const [deactivateModal, setDeactivateModal] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
+  const [agents, setAgents] = useState(MOCK_AGENTS);
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", territory: "", commission: "", status: "Activo", notes: "" });
 
@@ -120,10 +124,24 @@ export default function Agents() {
     setTimeout(() => { setDrawerMode("create"); setEditAgent(null); setViewAgent(null); }, 300);
   };
 
+  const handleDelete = () => {
+    if (deleteModal) {
+      setAgents((prev) => prev.filter((a) => a.id !== deleteModal.id));
+      setDeleteModal(null);
+    }
+  };
+
+  const handleDeactivate = () => {
+    if (deactivateModal) {
+      setAgents((prev) => prev.map((a) => a.id === deactivateModal.id ? { ...a, status: "Inactivo" } : a));
+      setDeactivateModal(null);
+    }
+  };
+
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const toggleCollapse = () => setSidebarCollapsed(!sidebarCollapsed);
 
-  const filtered = MOCK_AGENTS.filter((a) => {
+  const filtered = agents.filter((a) => {
     const q = search.toLowerCase();
     const matchSearch = a.name.toLowerCase().includes(q) || a.email.toLowerCase().includes(q) || a.company.toLowerCase().includes(q);
     const matchStatus = statusFilter === "Todos" || a.status === statusFilter;
@@ -308,6 +326,9 @@ export default function Agents() {
                         <button onClick={() => setDeactivateModal(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors" title="Desactivar">
                           <RiUserSharedFill size={14} />
                         </button>
+                        <button onClick={() => setDeleteModal(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Eliminar">
+                          <RiDeleteBinFill size={14} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -361,6 +382,7 @@ export default function Agents() {
                   <button onClick={() => openViewDrawer(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEyeFill size={13} /></button>
                   <button onClick={() => openEditDrawer(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEditFill size={13} /></button>
                   <button onClick={() => setDeactivateModal(a)} className="w-7 h-7 rounded-lg text-yellow-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors"><RiUserSharedFill size={13} /></button>
+                  <button onClick={() => setDeleteModal(a)} className="w-7 h-7 rounded-lg text-red-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors"><RiDeleteBinFill size={13} /></button>
                 </div>
               </div>
             ))}
@@ -543,8 +565,34 @@ export default function Agents() {
                 <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
                   Cancelar
                 </button>
-                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={handleDeactivate} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
                   Desactivar
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Delete Modal */}
+      {deleteModal && (
+        <>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setDeleteModal(null)} />
+          <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
+            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+                <RiDeleteBinFill size={24} className="text-red-400" />
+              </div>
+              <h3 className="text-center text-base font-bold text-white mb-1">Eliminar agente</h3>
+              <p className="text-center text-sm text-gray-400 mb-5">
+                ¿Eliminar a <span className="text-white font-medium">{deleteModal.name}</span>? Esta acción no se puede deshacer.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={handleDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                  Eliminar
                 </button>
               </div>
             </div>
