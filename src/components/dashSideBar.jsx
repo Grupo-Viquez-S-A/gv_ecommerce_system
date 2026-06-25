@@ -16,6 +16,7 @@ import {
   RiShoppingBagFill,
 } from "react-icons/ri";
 import { useAuth } from "../context/AuthContext.js";
+import { Link, useLocation } from "react-router-dom";
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
 function DashSideBar({
@@ -27,23 +28,38 @@ function DashSideBar({
   setSidebarOpen,
 }) {
   const { user, signOut } = useAuth();
-  const NavItem = ({ icon, label, active = false, collapsed }) => (
-    <a
-      href="#"
-      title={collapsed ? label : undefined}
-      className={`flex items-center gap-3 py-2.5 text-sm transition-colors ${
-        collapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4"
-      } ${
-        active
-          ? "text-white bg-[#1e3a5f] border-r-2 border-[#3b82f6]"
-          : "text-gray-400 hover:text-white hover:bg-[#141a2a] " +
-            (collapsed ? "rounded-lg" : "")
-      }`}
-    >
-      <span className={active ? "text-[#3b82f6]" : ""}>{icon}</span>
-      {!collapsed && <span className="whitespace-nowrap">{label}</span>}
-    </a>
-  );
+  const location = useLocation();
+  const NavItem = ({ icon, label, to, active = false, collapsed }) => {
+    const isActive = active || (to && location.pathname === to);
+    const content = (
+      <div
+        title={collapsed ? label : undefined}
+        className={`flex items-center gap-3 py-2.5 text-sm transition-colors ${
+          collapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4"
+        } ${
+          isActive
+            ? "text-white bg-[#1e3a5f] border-r-2 border-[#3b82f6]"
+            : "text-gray-400 hover:text-white hover:bg-[#141a2a] " +
+              (collapsed ? "rounded-lg" : "")
+        }`}
+      >
+        <span className={isActive ? "text-[#3b82f6]" : ""}>{icon}</span>
+        {!collapsed && <span className="whitespace-nowrap">{label}</span>}
+      </div>
+    );
+    if (to) {
+      return (
+        <Link to={to} onClick={() => setSidebarOpen(false)} className="block">
+          {content}
+        </Link>
+      );
+    }
+    return (
+      <button className="block w-full text-left" onClick={() => {}}>
+        {content}
+      </button>
+    );
+  };
 
   return (
     <>
@@ -102,7 +118,7 @@ function DashSideBar({
           <NavItem
             icon={<RiDashboardFill size={18} />}
             label="Dashboard"
-            active
+            to="/dashboard"
             collapsed={sidebarCollapsed}
           />
           <NavItem
@@ -189,6 +205,7 @@ function DashSideBar({
           <NavItem
             icon={<RiSettings4Fill size={18} />}
             label="Configuración"
+            to="/admin/usuarios"
             collapsed={sidebarCollapsed}
           />
         </nav>
@@ -277,7 +294,7 @@ function DashSideBar({
             <NavItem
               icon={<RiDashboardFill size={18} />}
               label="Dashboard"
-              active
+              to="/dashboard"
               collapsed={false}
             />
             <NavItem
@@ -338,6 +355,7 @@ function DashSideBar({
             <NavItem
               icon={<RiSettings4Fill size={18} />}
               label="Configuración"
+              to="/admin/usuarios"
               collapsed={false}
             />
           </nav>
