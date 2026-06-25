@@ -141,6 +141,7 @@ function DashSideBar({
           <NavItem
             icon={<RiShoppingBagFill size={18} />}
             label="Catálogo"
+            to="/catalogo"
             collapsed={sidebarCollapsed}
           />
           <NavItem

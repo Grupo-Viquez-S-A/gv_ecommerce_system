@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
+import Catalog from "./pages/Catalog";
 import AdminConfig from "./pages/adminConfig";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -25,6 +26,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Clients />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/catalogo"
+          element={
+            <ProtectedRoute>
+              <Catalog />
             </ProtectedRoute>
           }
         />
