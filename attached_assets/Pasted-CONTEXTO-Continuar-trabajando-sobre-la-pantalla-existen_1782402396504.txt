@@ -1,0 +1,436 @@
+CONTEXTO
+
+Continuar trabajando sobre la pantalla existente de Gestión de Usuarios.
+
+NO reemplazar el trabajo actual.
+
+NO reconstruir la página desde cero.
+
+La pantalla actual ya contiene:
+
+* Métricas superiores.
+* Tabla de usuarios.
+* Búsqueda.
+* Filtros.
+* Creación de usuarios.
+* Diseño dark theme.
+
+El objetivo es EVOLUCIONAR la pantalla existente para convertirla en un módulo corporativo completo de administración de usuarios.
+
+Mantener exactamente la misma línea visual ya implementada:
+
+* Tema oscuro.
+* Diseño SaaS empresarial.
+* Colores actuales.
+* Bordes suaves.
+* Cards modernas.
+* Consistencia visual con el dashboard principal.
+
+IMPORTANTE
+
+* Reutilizar componentes existentes del proyecto.
+* No generar componentes duplicados si ya existe alguno similar.
+* Mantener React + Vite + Javascript.
+* Mantener TailwindCSS.
+* Corregir cualquier error de compilación, importación o estilos que aparezca durante la implementación.
+* Verificar que la aplicación compile correctamente al finalizar.
+
+==================================================
+
+1. PESTAÑAS SUPERIORES
+   ==================================================
+
+Agregar navegación interna mediante tabs.
+
+Ubicación:
+
+Debajo del título "Gestión de Usuarios".
+
+Tabs:
+
+* Usuarios
+* Roles y Permisos
+* Actividad
+* Seguridad
+
+La pestaña activa debe usar el color principal azul del sistema.
+
+Las pestañas deben verse modernas y corporativas.
+
+==================================================
+2. MÓDULO DE ROLES Y PERMISOS
+=============================
+
+Al seleccionar la pestaña:
+
+Roles y Permisos
+
+Mostrar una nueva vista.
+
+Tabla:
+
+* Rol
+* Usuarios asignados
+* Cantidad de permisos
+* Estado
+* Acciones
+
+Datos mock:
+
+Administrador
+Supervisor
+Vendedor
+Contabilidad
+
+==================================================
+EDITOR DE ROL
+=============
+
+Al presionar:
+
+Editar Rol
+
+Abrir Drawer lateral.
+
+Título:
+
+Editar Rol
+
+Secciones de permisos:
+
+CLIENTES
+
+☑ Ver clientes
+☑ Crear clientes
+☑ Editar clientes
+☑ Eliminar clientes
+
+VENTAS
+
+☑ Ver ventas
+☑ Crear ventas
+☑ Editar ventas
+☑ Aprobar ventas
+
+COTIZACIONES
+
+☑ Ver cotizaciones
+☑ Crear cotizaciones
+☑ Aprobar cotizaciones
+
+CONFIGURACIÓN
+
+☑ Gestión de usuarios
+☑ Gestión de roles
+☑ Configuración general
+
+EMPRESAS
+
+☑ Grupo Víquez S.A
+☑ Textiles de Occidente
+☑ Pacific Pet Food
+☑ Constructora Víquez
+
+Botones:
+
+Cancelar
+Guardar Cambios
+
+==================================================
+3. MÓDULO DE ACTIVIDAD
+======================
+
+Crear pestaña:
+
+Actividad
+
+Diseño tipo timeline.
+
+Mostrar registros simulados.
+
+Ejemplo:
+
+Hoy
+
+• José González inició sesión
+Hace 10 minutos
+
+• María Castillo creó una cotización
+Hace 35 minutos
+
+• Luis Pérez actualizó un cliente
+Hace 1 hora
+
+Ayer
+
+• Ana Córdoba modificó una venta
+
+• Roberto Sánchez eliminó una cotización
+
+==================================================
+FILTROS DE ACTIVIDAD
+====================
+
+Agregar:
+
+* Buscar usuario
+* Tipo de actividad
+* Fecha
+
+==================================================
+4. PANEL DE DETALLE DE USUARIO
+==============================
+
+En la pestaña Usuarios.
+
+Agregar acción:
+
+Ver Perfil
+
+Al hacer clic abrir Drawer lateral.
+
+Información:
+
+==================================================
+DATOS PERSONALES
+================
+
+Nombre
+Correo
+Teléfono
+
+==================================================
+INFORMACIÓN LABORAL
+===================
+
+Rol
+Empresa
+Departamento
+
+==================================================
+ACCESO AL SISTEMA
+=================
+
+Fecha de creación
+
+Último acceso
+
+Última actualización
+
+Estado
+
+==================================================
+ESTADÍSTICAS
+============
+
+Ventas realizadas
+
+Cotizaciones creadas
+
+Clientes asignados
+
+Pedidos gestionados
+
+Mostrar en formato de tarjetas pequeñas.
+
+==================================================
+5. ASIGNACIÓN MULTIEMPRESA
+==========================
+
+Modificar formulario de usuario.
+
+Actualmente existe:
+
+Empresa
+
+Reemplazar por:
+
+Empresas asignadas
+
+Checkboxes:
+
+☑ Grupo Víquez S.A
+☑ Textiles de Occidente
+☐ Pacific Pet Food
+☐ Constructora Víquez
+
+Permitir múltiples selecciones.
+
+==================================================
+6. INVITACIONES PENDIENTES
+==========================
+
+Agregar nueva card de resumen.
+
+Título:
+
+Invitaciones Pendientes
+
+Valor:
+
+8
+
+Color:
+
+Amarillo
+
+==================================================
+TABLA DE INVITACIONES
+=====================
+
+Debajo de la tabla de usuarios.
+
+Columnas:
+
+Correo
+Fecha de envío
+Estado
+Acciones
+
+Ejemplos:
+
+[usuario1@empresa.com](mailto:usuario1@empresa.com)
+Pendiente
+
+[usuario2@empresa.com](mailto:usuario2@empresa.com)
+Pendiente
+
+Acciones:
+
+* Reenviar
+* Cancelar
+
+==================================================
+7. ACCIONES MASIVAS
+===================
+
+Agregar checkbox al inicio de cada fila.
+
+Al seleccionar usuarios mostrar barra contextual.
+
+Ejemplo:
+
+3 usuarios seleccionados
+
+Botones:
+
+Activar
+Desactivar
+Cambiar Rol
+Eliminar
+
+La barra debe aparecer con animación.
+
+==================================================
+8. SEGURIDAD
+============
+
+Pestaña independiente:
+
+Seguridad
+
+Diseño basado en cards.
+
+==================================================
+POLÍTICAS DE CONTRASEÑA
+=======================
+
+Switches:
+
+☑ Requerir contraseña fuerte
+
+☑ Forzar cambio cada 90 días
+
+☑ Bloquear después de 5 intentos fallidos
+
+==================================================
+AUTENTICACIÓN
+=============
+
+Switches:
+
+☑ Habilitar doble factor (2FA)
+
+☑ Permitir inicio de sesión con Google
+
+☑ Cierre automático por inactividad
+
+==================================================
+SESIÓN
+======
+
+Tiempo máximo:
+
+30 minutos
+
+Selector tipo dropdown.
+
+==================================================
+9. MÉTRICAS ADICIONALES
+=======================
+
+Agregar nuevas tarjetas superiores.
+
+Usuarios con acceso reciente
+
+Usuarios bloqueados
+
+Invitaciones pendientes
+
+Usuarios con 2FA activo
+
+Mantener diseño consistente con las métricas existentes.
+
+==================================================
+10. MEJORAS VISUALES
+====================
+
+Agregar:
+
+* Animaciones suaves.
+* Hover states.
+* Skeleton loaders mock.
+* Tooltips para acciones.
+* Transiciones en drawers y modales.
+* Estados vacíos elegantes.
+* Badges modernos.
+
+==================================================
+RESPONSIVE
+==========
+
+Garantizar funcionamiento completo en:
+
+* Desktop
+* Tablet
+* Mobile
+
+Las tablas deben convertirse en tarjetas en móviles.
+
+Evitar scroll horizontal.
+
+==================================================
+DATOS
+=====
+
+Toda la información debe ser mockeada.
+
+NO conectar backend.
+
+NO crear llamadas API.
+
+NO modificar Supabase.
+
+==================================================
+OBJETIVO FINAL
+==============
+
+Convertir la pantalla actual de Gestión de Usuarios en un módulo administrativo corporativo avanzado, similar al que podría encontrarse en sistemas como:
+
+* SAP Business One
+* Odoo Enterprise
+* Zoho One
+* Salesforce Admin
+* Monday Enterprise
+
+Manteniendo el estilo visual oscuro y moderno ya implementado en el proyecto.
