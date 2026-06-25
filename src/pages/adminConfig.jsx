@@ -13,6 +13,7 @@ import {
   RiUserFollowFill,
   RiUserUnfollowFill,
   RiShieldUserFill,
+  RiShieldStarFill,
   RiSearchLine,
   RiFilterLine,
   RiAddFill,
@@ -121,7 +122,7 @@ function AdminConfig() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState("create"); // "create" | "edit"
+  const [drawerMode, setDrawerMode] = useState("create"); // "create" | "edit" | "role"
   const [editUser, setEditUser] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
   const [deactivateModal, setDeactivateModal] = useState(null);
@@ -133,6 +134,11 @@ function AdminConfig() {
     company: "",
     role: "",
     status: "Activo",
+  });
+  const [roleForm, setRoleForm] = useState({
+    name: "",
+    description: "",
+    color: "azul",
   });
 
   const openCreateDrawer = () => {
@@ -159,6 +165,16 @@ function AdminConfig() {
       company: user.company,
       role: user.role,
       status: user.status,
+    });
+    setDrawerOpen(true);
+  };
+
+  const openRoleDrawer = () => {
+    setDrawerMode("role");
+    setRoleForm({
+      name: "",
+      description: "",
+      color: "azul",
     });
     setDrawerOpen(true);
   };
@@ -298,13 +314,22 @@ function AdminConfig() {
                 Administra los accesos y permisos de los usuarios del sistema. Adicionalmente puedes crear, editar o eliminar usuarios.
               </p>
             </div>
-            <button
-              onClick={openCreateDrawer}
-              className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex-shrink-0"
-            >
-              <RiAddFill size={18} />
-              Nuevo Usuario
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={openRoleDrawer}
+                className="flex items-center gap-2 bg-[#111827] hover:bg-[#1e3a5f] border border-[#1f2a40] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <RiShieldStarFill size={18} className="text-[#f59e0b]" />
+                Nuevo Rol
+              </button>
+              <button
+                onClick={openCreateDrawer}
+                className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <RiAddFill size={18} />
+                Nuevo Usuario
+              </button>
+            </div>
           </div>
 
           {/* Search + filter */}
@@ -537,22 +562,31 @@ function AdminConfig() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" ? (
+              {drawerMode === "create" && (
                 <>
                   <RiUserAddFill size={20} className="text-[#2563eb]" />
                   Nuevo Usuario
                 </>
-              ) : (
+              )}
+              {drawerMode === "edit" && (
                 <>
                   <RiEditFill size={20} className="text-[#2563eb]" />
                   Editar Usuario
+                </>
+              )}
+              {drawerMode === "role" && (
+                <>
+                  <RiShieldStarFill size={20} className="text-[#f59e0b]" />
+                  Nuevo Rol
                 </>
               )}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
               {drawerMode === "create"
                 ? "Completa la información para crear un nuevo usuario."
-                : "Modifica la información del usuario seleccionado."}
+                : drawerMode === "edit"
+                  ? "Modifica la información del usuario seleccionado."
+                  : "Define un nuevo rol de acceso para el sistema."}
             </p>
           </div>
           <button
@@ -565,100 +599,154 @@ function AdminConfig() {
 
         {/* Drawer body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-          <FormField
-            label="Nombre Completo"
-            placeholder="Ej. Juan Pérez Gómez"
-            value={form.name}
-            onChange={(v) => setForm({ ...form, name: v })}
-            icon="👤"
-          />
-          <FormField
-            label="Correo Electrónico"
-            placeholder="Ej. juan.perez@empresa.com"
-            value={form.email}
-            onChange={(v) => setForm({ ...form, email: v })}
-            type="email"
-            icon="✉️"
-          />
-          <FormField
-            label="Teléfono"
-            placeholder="Ej. +506 8888 8888"
-            value={form.phone}
-            onChange={(v) => setForm({ ...form, phone: v })}
-            type="tel"
-            icon="📞"
-          />
-
-          {/* Empresa */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              Empresa
-            </label>
-            <div className="relative">
-              <select
-                value={form.company}
-                onChange={(e) => setForm({ ...form, company: e.target.value })}
-                className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer"
-              >
-                <option value="">Seleccionar empresa</option>
-                <option>Grupo Víquez S.A</option>
-                <option>Constructora Víquez</option>
-                <option>Textiles de Occidente</option>
-                <option>Pacific Pet Food</option>
-                <option>Occidente Lab</option>
-              </select>
-              <RiArrowDownSFill size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Rol */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
-              Rol
-            </label>
-            <div className="relative">
-              <select
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer"
-              >
-                <option value="">Seleccionar rol</option>
-                <option>Administrador</option>
-                <option>Supervisor</option>
-                <option>Vendedor</option>
-                <option>Contabilidad</option>
-              </select>
-              <RiArrowDownSFill size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Estado */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-              Estado
-            </label>
-            <div className="flex gap-5">
-              {["Activo", "Inactivo"].map((s) => (
-                <label key={s} className="flex items-center gap-2 cursor-pointer group">
-                  <div
-                    onClick={() => setForm({ ...form, status: s })}
-                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                      form.status === s
-                        ? s === "Activo"
-                          ? "border-green-400"
-                          : "border-red-400"
-                        : "border-gray-600"
-                    }`}
-                  >
-                    {form.status === s && (
-                      <div className={`w-2 h-2 rounded-full ${s === "Activo" ? "bg-green-400" : "bg-red-400"}`} />
-                    )}
-                  </div>
-                  <span className={`text-sm ${form.status === s ? "text-white" : "text-gray-400"}`}>{s}</span>
+          {drawerMode === "role" ? (
+            <>
+              <FormField
+                label="Nombre del Rol"
+                placeholder="Ej. Gerente de Ventas"
+                value={roleForm.name}
+                onChange={(v) => setRoleForm({ ...roleForm, name: v })}
+                icon="🎯"
+              />
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Descripción
                 </label>
-              ))}
-            </div>
-          </div>
+                <textarea
+                  placeholder="Ej. Acceso completo al módulo de ventas y reportes."
+                  value={roleForm.description}
+                  onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#2563eb] transition-colors resize-none"
+                />
+              </div>
+              {/* Color */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Color del Badge
+                </label>
+                <div className="flex gap-3 flex-wrap">
+                  {[
+                    { value: "azul", label: "Azul", bg: "bg-[#1e3a5f]", dot: "bg-[#60a5fa]" },
+                    { value: "morado", label: "Morado", bg: "bg-[#2d1b4e]", dot: "bg-[#c084fc]" },
+                    { value: "verde", label: "Verde", bg: "bg-[#1a2e1a]", dot: "bg-[#4ade80]" },
+                    { value: "amarillo", label: "Amarillo", bg: "bg-[#2d200a]", dot: "bg-[#fbbf24]" },
+                    { value: "rojo", label: "Rojo", bg: "bg-[#3b1a1a]", dot: "bg-[#f87171]" },
+                  ].map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => setRoleForm({ ...roleForm, color: c.value })}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
+                        roleForm.color === c.value
+                          ? "border-white/40 text-white"
+                          : "border-[#1f2a40] text-gray-500 hover:text-gray-300"
+                      }`}
+                    >
+                      <span className={`w-3 h-3 rounded-full ${c.dot}`} />
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <FormField
+                label="Nombre Completo"
+                placeholder="Ej. Juan Pérez Gómez"
+                value={form.name}
+                onChange={(v) => setForm({ ...form, name: v })}
+                icon="👤"
+              />
+              <FormField
+                label="Correo Electrónico"
+                placeholder="Ej. juan.perez@empresa.com"
+                value={form.email}
+                onChange={(v) => setForm({ ...form, email: v })}
+                type="email"
+                icon="✉️"
+              />
+              <FormField
+                label="Teléfono"
+                placeholder="Ej. +506 8888 8888"
+                value={form.phone}
+                onChange={(v) => setForm({ ...form, phone: v })}
+                type="tel"
+                icon="📞"
+              />
+
+              {/* Empresa */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Empresa
+                </label>
+                <div className="relative">
+                  <select
+                    value={form.company}
+                    onChange={(e) => setForm({ ...form, company: e.target.value })}
+                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="">Seleccionar empresa</option>
+                    <option>Grupo Víquez S.A</option>
+                    <option>Constructora Víquez</option>
+                    <option>Textiles de Occidente</option>
+                    <option>Pacific Pet Food</option>
+                    <option>Occidente Lab</option>
+                  </select>
+                  <RiArrowDownSFill size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Rol */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                  Rol
+                </label>
+                <div className="relative">
+                  <select
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer"
+                  >
+                    <option value="">Seleccionar rol</option>
+                    <option>Administrador</option>
+                    <option>Supervisor</option>
+                    <option>Vendedor</option>
+                    <option>Contabilidad</option>
+                  </select>
+                  <RiArrowDownSFill size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Estado */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                  Estado
+                </label>
+                <div className="flex gap-5">
+                  {["Activo", "Inactivo"].map((s) => (
+                    <label key={s} className="flex items-center gap-2 cursor-pointer group">
+                      <div
+                        onClick={() => setForm({ ...form, status: s })}
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
+                          form.status === s
+                            ? s === "Activo"
+                              ? "border-green-400"
+                              : "border-red-400"
+                            : "border-gray-600"
+                        }`}
+                      >
+                        {form.status === s && (
+                          <div className={`w-2 h-2 rounded-full ${s === "Activo" ? "bg-green-400" : "bg-red-400"}`} />
+                        )}
+                      </div>
+                      <span className={`text-sm ${form.status === s ? "text-white" : "text-gray-400"}`}>{s}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Drawer footer */}
@@ -670,7 +758,11 @@ function AdminConfig() {
             Cancelar
           </button>
           <button className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-            {drawerMode === "create" ? "Guardar Usuario" : "Guardar Cambios"}
+            {drawerMode === "create"
+              ? "Guardar Usuario"
+              : drawerMode === "edit"
+                ? "Guardar Cambios"
+                : "Guardar Rol"}
           </button>
         </div>
       </div>
