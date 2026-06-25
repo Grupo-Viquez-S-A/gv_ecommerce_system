@@ -1095,23 +1095,6 @@ export default function AdminConfig() {
                 </div>
               </div>
 
-              {/* Estadísticas */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Estadísticas</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { label: "Ventas realizadas", value: profileUser.sales, color: "text-[#60a5fa]", bg: "bg-[#1e3a5f]" },
-                    { label: "Cotizaciones", value: profileUser.quotes, color: "text-[#c084fc]", bg: "bg-[#2d1b4e]" },
-                    { label: "Clientes asignados", value: profileUser.clients, color: "text-[#4ade80]", bg: "bg-[#1a2e1a]" },
-                    { label: "Pedidos gestionados", value: profileUser.orders, color: "text-[#fbbf24]", bg: "bg-[#2d200a]" },
-                  ].map(({ label, value, color, bg }) => (
-                    <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
-                      <div className={`text-2xl font-bold ${color}`}>{value}</div>
-                      <div className="text-xs text-gray-400 mt-1 leading-tight">{label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
         </div>
