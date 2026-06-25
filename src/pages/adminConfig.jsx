@@ -33,6 +33,7 @@ const MOCK_USERS = [
     color: "#3b82f6",
     name: "José González",
     email: "jose@grupoviquez.com",
+    phone: "+506 8421 1234",
     role: "Administrador",
     roleColor: "bg-[#1e3a5f] text-[#60a5fa]",
     company: "Grupo Víquez S.A",
@@ -45,6 +46,7 @@ const MOCK_USERS = [
     color: "#ec4899",
     name: "María Castillo",
     email: "maria.castillo@grupoviquez.com",
+    phone: "+506 8815 6789",
     role: "Supervisor",
     roleColor: "bg-[#2d1b4e] text-[#c084fc]",
     company: "Grupo Víquez S.A",
@@ -57,6 +59,7 @@ const MOCK_USERS = [
     color: "#6366f1",
     name: "Luis Pérez",
     email: "luis.perez@grupoviquez.com",
+    phone: "+506 8350 2244",
     role: "Vendedor",
     roleColor: "bg-[#1a2e1a] text-[#4ade80]",
     company: "Textiles de Occidente",
@@ -69,6 +72,7 @@ const MOCK_USERS = [
     color: "#f59e0b",
     name: "Ana Córdoba",
     email: "ana.cordoba@grupoviquez.com",
+    phone: "+506 8560 3311",
     role: "Contabilidad",
     roleColor: "bg-[#2d200a] text-[#fbbf24]",
     company: "Grupo Víquez S.A",
@@ -81,6 +85,7 @@ const MOCK_USERS = [
     color: "#ef4444",
     name: "Roberto Sánchez",
     email: "roberto.sanchez@grupoviquez.com",
+    phone: "+506 8721 9900",
     role: "Vendedor",
     roleColor: "bg-[#1a2e1a] text-[#4ade80]",
     company: "Pacific Pet Food",
@@ -93,6 +98,7 @@ const MOCK_USERS = [
     color: "#22c55e",
     name: "Daniela Cruz",
     email: "daniela.cruz@grupoviquez.com",
+    phone: "+506 8492 5567",
     role: "Supervisor",
     roleColor: "bg-[#2d1b4e] text-[#c084fc]",
     company: "Constructora Víquez",
@@ -350,7 +356,7 @@ function AdminConfig() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#1f2a40]">
-                  {["USUARIO", "CORREO", "ROL", "EMPRESA", "ESTADO", "ÚLTIMO ACCESO", "ACCIONES"].map((col) => (
+                  {["USUARIO", "CORREO", "TELÉFONO", "ROL", "EMPRESA", "ESTADO", "ÚLTIMO ACCESO", "ACCIONES"].map((col) => (
                     <th
                       key={col}
                       className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-5 py-3"
@@ -380,6 +386,8 @@ function AdminConfig() {
                     </td>
                     {/* Correo */}
                     <td className="px-5 py-3 text-gray-400">{u.email}</td>
+                    {/* Teléfono */}
+                    <td className="px-5 py-3 text-gray-400 text-xs">{u.phone}</td>
                     {/* Rol */}
                     <td className="px-5 py-3">
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${u.roleColor}`}>
@@ -462,6 +470,7 @@ function AdminConfig() {
                     <div>
                       <div className="font-medium text-white text-sm">{u.name}</div>
                       <div className="text-xs text-gray-500">{u.email}</div>
+                      <div className="text-xs text-gray-600">{u.phone}</div>
                     </div>
                   </div>
                   {u.status === "Activo" ? (
