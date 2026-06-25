@@ -35,14 +35,34 @@ import {
 
 /* ─── MOCK DATA: CLIENTES ─────────────────────────────────────────── */
 const MOCK_CLIENTS = [
-  { id: 1, initials: "HL", color: "#3b82f6", name: "Hotel Los Laureles", company: "Textiles de Occidente", sales: "18.5 M", lastPurchase: "Hace 3 días", status: "Activo", email: "contacto@loslaureles.com", phone: "+506 2222 1111", address: "Puntarenas, Costa Rica", totalOrders: 47, totalQuotes: 23, notes: "" },
-  { id: 2, initials: "VG", color: "#22c55e", name: "Veterinaria Grecia", company: "Pacific Pet Food", sales: "12.7 M", lastPurchase: "Hoy", status: "Activo", email: "info@veterinariagrecia.com", phone: "+506 2494 2222", address: "Grecia, Alajuela", totalOrders: 62, totalQuotes: 18, notes: "" },
-  { id: 3, initials: "CS", color: "#f59e0b", name: "Constructora San Carlos", company: "Constructora Víquez", sales: "9.3 M", lastPurchase: "Hace 2 días", status: "Activo", email: "ventas@csan.carlos.com", phone: "+506 2401 3333", address: "San Carlos, Alajuela", totalOrders: 31, totalQuotes: 15, notes: "" },
-  { id: 4, initials: "RT", color: "#ec4899", name: "Restaurante El Trapiche", company: "Occidente Lab", sales: "6.8 M", lastPurchase: "Hace 1 semana", status: "Activo", email: "eltrapiche@grupoviquez.com", phone: "+506 2645 4444", address: "Naranjo, Alajuela", totalOrders: 22, totalQuotes: 8, notes: "" },
-  { id: 5, initials: "HV", color: "#6366f1", name: "Hotel Vista Real", company: "Textiles de Occidente", sales: "5.4 M", lastPurchase: "Ayer", status: "Activo", email: "reservas@vistareal.com", phone: "+506 2637 5555", address: "San Ramón, Alajuela", totalOrders: 19, totalQuotes: 12, notes: "" },
-  { id: 6, initials: "LE", color: "#14b8a6", name: "Lavandería El Sol", company: "Occidente Lab", sales: "4.1 M", lastPurchase: "Hace 4 días", status: "Activo", email: "elsol@lavanderia.com", phone: "+506 2443 6666", address: "Palmares, Alajuela", totalOrders: 28, totalQuotes: 5, notes: "" },
-  { id: 7, initials: "PS", color: "#a855f7", name: "Pet Shop San Rafael", company: "Pacific Pet Food", sales: "3.2 M", lastPurchase: "Hace 5 días", status: "Activo", email: "sanrafael@petshop.com", phone: "+506 2277 7777", address: "San Rafael, Heredia", totalOrders: 15, totalQuotes: 7, notes: "" },
-  { id: 8, initials: "AE", color: "#ef4444", name: "Agropecuaria La Esperanza", company: "Agro Occidente Group", sales: "2.9 M", lastPurchase: "Hace 1 semana", status: "Activo", email: "laesperanza@agro.com", phone: "+506 2456 8888", address: "San Carlos, Alajuela", totalOrders: 11, totalQuotes: 4, notes: "" },
+  { id: 1, initials: "HL", color: "#3b82f6", name: "Hotel Los Laureles", company: "Textiles de Occidente", sales: "18.5 M", lastPurchase: "Hace 3 días", status: "Activo", email: "contacto@loslaureles.com", phone: "+506 2222 1111", address: "Puntarenas, Costa Rica", totalOrders: 47, totalQuotes: 23, notes: "", branches: [
+    { name: "Alajuela", address: "Av. 2, Calle 3, Alajuela Centro", phone: "2440-1122", email: "alajuela@hotelloslaureles.com", sales: "8.5 M", lastPurchase: "Hace 2 días" },
+    { name: "San José", address: "Av. Central, San José Centro", phone: "2222-3344", email: "sanjose@hotelloslaureles.com", sales: "6.2 M", lastPurchase: "Ayer" },
+    { name: "Heredia", address: "Oestado Norte del Mall Oxígeno", phone: "2266-5566", email: "heredia@hotelloslaureles.com", sales: "3.8 M", lastPurchase: "Hace 3 días" },
+  ]},
+  { id: 2, initials: "VG", color: "#22c55e", name: "Veterinaria Grecia", company: "Pacific Pet Food", sales: "12.7 M", lastPurchase: "Hoy", status: "Activo", email: "info@veterinariagrecia.com", phone: "+506 2494 2222", address: "Grecia, Alajuela", totalOrders: 62, totalQuotes: 18, notes: "", branches: [
+    { name: "Grecia", address: "Frente al Parque Central, Grecia", phone: "2494-2222", email: "grecia@veterinariagrecia.com", sales: "12.7 M", lastPurchase: "Hoy" },
+  ]},
+  { id: 3, initials: "CS", color: "#f59e0b", name: "Constructora San Carlos", company: "Constructora Víquez", sales: "9.3 M", lastPurchase: "Hace 2 días", status: "Activo", email: "ventas@csan.carlos.com", phone: "+506 2401 3333", address: "San Carlos, Alajuela", totalOrders: 31, totalQuotes: 15, notes: "", branches: [
+    { name: "San Carlos", address: "Barrio La Palmera, San Carlos", phone: "2401-3333", email: "sancarlos@constructora.com", sales: "6.1 M", lastPurchase: "Hace 2 días" },
+    { name: "San Ramón", address: "Calle 5, San Ramón", phone: "2455-2222", email: "sanramon@constructora.com", sales: "3.2 M", lastPurchase: "Hace 1 semana" },
+  ]},
+  { id: 4, initials: "RT", color: "#ec4899", name: "Restaurante El Trapiche", company: "Occidente Lab", sales: "6.8 M", lastPurchase: "Hace 1 semana", status: "Activo", email: "eltrapiche@grupoviquez.com", phone: "+506 2645 4444", address: "Naranjo, Alajuela", totalOrders: 22, totalQuotes: 8, notes: "", branches: [
+    { name: "Naranjo", address: "Frente al Estadio de Naranjo", phone: "2645-4444", email: "naranjo@eltrapiche.com", sales: "6.8 M", lastPurchase: "Hace 1 semana" },
+  ]},
+  { id: 5, initials: "HV", color: "#6366f1", name: "Hotel Vista Real", company: "Textiles de Occidente", sales: "5.4 M", lastPurchase: "Ayer", status: "Activo", email: "reservas@vistareal.com", phone: "+506 2637 5555", address: "San Ramón, Alajuela", totalOrders: 19, totalQuotes: 12, notes: "", branches: [
+    { name: "San Ramón", address: "Ruta 1, San Ramón", phone: "2637-5555", email: "sanramon@vistareal.com", sales: "5.4 M", lastPurchase: "Ayer" },
+  ]},
+  { id: 6, initials: "LE", color: "#14b8a6", name: "Lavandería El Sol", company: "Occidente Lab", sales: "4.1 M", lastPurchase: "Hace 4 días", status: "Activo", email: "elsol@lavanderia.com", phone: "+506 2443 6666", address: "Palmares, Alajuela", totalOrders: 28, totalQuotes: 5, notes: "", branches: [
+    { name: "Palmares", address: "Avenida Central, Palmares", phone: "2443-6666", email: "palmares@elsol.com", sales: "3.1 M", lastPurchase: "Hace 4 días" },
+    { name: "San Ramón", address: "Plaza del Mercado, San Ramón", phone: "2455-7777", email: "sanramon@elsol.com", sales: "1.0 M", lastPurchase: "Hace 2 semanas" },
+  ]},
+  { id: 7, initials: "PS", color: "#a855f7", name: "Pet Shop San Rafael", company: "Pacific Pet Food", sales: "3.2 M", lastPurchase: "Hace 5 días", status: "Activo", email: "sanrafael@petshop.com", phone: "+506 2277 7777", address: "San Rafael, Heredia", totalOrders: 15, totalQuotes: 7, notes: "", branches: [
+    { name: "San Rafael", address: "Calle 3, San Rafael", phone: "2277-7777", email: "sanrafael@petshop.com", sales: "3.2 M", lastPurchase: "Hace 5 días" },
+  ]},
+  { id: 8, initials: "AE", color: "#ef4444", name: "Agropecuaria La Esperanza", company: "Agro Occidente Group", sales: "2.9 M", lastPurchase: "Hace 1 semana", status: "Activo", email: "laesperanza@agro.com", phone: "+506 2456 8888", address: "San Carlos, Alajuela", totalOrders: 11, totalQuotes: 4, notes: "", branches: [
+    { name: "San Carlos", address: "Carretera a Arenal, San Carlos", phone: "2456-8888", email: "sancarlos@laesperanza.com", sales: "2.9 M", lastPurchase: "Hace 1 semana" },
+  ]},
 ];
 
 const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e", "#14b8a6", "#a855f7", "#ef4444"];
@@ -91,6 +111,7 @@ export default function Clients() {
   const [editClient, setEditClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
   const [deactivateModal, setDeactivateModal] = useState(null);
+  const [branchModal, setBranchModal] = useState(null);
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", address: "", status: "Activo", notes: "", branches: [{ name: "", phone: "", address: "" }] });
 
@@ -303,6 +324,9 @@ export default function Clients() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1">
+                        <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver sucursales">
+                          <RiStoreFill size={14} />
+                        </button>
                         <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver cliente">
                           <RiEyeFill size={14} />
                         </button>
@@ -362,6 +386,7 @@ export default function Clients() {
                   <span className="text-gray-500 text-xs">{c.lastPurchase}</span>
                 </div>
                 <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#1f2a40]">
+                  <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiStoreFill size={13} /></button>
                   <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEyeFill size={13} /></button>
                   <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEditFill size={13} /></button>
                   <button onClick={() => setDeactivateModal(c)} className="w-7 h-7 rounded-lg text-yellow-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors"><RiUserSharedFill size={13} /></button>
@@ -608,6 +633,118 @@ export default function Clients() {
           </div>
         )}
       </div>
+
+      {/* Branches Modal */}
+      {branchModal && (
+        <>
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setBranchModal(null)} />
+          <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
+            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f2a40] sticky top-0 bg-[#111827] z-10 rounded-t-2xl">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ backgroundColor: branchModal.color }}>
+                    {branchModal.initials}
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">{branchModal.name}</h3>
+                    <p className="text-sm text-gray-400">{branchModal.company}</p>
+                  </div>
+                </div>
+                <button onClick={() => setBranchModal(null)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors">
+                  <RiCloseLine size={18} />
+                </button>
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 border-b border-[#1f2a40]">
+                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">Ventas acumuladas</div>
+                  <div className="text-base font-bold text-white">{branchModal.sales}</div>
+                </div>
+                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">Cotizaciones activas</div>
+                  <div className="text-base font-bold text-white">{branchModal.totalQuotes}</div>
+                </div>
+                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">Pedidos activos</div>
+                  <div className="text-base font-bold text-white">{branchModal.totalOrders}</div>
+                </div>
+                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+                  <div className="text-xs text-gray-500 mb-1">Sucursales</div>
+                  <div className="text-base font-bold text-white">{branchModal.branches?.length || 0}</div>
+                </div>
+              </div>
+
+              {/* Branches grid */}
+              <div className="px-6 py-5">
+                <div className="mb-4">
+                  <h4 className="text-base font-bold text-white">Sucursales</h4>
+                  <p className="text-sm text-gray-500">Todas las sucursales de este cliente.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {(branchModal.branches || []).map((branch, idx) => (
+                    <div key={idx} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-4 hover:border-[#2563eb]/50 transition-colors">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[#60a5fa] flex-shrink-0">
+                          <RiMapPinFill size={14} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-white">{branch.name}</div>
+                          <div className="text-xs text-gray-500">Sucursal {branch.name}</div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {branch.address && (
+                          <div className="flex items-start gap-2">
+                            <RiMapPinFill size={12} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                            <span className="text-xs text-gray-300">{branch.address}</span>
+                          </div>
+                        )}
+                        {branch.phone && (
+                          <div className="flex items-center gap-2">
+                            <RiPhoneFill size={12} className="text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-300">{branch.phone}</span>
+                          </div>
+                        )}
+                        {branch.email && (
+                          <div className="flex items-center gap-2">
+                            <RiMailFill size={12} className="text-gray-500 flex-shrink-0" />
+                            <span className="text-xs text-gray-300">{branch.email}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-[#1f2a40] flex items-center justify-between">
+                        <div className="text-xs text-gray-500">
+                          Ventas: <span className="text-white font-medium">{branch.sales || "N/A"}</span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {branch.lastPurchase || "N/A"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {(!branchModal.branches || branchModal.branches.length === 0) && (
+                  <div className="flex flex-col items-center justify-center py-10 gap-3">
+                    <div className="w-12 h-12 rounded-full bg-[#1f2a40] flex items-center justify-center text-gray-600">
+                      <RiStoreFill size={24} />
+                    </div>
+                    <p className="text-sm text-gray-500">Este cliente no tiene sucursales registradas</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end px-6 py-4 border-t border-[#1f2a40] sticky bottom-0 bg-[#111827] rounded-b-2xl">
+                <button onClick={() => setBranchModal(null)} className="bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors">
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Deactivate Modal */}
       {deactivateModal && (
