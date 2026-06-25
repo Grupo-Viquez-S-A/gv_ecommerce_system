@@ -146,6 +146,7 @@ function DashSideBar({
           <NavItem
             icon={<RiGroupFill size={18} />}
             label="Clientes"
+            to="/clientes"
             collapsed={sidebarCollapsed}
           />
           <NavItem
