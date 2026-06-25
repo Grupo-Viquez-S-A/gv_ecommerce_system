@@ -12,13 +12,12 @@ import {
   RiFilterLine,
   RiAddFill,
   RiCloseLine,
-  RiDeleteBinFill,
   RiArrowLeftSLine,
   RiArrowRightSFill,
   RiCheckboxCircleFill,
   RiCloseCircleFill,
   RiEditFill,
-  RiMoreFill,
+  RiUserSharedFill,
   RiEyeFill,
   RiBuilding2Fill,
   RiPhoneFill,
@@ -88,7 +87,7 @@ export default function Clients() {
   const [drawerMode, setDrawerMode] = useState("create"); // "create" | "edit" | "view"
   const [editClient, setEditClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
-  const [deleteModal, setDeleteModal] = useState(null);
+  const [deactivateModal, setDeactivateModal] = useState(null);
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", company: "", address: "", status: "Activo", notes: "" });
 
@@ -307,11 +306,8 @@ export default function Clients() {
                         <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar">
                           <RiEditFill size={14} />
                         </button>
-                        <button onClick={() => setDeleteModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Eliminar">
-                          <RiDeleteBinFill size={14} />
-                        </button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Más opciones">
-                          <RiMoreFill size={14} />
+                        <button onClick={() => setDeactivateModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors" title="Desactivar">
+                          <RiUserSharedFill size={14} />
                         </button>
                       </div>
                     </td>
@@ -365,8 +361,7 @@ export default function Clients() {
                 <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#1f2a40]">
                   <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEyeFill size={13} /></button>
                   <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEditFill size={13} /></button>
-                  <button onClick={() => setDeleteModal(c)} className="w-7 h-7 rounded-lg text-red-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors"><RiDeleteBinFill size={13} /></button>
-                  <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiMoreFill size={13} /></button>
+                  <button onClick={() => setDeactivateModal(c)} className="w-7 h-7 rounded-lg text-yellow-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors"><RiUserSharedFill size={13} /></button>
                 </div>
               </div>
             ))}
@@ -546,25 +541,25 @@ export default function Clients() {
         )}
       </div>
 
-      {/* Delete Modal */}
-      {deleteModal && (
+      {/* Deactivate Modal */}
+      {deactivateModal && (
         <>
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setDeleteModal(null)} />
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setDeactivateModal(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
             <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-                <RiDeleteBinFill size={24} className="text-red-400" />
+              <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-4">
+                <RiUserSharedFill size={24} className="text-yellow-400" />
               </div>
-              <h3 className="text-center text-base font-bold text-white mb-1">Eliminar cliente</h3>
+              <h3 className="text-center text-base font-bold text-white mb-1">Desactivar cliente</h3>
               <p className="text-center text-sm text-gray-400 mb-5">
-                ¿Estás seguro de que deseas eliminar a <span className="text-white font-medium">{deleteModal.name}</span>? Esta acción no se puede deshacer.
+                ¿Desactivar a <span className="text-white font-medium">{deactivateModal.name}</span>? El cliente pasará a estado inactivo y no podrá realizar compras.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
                   Cancelar
                 </button>
-                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-                  Eliminar
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                  Desactivar
                 </button>
               </div>
             </div>
