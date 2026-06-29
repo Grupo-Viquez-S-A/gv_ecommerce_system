@@ -98,7 +98,7 @@ const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e"];
 /* ─── SMALL HELPERS ─────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#2563eb] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
       {icon || label}
     </button>
   );
@@ -115,7 +115,7 @@ function FormField({ label, placeholder, value, onChange, type = "text", icon })
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#2563eb] transition-colors`}
+          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors`}
         />
       </div>
     </div>
@@ -126,7 +126,7 @@ function Toggle({ checked, onChange }) {
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 ${checked ? "bg-[#2563eb]" : "bg-[#2a3448]"}`}
+      className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 ${checked ? "bg-[#3B82F6]" : "bg-[#2a3448]"}`}
     >
       <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${checked ? "left-5" : "left-0.5"}`} />
     </button>
@@ -288,7 +288,7 @@ export default function AdminConfig() {
 
   /* ─── RENDER ───────────────────────────────────────────────── */
   return (
-    <div className="w-full h-screen bg-[#0a0e1a] text-white flex overflow-hidden">
+    <div className="w-full h-screen bg-[#0B1120] text-white flex overflow-hidden">
       <DashSideBar
         sidebarCollapsed={sidebarCollapsed}
         sidebarOpen={sidebarOpen}
@@ -373,7 +373,7 @@ export default function AdminConfig() {
                   </button>
                   <button
                     onClick={openCreateDrawer}
-                    className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                   >
                     <RiAddFill size={18} />
                     Nuevo Usuario
@@ -383,7 +383,7 @@ export default function AdminConfig() {
               {activeTab === "roles" && (
                 <button
                   onClick={openRoleDrawer}
-                  className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                 >
                   <RiAddFill size={18} />
                   Nuevo Rol
@@ -395,7 +395,7 @@ export default function AdminConfig() {
           {/* Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#2563eb]/40 transition-colors">
+              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#3B82F6]/40 transition-colors">
                 <div className={`w-8 h-8 rounded-lg ${m.color} flex items-center justify-center ${m.iconColor} mb-2`}>
                   {m.icon}
                 </div>
@@ -416,7 +416,7 @@ export default function AdminConfig() {
                 onClick={() => setActiveTab(t.key)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
                   activeTab === t.key
-                    ? "border-[#2563eb] text-white"
+                    ? "border-[#3B82F6] text-white"
                     : "border-transparent text-gray-500 hover:text-gray-300"
                 }`}
               >
@@ -431,7 +431,7 @@ export default function AdminConfig() {
             <>
               {/* Bulk action bar */}
               {selectedUsers.length > 0 && (
-                <div className="mb-4 bg-[#1e3a5f] border border-[#2563eb]/50 rounded-xl px-5 py-3 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="mb-4 bg-[#1e3a5f] border border-[#3B82F6]/50 rounded-xl px-5 py-3 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
                   <span className="text-sm font-medium text-white">
                     <span className="text-[#60a5fa] font-bold">{selectedUsers.length}</span> usuarios seleccionados
                   </span>
@@ -464,7 +464,7 @@ export default function AdminConfig() {
                     placeholder="Buscar usuario..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#2563eb] transition-colors"
+                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#3B82F6] transition-colors"
                   />
                 </div>
                 <div className="relative">
@@ -472,7 +472,7 @@ export default function AdminConfig() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer min-w-[160px]"
+                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#3B82F6] transition-colors appearance-none cursor-pointer min-w-[160px]"
                   >
                     <option value="Todos">Todos los estados</option>
                     <option value="Activo">Activo</option>
@@ -492,7 +492,7 @@ export default function AdminConfig() {
                           type="checkbox"
                           checked={selectedUsers.length === filtered.length && filtered.length > 0}
                           onChange={toggleSelectAll}
-                          className="accent-[#2563eb] w-4 h-4 rounded cursor-pointer"
+                          className="accent-[#3B82F6] w-4 h-4 rounded cursor-pointer"
                         />
                       </th>
                       {["USUARIO", "CORREO", "TELÉFONO", "ROL", "EMPRESA", "ESTADO", "ÚLTIMO ACCESO", "ACCIONES"].map((col) => (
@@ -513,7 +513,7 @@ export default function AdminConfig() {
                             type="checkbox"
                             checked={selectedUsers.includes(u.id)}
                             onChange={() => toggleSelectUser(u.id)}
-                            className="accent-[#2563eb] w-4 h-4 rounded cursor-pointer"
+                            className="accent-[#3B82F6] w-4 h-4 rounded cursor-pointer"
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -655,7 +655,7 @@ export default function AdminConfig() {
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
                               <div className="h-1.5 bg-[#1f2a40] rounded-full w-20">
-                                <div className="h-1.5 bg-[#2563eb] rounded-full" style={{ width: `${(role.permissions / 16) * 100}%` }} />
+                                <div className="h-1.5 bg-[#3B82F6] rounded-full" style={{ width: `${(role.permissions / 16) * 100}%` }} />
                               </div>
                               <span className="text-gray-400 text-xs">{role.permissions}</span>
                             </div>
@@ -708,7 +708,7 @@ export default function AdminConfig() {
                     placeholder="Buscar usuario..."
                     value={activitySearch}
                     onChange={(e) => setActivitySearch(e.target.value)}
-                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#2563eb] transition-colors"
+                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#3B82F6] transition-colors"
                   />
                 </div>
                 <div className="relative">
@@ -716,7 +716,7 @@ export default function AdminConfig() {
                   <select
                     value={activityType}
                     onChange={(e) => setActivityType(e.target.value)}
-                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer min-w-[180px]"
+                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#3B82F6] transition-colors appearance-none cursor-pointer min-w-[180px]"
                   >
                     <option value="Todos">Todos los tipos</option>
                     <option value="login">Inicios de sesión</option>
@@ -730,7 +730,7 @@ export default function AdminConfig() {
                   <RiCalendarLine size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
                     type="date"
-                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#2563eb] transition-colors"
+                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#3B82F6] transition-colors"
                   />
                 </div>
               </div>
@@ -835,7 +835,7 @@ export default function AdminConfig() {
                       <select
                         value={security.sessionTime}
                         onChange={(e) => setSecurity((s) => ({ ...s, sessionTime: e.target.value }))}
-                        className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer"
+                        className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors appearance-none cursor-pointer"
                       >
                         <option value="15">15 minutos</option>
                         <option value="30">30 minutos</option>
@@ -849,7 +849,7 @@ export default function AdminConfig() {
                 </div>
               </div>
 
-              <button className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+              <button className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
                 <RiCheckLine size={16} /> Guardar Configuración
               </button>
             </div>
@@ -872,8 +872,8 @@ export default function AdminConfig() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" && <><RiUserAddFill size={20} className="text-[#2563eb]" />Nuevo Usuario</>}
-              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#2563eb]" />Editar Usuario</>}
+              {drawerMode === "create" && <><RiUserAddFill size={20} className="text-[#3B82F6]" />Nuevo Usuario</>}
+              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#3B82F6]" />Editar Usuario</>}
               {drawerMode === "role" && <><RiShieldStarFill size={20} className="text-[#f59e0b]" />Nuevo Rol</>}
               {drawerMode === "editRole" && <><RiEditFill size={20} className="text-[#c084fc]" />Editar Rol — {editRole?.name}</>}
               {drawerMode === "profile" && <><RiUserFill size={20} className="text-[#60a5fa]" />Perfil de Usuario</>}
@@ -909,7 +909,7 @@ export default function AdminConfig() {
                     <label key={company} className="flex items-center gap-3 cursor-pointer group p-2 rounded-lg hover:bg-[#141a2a] transition-colors">
                       <div
                         onClick={() => toggleCompanyInForm(company)}
-                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.companies.includes(company) ? "border-[#2563eb] bg-[#2563eb]" : "border-[#2a3448]"}`}
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.companies.includes(company) ? "border-[#3B82F6] bg-[#3B82F6]" : "border-[#2a3448]"}`}
                       >
                         {form.companies.includes(company) && <RiCheckLine size={10} className="text-white" />}
                       </div>
@@ -923,7 +923,7 @@ export default function AdminConfig() {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Rol</label>
                 <div className="relative">
-                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors appearance-none cursor-pointer">
+                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors appearance-none cursor-pointer">
                     <option value="">Seleccionar rol</option>
                     <option>Administrador</option>
                     <option>Supervisor</option>
@@ -962,7 +962,7 @@ export default function AdminConfig() {
                   value={roleForm.description}
                   onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
                   rows={3}
-                  className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#2563eb] transition-colors resize-none"
+                  className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors resize-none"
                 />
               </div>
               <div>
@@ -1015,7 +1015,7 @@ export default function AdminConfig() {
                         <label key={idx} className="flex items-center gap-3 cursor-pointer group p-1.5 rounded-lg hover:bg-[#141a2a] transition-colors">
                           <div
                             onClick={() => togglePermission(editRole.name, section.key, idx)}
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${active.includes(idx) ? "border-[#2563eb] bg-[#2563eb]" : "border-[#2a3448]"}`}
+                            className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${active.includes(idx) ? "border-[#3B82F6] bg-[#3B82F6]" : "border-[#2a3448]"}`}
                           >
                             {active.includes(idx) && <RiCheckLine size={10} className="text-white" />}
                           </div>
@@ -1105,14 +1105,14 @@ export default function AdminConfig() {
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button className="flex-1 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               {drawerMode === "create" ? "Guardar Usuario" : drawerMode === "edit" ? "Guardar Cambios" : drawerMode === "editRole" ? "Guardar Permisos" : "Guardar Rol"}
             </button>
           </div>
         )}
         {drawerMode === "profile" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(profileUser), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#2563eb] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(profileUser), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#3B82F6] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               <RiEditFill size={15} /> Editar Usuario
             </button>
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">

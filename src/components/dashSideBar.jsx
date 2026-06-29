@@ -38,12 +38,12 @@ function DashSideBar({
           collapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4"
         } ${
           isActive
-            ? "text-white bg-[#1e3a5f] border-r-2 border-[#3b82f6]"
+            ? "text-white bg-[#1e3a5f] border-r-2 border-[#C9A227]"
             : "text-gray-400 hover:text-white hover:bg-[#141a2a] " +
               (collapsed ? "rounded-lg" : "")
         }`}
       >
-        <span className={isActive ? "text-[#3b82f6]" : ""}>{icon}</span>
+        <span className={isActive ? "text-[#C9A227]" : ""}>{icon}</span>
         {!collapsed && <span className="whitespace-nowrap">{label}</span>}
       </div>
     );
@@ -277,7 +277,7 @@ function DashSideBar({
         <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[#0f1623] border-r border-[#1f2a40]">
           <div className="flex items-center gap-3 px-4 h-14 border-b border-[#1f2a40]">
             <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center flex-shrink-0">
-              <span className="font-bold text-[#0a0e1a] text-sm">GV</span>
+              <span className="font-bold text-[#0B1120] text-sm">GV</span>
             </div>
             <span className="font-bold text-sm tracking-wider">
               Grupo Víquez

@@ -124,7 +124,7 @@ function Dashboard() {
   );
 
   return (
-    <div className="w-full h-screen bg-[#0a0e1a] text-white flex overflow-hidden">
+    <div className="w-full h-screen bg-[#0B1120] text-white flex overflow-hidden">
       {/* Sidebar */}
       <DashSideBar
         sidebarCollapsed={sidebarCollapsed}
@@ -339,7 +339,7 @@ function Dashboard() {
               {topClients.map((client, i) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b border-[#1f2a40] last:border-0">
                   <div className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-[#c9a227] text-[#0a0e1a]" : "bg-[#1e3a5f] text-white"}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-[#c9a227] text-[#0B1120]" : "bg-[#1e3a5f] text-white"}`}>
                       {client.rank}
                     </div>
                     <div>
@@ -404,7 +404,7 @@ function Dashboard() {
                   <div key={i}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? "bg-[#c9a227] text-[#0a0e1a]" : "bg-[#1e3a5f] text-white"}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? "bg-[#c9a227] text-[#0B1120]" : "bg-[#1e3a5f] text-white"}`}>
                           {i + 1}
                         </div>
                         <div>
