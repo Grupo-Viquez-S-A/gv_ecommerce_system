@@ -164,6 +164,7 @@ function DashSideBar({
           <NavItem
             icon={<RiStoreFill size={18} />}
             label="Ventas"
+            to="/ventas"
             collapsed={sidebarCollapsed}
           />
           <NavItem
@@ -339,6 +340,7 @@ function DashSideBar({
             <NavItem
               icon={<RiStoreFill size={18} />}
               label="Ventas"
+              to="/ventas"
               collapsed={false}
             />
             <NavItem

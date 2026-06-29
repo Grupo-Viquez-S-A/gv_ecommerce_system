@@ -6,6 +6,7 @@ import Clients from "./pages/Clients";
 import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
+import Sales from "./pages/Sales";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
@@ -49,6 +50,15 @@ function App() {
           }
         />
         <Route path="/cotizaciones-dev" element={<Quotations />} />
+        <Route
+          path="/ventas"
+          element={
+            <ProtectedRoute>
+              <Sales />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/ventas-dev" element={<Sales />} />
         <Route
           path="/admin/usuarios"
           element={

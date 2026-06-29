@@ -1,0 +1,477 @@
+import { useState } from "react";
+import { useAuth } from "../context/AuthContext.js";
+import DashSideBar from "../components/dashSideBar.jsx";
+import {
+  RiMenuFill,
+  RiNotification3Fill,
+  RiSettings4Fill,
+  RiArrowDownSFill,
+  RiSearchLine,
+  RiFilterLine,
+  RiAddFill,
+  RiCloseLine,
+  RiArrowLeftSLine,
+  RiArrowRightSFill,
+  RiEyeFill,
+  RiEditFill,
+  RiDownloadFill,
+  RiMoreFill,
+  RiCalendarLine,
+  RiExportFill,
+} from "react-icons/ri";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+
+/* ─── MOCK DATA: VENTAS ─────────────────────────────────────────────────────────────────── */
+const MOCK_SALES = [
+  { id: 1, number: "VEN-000247", client: "María Fernández", date: "30/06/2024 14:30", channel: "Tienda en Línea", products: 3, total: "€45.200.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
+  { id: 2, number: "VEN-000246", client: "Constructora Solís", date: "30/06/2024 11:12", channel: "Tienda Física", products: 7, total: "€28.750.000", status: "Completada", agent: "Manuel Rojas", avatar: "MR" },
+  { id: 3, number: "VEN-000245", client: "Hotel Los Laureles", date: "29/06/2024 16:45", channel: "WhatsApp", products: 2, total: "€15.600.000", status: "En proceso", agent: "Laura Gómez", avatar: "LG" },
+  { id: 4, number: "VEN-000244", client: "Pacific Pet Food", date: "27/06/2024 09:20", channel: "Tienda en Línea", products: 5, total: "€9.850.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
+  { id: 5, number: "VEN-000243", client: "Distribuidora del Norte", date: "28/06/2024 10:35", channel: "Tienda Física", products: 4, total: "€6.450.000", status: "Completada", agent: "Manuel Rojas", avatar: "MR" },
+  { id: 6, number: "VEN-000242", client: "Farmacia La Salud", date: "27/06/2024 15:18", channel: "WhatsApp", products: 2, total: "€3.200.000", status: "Cancelada", agent: "Laura Gómez", avatar: "LG" },
+  { id: 7, number: "VEN-000241", client: "Grupo Alimenticio S.A.", date: "27/06/2024 12:54", channel: "Tienda en Línea", products: 6, total: "€18.500.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
+];
+
+/* ─── STATUS CONFIG ──────────────────────────────────────────────────── */
+const STATUS_CONFIG = {
+  Completada:  { bg: "bg-green-500/10", text: "text-green-400", border: "border-green-500/20" },
+  "En proceso": { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/20" },
+  Cancelada:   { bg: "bg-red-500/10",    text: "text-red-400",    border: "border-red-500/20" },
+};
+
+/* ─── CHART DATA ─────────────────────────────────────────────────────────────── */
+const dailySalesData = [
+  { name: "01 Jun", value: 4.2 }, { name: "03 Jun", value: 5.1 }, { name: "05 Jun", value: 7.8 },
+  { name: "07 Jun", value: 5.5 }, { name: "09 Jun", value: 6.0 }, { name: "11 Jun", value: 8.2 },
+  { name: "13 Jun", value: 5.8 }, { name: "15 Jun", value: 7.0 }, { name: "17 Jun", value: 9.5 },
+  { name: "19 Jun", value: 12.0 }, { name: "21 Jun", value: 14.5 }, { name: "23 Jun", value: 10.0 },
+  { name: "25 Jun", value: 8.5 }, { name: "27 Jun", value: 6.2 }, { name: "29 Jun", value: 5.0 },
+  { name: "30 Jun", value: 4.5 },
+];
+
+const channelData = [
+  { name: "Tienda Física", value: 74, pct: 40, color: "#8b5cf6" },
+  { name: "Tienda en Línea", value: 55, pct: 30, color: "#3b82f6" },
+  { name: "WhatsApp", value: 33, pct: 18, color: "#22c55e" },
+  { name: "Marketplace", value: 13, pct: 7, color: "#f59e0b" },
+  { name: "Otros", value: 9, pct: 4, color: "#ec4899" },
+];
+
+/* ─── HELPERS ─────────────────────────────────────────────────────────────── */
+function PagBtn({ icon, label, active }) {
+  return (
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#2563eb] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+      {icon || label}
+    </button>
+  );
+}
+
+function StatusBadge({ status }) {
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG["En proceso"];
+  return (
+    <span className={`inline-block text-xs font-medium px-2.5 py-1 rounded-md border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+      {status}
+    </span>
+  );
+}
+
+/* ─── MAIN COMPONENT ───────────────────────────────────────────────── */
+export default function Sales() {
+  const { user } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [companyDropdown, setCompanyDropdown] = useState(false);
+  const [currentCompany, setCurrentCompany] = useState(
+    user?.activeCompany || user?.companies?.[0] || { name: "Grupo Víquez S.A", color: "#c9a227" }
+  );
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("Todos");
+  const [channelFilter, setChannelFilter] = useState("Todos");
+  const [agentFilter, setAgentFilter] = useState("Todos");
+  const [dateFrom, setDateFrom] = useState("01/06/2024");
+  const [dateTo, setDateTo] = useState("30/06/2024");
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState("create");
+  const [viewSale, setViewSale] = useState(null);
+
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const toggleCollapse = () => setSidebarCollapsed(!sidebarCollapsed);
+
+  const openCreateDrawer = () => { setDrawerMode("create"); setViewSale(null); setDrawerOpen(true); };
+  const openViewDrawer = (s) => { setDrawerMode("view"); setViewSale(s); setDrawerOpen(true); };
+  const closeDrawer = () => { setDrawerOpen(false); setTimeout(() => { setDrawerMode("create"); setViewSale(null); }, 300); };
+
+  const filtered = MOCK_SALES.filter((s) => {
+    const sq = search.toLowerCase();
+    const matchSearch = s.number.toLowerCase().includes(sq) || s.client.toLowerCase().includes(sq);
+    const matchStatus = statusFilter === "Todos" || s.status === statusFilter;
+    const matchChannel = channelFilter === "Todos" || s.channel === channelFilter;
+    const matchAgent = agentFilter === "Todos" || s.agent === agentFilter;
+    return matchSearch && matchStatus && matchChannel && matchAgent;
+  });
+
+  const channels = ["Todos", "Tienda Física", "Tienda en Línea", "WhatsApp", "Marketplace", "Otros"];
+  const agents = ["Todos", "Ana Gómez", "Manuel Rojas", "Laura Gómez"];
+  const companies = ["Todas", "Grupo Víquez", "Textiles de Occidente", "Constructora Víquez", "Pacific Pet Food", "Occidente Lab", "Agro Occidente Group"];
+
+  const metrics = [
+    { label: "VENTAS TOTALES", value: "€185 M", growth: "+14%", growthColor: "text-green-400", color: "#3b82f6", iconColor: "text-[#3b82f6]", bg: "bg-[#3b82f6]/10" },
+    { label: "ÓRDENES REALIZADAS", value: "247", growth: "+12%", growthColor: "text-green-400", color: "#22c55e", iconColor: "text-[#22c55e]", bg: "bg-[#22c55e]/10" },
+    { label: "TICKET PROMEDIO", value: "€748.000", growth: "+7%", growthColor: "text-green-400", color: "#8b5cf6", iconColor: "text-[#8b5cf6]", bg: "bg-[#8b5cf6]/10" },
+    { label: "PRODUCTOS VENDIDOS", value: "1.532", growth: "+5%", growthColor: "text-green-400", color: "#f59e0b", iconColor: "text-[#f59e0b]", bg: "bg-[#f59e0b]/10" },
+    { label: "DEVOLUCIONES", value: "€3.2 M", growth: "-8%", growthColor: "text-red-400", color: "#ef4444", iconColor: "text-[#ef4444]", bg: "bg-[#ef4444]/10" },
+  ];
+
+  return (
+    <div className="w-full h-screen bg-[#0a0e1a] text-white flex overflow-hidden">
+      <DashSideBar
+        sidebarCollapsed={sidebarCollapsed}
+        sidebarOpen={sidebarOpen}
+        currentCompany={currentCompany}
+        toggleCollapse={toggleCollapse}
+        toggleSidebar={toggleSidebar}
+        setSidebarOpen={setSidebarOpen}
+      />
+
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {/* Header */}
+        <header className="h-14 border-b border-[#1f2a40] flex items-center justify-between px-5 flex-shrink-0 bg-[#0a0e1a]">
+          <div className="flex items-center gap-3">
+            <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
+              <RiMenuFill size={20} />
+            </button>
+            <span className="text-xs text-gray-500">Comercial</span>
+            <span className="text-gray-600">/</span>
+            <span className="text-xs text-white font-medium">Ventas</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button onClick={() => setCompanyDropdown(!companyDropdown)} className="flex items-center gap-2 text-sm text-white hover:bg-[#141a2a] px-3 py-1.5 rounded-lg transition-colors">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color }} />
+                <span className="hidden sm:inline">{currentCompany.name}</span>
+                <RiArrowDownSFill size={14} className="text-gray-500" />
+              </button>
+              {companyDropdown && (
+                <div className="absolute right-0 mt-2 w-56 bg-[#111827] border border-[#1f2a40] rounded-xl shadow-xl z-50 py-1">
+                  {companies.slice(1).map((c) => (
+                    <button key={c} onClick={() => { setCurrentCompany({ name: c, color: "#c9a227" }); setCompanyDropdown(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#1e3a5f] transition-colors">{c}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button className="relative text-gray-400 hover:text-white transition-colors">
+              <RiNotification3Fill size={18} />
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+            </button>
+            <button className="text-gray-400 hover:text-white transition-colors"><RiSettings4Fill size={18} /></button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-5 md:p-6">
+          {/* Title */}
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h1 className="text-xl font-bold text-white">Ventas</h1>
+              <p className="text-sm text-gray-400 mt-0.5">Consulta y gestiona todas las ventas realizadas en el grupo.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="flex items-center gap-2 bg-[#141a2a] border border-[#1f2a40] hover:bg-[#1e3a5f] text-gray-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
+                <RiExportFill size={15} /> Exportar
+              </button>
+              <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+                <RiAddFill size={16} /> Nueva Venta
+              </button>
+            </div>
+          </div>
+
+          {/* Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+            {metrics.map((m, i) => (
+              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#2563eb]/20 transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center ${m.iconColor}`}>
+                    {i === 1 ? (
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 12 L6 8 L9 11 L14 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    ) : (
+                      <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: m.color }} />
+                    )}
+                  </div>
+                </div>
+                <div className="text-xl font-bold text-white">{m.value}</div>
+                <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mt-1">{m.label}</div>
+                <div className={`text-xs font-medium mt-1 ${m.growthColor}`}>{m.growth} vs. mes anterior</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Charts */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+            {/* Daily sales area chart */}
+            <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-white">Ventas por día</h3>
+                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
+                  Este mes <RiArrowDownSFill size={12} />
+                </button>
+              </div>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailySalesData}>
+                    <defs>
+                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2a40" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v} M`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#111827", border: "1px solid #1f2a40", borderRadius: "8px", fontSize: "12px", color: "#fff" }}
+                      itemStyle={{ color: "#fff" }}
+                      formatter={(v) => [`€${v} M`, "Ventas"]}
+                    />
+                    <Area type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} fill="url(#colorSales)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Channel donut chart */}
+            <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-white">Ventas por canal</h3>
+                <span className="text-xs text-gray-500">Este mes</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="relative w-28 h-28 flex-shrink-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={channelData} cx="50%" cy="50%" innerRadius={36} outerRadius={50} paddingAngle={2} dataKey="value" stroke="none">
+                        {channelData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-sm font-bold text-white">€185M</span>
+                    <span className="text-[10px] text-gray-500">Total</span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-2">
+                  {channelData.map((d) => (
+                    <div key={d.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: d.color }} />
+                        <span className="text-gray-300">{d.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-medium">€{d.value} M</span>
+                        <span className="text-gray-500">{d.pct}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              <div className="relative lg:col-span-2">
+                <RiSearchLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input type="text" placeholder="Buscar por número, cliente o producto..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#2563eb] transition-colors" />
+              </div>
+              <div>
+                <div className="relative">
+                  <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors" />
+                </div>
+              </div>
+              <div>
+                <div className="relative">
+                  <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors" />
+                </div>
+              </div>
+              <div>
+                <div className="relative">
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors cursor-pointer">
+                    <option>Todos los estados</option>
+                    <option>Completada</option>
+                    <option>En proceso</option>
+                    <option>Cancelada</option>
+                  </select>
+                  <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <div className="relative">
+                  <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors cursor-pointer">
+                    {channels.map((c) => <option key={c}>{c}</option>)}
+                  </select>
+                  <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <div className="relative">
+                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors cursor-pointer">
+                    {agents.map((a) => <option key={a}>{a}</option>)}
+                  </select>
+                  <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 lg:col-span-2 lg:col-start-5">
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setChannelFilter("Todos"); setAgentFilter("Todos"); }} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                  Limpiar filtros
+                </button>
+                <button className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                  Buscar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden mb-4">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#1f2a40]">
+              <h3 className="text-sm font-semibold text-white">Listado de Ventas</h3>
+              <button className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
+                <RiExportFill size={13} /> Exportar <RiArrowDownSFill size={12} />
+              </button>
+            </div>
+            <table className="w-full text-left hidden md:table">
+              <thead>
+                <tr className="border-b border-[#1f2a40]">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Canal</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Productos</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Vendedor</th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1f2a40]">
+                {filtered.map((s) => (
+                  <tr key={s.id} className="hover:bg-[#0f1623]/50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-300 font-mono">{s.number}</td>
+                    <td className="px-4 py-3 text-sm text-white">{s.client}</td>
+                    <td className="px-4 py-3 text-sm text-gray-400">{s.date}</td>
+                    <td className="px-4 py-3 text-sm text-gray-300">{s.channel}</td>
+                    <td className="px-4 py-3 text-sm text-white font-semibold text-center">{s.products}</td>
+                    <td className="px-4 py-3 text-sm text-white font-semibold">{s.total}</td>
+                    <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[10px] font-bold text-[#60a5fa]">{s.avatar}</div>
+                        <span className="text-sm text-gray-300">{s.agent}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <button onClick={() => openViewDrawer(s)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver"><RiEyeFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar"><RiEditFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Descargar"><RiDownloadFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Más"><RiMoreFill size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-14 gap-3">
+                <RiSearchLine size={28} className="text-gray-600" />
+                <p className="text-sm text-gray-500">No se encontraron ventas</p>
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setChannelFilter("Todos"); setAgentFilter("Todos"); }} className="text-xs text-[#60a5fa] hover:underline">Limpiar filtros</button>
+              </div>
+            )}
+            {/* Pagination */}
+            <div className="flex items-center justify-between px-5 py-3 border-t border-[#1f2a40]">
+              <span className="text-xs text-gray-500">Mostrando 1 a {filtered.length} de 247 ventas</span>
+              <div className="flex items-center gap-1">
+                <PagBtn icon={<RiArrowLeftSLine size={14} />} />
+                {[1,2,3].map((n) => <PagBtn key={n} label={n} active={n===1} />)}
+                <span className="text-gray-600 px-1">...</span>
+                <PagBtn label={25} />
+                <PagBtn icon={<RiArrowRightSFill size={14} />} />
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Drawer */}
+      {drawerOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={closeDrawer} />}
+      <div className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#111827] border-l border-[#1f2a40] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#2563eb]" />Nueva Venta</>}
+              {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle de Venta</>}
+            </h2>
+            <p className="text-sm text-gray-400 mt-0.5">
+              {drawerMode === "create" ? "Registra una nueva venta." : "Información completa de la venta."}
+            </p>
+          </div>
+          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
+            <RiCloseLine size={18} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {drawerMode === "view" && viewSale && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-4 pb-5 border-b border-[#1f2a40]">
+                <div className="w-14 h-14 rounded-xl bg-[#1e3a5f] flex items-center justify-center text-lg font-bold text-[#60a5fa]">{viewSale.number.slice(-3)}</div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">{viewSale.number}</h3>
+                  <StatusBadge status={viewSale.status} />
+                </div>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { label: "Cliente", value: viewSale.client },
+                  { label: "Fecha", value: viewSale.date },
+                  { label: "Canal", value: viewSale.channel },
+                  { label: "Productos", value: viewSale.products },
+                  { label: "Total", value: viewSale.total },
+                  { label: "Vendedor", value: viewSale.agent },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between py-2 border-b border-[#1f2a40]">
+                    <span className="text-xs text-gray-500">{label}</span>
+                    <span className="text-sm text-white font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        {drawerMode === "view" && (
+          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
+            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">Cerrar</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
