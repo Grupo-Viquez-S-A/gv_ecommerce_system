@@ -7,7 +7,6 @@ import {
   RiSettings4Fill,
   RiArrowDownSFill,
   RiSearchLine,
-  RiFilterLine,
   RiAddFill,
   RiCloseLine,
   RiArrowLeftSLine,
@@ -20,9 +19,6 @@ import {
   RiExportFill,
 } from "react-icons/ri";
 import {
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
   AreaChart,
   Area,
@@ -32,25 +28,25 @@ import {
   Tooltip,
 } from "recharts";
 
-/* ─── MOCK DATA: VENTAS ─────────────────────────────────────────────────────────────────── */
+/* ─── MOCK DATA: VENTAS ──────────────────────────────────────── */
 const MOCK_SALES = [
-  { id: 1, number: "VEN-000247", client: "María Fernández", date: "30/06/2024 14:30", channel: "Tienda en Línea", products: 3, total: "€45.200.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
-  { id: 2, number: "VEN-000246", client: "Constructora Solís", date: "30/06/2024 11:12", channel: "Tienda Física", products: 7, total: "€28.750.000", status: "Completada", agent: "Manuel Rojas", avatar: "MR" },
-  { id: 3, number: "VEN-000245", client: "Hotel Los Laureles", date: "29/06/2024 16:45", channel: "WhatsApp", products: 2, total: "€15.600.000", status: "En proceso", agent: "Laura Gómez", avatar: "LG" },
-  { id: 4, number: "VEN-000244", client: "Pacific Pet Food", date: "27/06/2024 09:20", channel: "Tienda en Línea", products: 5, total: "€9.850.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
-  { id: 5, number: "VEN-000243", client: "Distribuidora del Norte", date: "28/06/2024 10:35", channel: "Tienda Física", products: 4, total: "€6.450.000", status: "Completada", agent: "Manuel Rojas", avatar: "MR" },
-  { id: 6, number: "VEN-000242", client: "Farmacia La Salud", date: "27/06/2024 15:18", channel: "WhatsApp", products: 2, total: "€3.200.000", status: "Cancelada", agent: "Laura Gómez", avatar: "LG" },
-  { id: 7, number: "VEN-000241", client: "Grupo Alimenticio S.A.", date: "27/06/2024 12:54", channel: "Tienda en Línea", products: 6, total: "€18.500.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
+  { id: 1, number: "VEN-000247", client: "María Fernández", date: "30/06/2024 14:30", products: 3, total: "€45.200.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
+  { id: 2, number: "VEN-000246", client: "Constructora Solís", date: "30/06/2024 11:12", products: 7, total: "€28.750.000", status: "Completada", agent: "Manuel Rojas", avatar: "MR" },
+  { id: 3, number: "VEN-000245", client: "Hotel Los Laureles", date: "29/06/2024 16:45", products: 2, total: "€15.600.000", status: "En proceso", agent: "Laura Gómez", avatar: "LG" },
+  { id: 4, number: "VEN-000244", client: "Pacific Pet Food", date: "27/06/2024 09:20", products: 5, total: "€9.850.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
+  { id: 5, number: "VEN-000243", client: "Distribuidora del Norte", date: "28/06/2024 10:35", products: 4, total: "€6.450.000", status: "Completada", agent: "Manuel Rojas", avatar: "MR" },
+  { id: 6, number: "VEN-000242", client: "Farmacia La Salud", date: "27/06/2024 15:18", products: 2, total: "€3.200.000", status: "Cancelada", agent: "Laura Gómez", avatar: "LG" },
+  { id: 7, number: "VEN-000241", client: "Grupo Alimenticio S.A.", date: "27/06/2024 12:54", products: 6, total: "€18.500.000", status: "Completada", agent: "Ana Gómez", avatar: "AG" },
 ];
 
-/* ─── STATUS CONFIG ──────────────────────────────────────────────────── */
+/* ─── STATUS CONFIG ───────────────────────────────────────── */
 const STATUS_CONFIG = {
   Completada:  { bg: "bg-green-500/10", text: "text-green-400", border: "border-green-500/20" },
   "En proceso": { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/20" },
   Cancelada:   { bg: "bg-red-500/10",    text: "text-red-400",    border: "border-red-500/20" },
 };
 
-/* ─── CHART DATA ─────────────────────────────────────────────────────────────── */
+/* ─── CHART DATA ──────────────────────────────────────────── */
 const dailySalesData = [
   { name: "01 Jun", value: 4.2 }, { name: "03 Jun", value: 5.1 }, { name: "05 Jun", value: 7.8 },
   { name: "07 Jun", value: 5.5 }, { name: "09 Jun", value: 6.0 }, { name: "11 Jun", value: 8.2 },
@@ -60,15 +56,7 @@ const dailySalesData = [
   { name: "30 Jun", value: 4.5 },
 ];
 
-const channelData = [
-  { name: "Tienda Física", value: 74, pct: 40, color: "#8b5cf6" },
-  { name: "Tienda en Línea", value: 55, pct: 30, color: "#3b82f6" },
-  { name: "WhatsApp", value: 33, pct: 18, color: "#22c55e" },
-  { name: "Marketplace", value: 13, pct: 7, color: "#f59e0b" },
-  { name: "Otros", value: 9, pct: 4, color: "#ec4899" },
-];
-
-/* ─── HELPERS ─────────────────────────────────────────────────────────────── */
+/* ─── HELPERS ────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
     <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#2563eb] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
@@ -86,7 +74,7 @@ function StatusBadge({ status }) {
   );
 }
 
-/* ─── MAIN COMPONENT ───────────────────────────────────────────────── */
+/* ─── MAIN COMPONENT ─────────────────────────────────────── */
 export default function Sales() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -98,7 +86,6 @@ export default function Sales() {
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
-  const [channelFilter, setChannelFilter] = useState("Todos");
   const [agentFilter, setAgentFilter] = useState("Todos");
   const [dateFrom, setDateFrom] = useState("01/06/2024");
   const [dateTo, setDateTo] = useState("30/06/2024");
@@ -118,12 +105,10 @@ export default function Sales() {
     const sq = search.toLowerCase();
     const matchSearch = s.number.toLowerCase().includes(sq) || s.client.toLowerCase().includes(sq);
     const matchStatus = statusFilter === "Todos" || s.status === statusFilter;
-    const matchChannel = channelFilter === "Todos" || s.channel === channelFilter;
     const matchAgent = agentFilter === "Todos" || s.agent === agentFilter;
-    return matchSearch && matchStatus && matchChannel && matchAgent;
+    return matchSearch && matchStatus && matchAgent;
   });
 
-  const channels = ["Todos", "Tienda Física", "Tienda en Línea", "WhatsApp", "Marketplace", "Otros"];
   const agents = ["Todos", "Ana Gómez", "Manuel Rojas", "Laura Gómez"];
   const companies = ["Todas", "Grupo Víquez", "Textiles de Occidente", "Constructora Víquez", "Pacific Pet Food", "Occidente Lab", "Agro Occidente Group"];
 
@@ -219,76 +204,34 @@ export default function Sales() {
             ))}
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            {/* Daily sales area chart */}
-            <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-white">Ventas por día</h3>
-                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
-                  Este mes <RiArrowDownSFill size={12} />
-                </button>
-              </div>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={dailySalesData}>
-                    <defs>
-                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2a40" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v} M`} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "#111827", border: "1px solid #1f2a40", borderRadius: "8px", fontSize: "12px", color: "#fff" }}
-                      itemStyle={{ color: "#fff" }}
-                      formatter={(v) => [`€${v} M`, "Ventas"]}
-                    />
-                    <Area type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} fill="url(#colorSales)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+          {/* Chart */}
+          <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white">Ventas por día</h3>
+              <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
+                Este mes <RiArrowDownSFill size={12} />
+              </button>
             </div>
-
-            {/* Channel donut chart */}
-            <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-white">Ventas por canal</h3>
-                <span className="text-xs text-gray-500">Este mes</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="relative w-28 h-28 flex-shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={channelData} cx="50%" cy="50%" innerRadius={36} outerRadius={50} paddingAngle={2} dataKey="value" stroke="none">
-                        {channelData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-sm font-bold text-white">€185M</span>
-                    <span className="text-[10px] text-gray-500">Total</span>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-2">
-                  {channelData.map((d) => (
-                    <div key={d.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: d.color }} />
-                        <span className="text-gray-300">{d.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-white font-medium">€{d.value} M</span>
-                        <span className="text-gray-500">{d.pct}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dailySalesData}>
+                  <defs>
+                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2a40" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => `€${v} M`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "#111827", border: "1px solid #1f2a40", borderRadius: "8px", fontSize: "12px", color: "#fff" }}
+                    itemStyle={{ color: "#fff" }}
+                    formatter={(v) => [`€${v} M`, "Ventas"]}
+                  />
+                  <Area type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={2} fill="url(#colorSales)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
@@ -324,14 +267,6 @@ export default function Sales() {
               </div>
               <div>
                 <div className="relative">
-                  <select value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors cursor-pointer">
-                    {channels.map((c) => <option key={c}>{c}</option>)}
-                  </select>
-                  <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-                </div>
-              </div>
-              <div>
-                <div className="relative">
                   <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors cursor-pointer">
                     {agents.map((a) => <option key={a}>{a}</option>)}
                   </select>
@@ -339,7 +274,7 @@ export default function Sales() {
                 </div>
               </div>
               <div className="flex items-center gap-2 lg:col-span-2 lg:col-start-5">
-                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setChannelFilter("Todos"); setAgentFilter("Todos"); }} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setAgentFilter("Todos"); }} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors">
                   Limpiar filtros
                 </button>
                 <button className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2 rounded-lg transition-colors">
@@ -363,7 +298,6 @@ export default function Sales() {
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">#</th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
-                  <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Canal</th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Productos</th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total</th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
@@ -377,7 +311,6 @@ export default function Sales() {
                     <td className="px-4 py-3 text-sm text-gray-300 font-mono">{s.number}</td>
                     <td className="px-4 py-3 text-sm text-white">{s.client}</td>
                     <td className="px-4 py-3 text-sm text-gray-400">{s.date}</td>
-                    <td className="px-4 py-3 text-sm text-gray-300">{s.channel}</td>
                     <td className="px-4 py-3 text-sm text-white font-semibold text-center">{s.products}</td>
                     <td className="px-4 py-3 text-sm text-white font-semibold">{s.total}</td>
                     <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
@@ -403,7 +336,7 @@ export default function Sales() {
               <div className="flex flex-col items-center justify-center py-14 gap-3">
                 <RiSearchLine size={28} className="text-gray-600" />
                 <p className="text-sm text-gray-500">No se encontraron ventas</p>
-                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setChannelFilter("Todos"); setAgentFilter("Todos"); }} className="text-xs text-[#60a5fa] hover:underline">Limpiar filtros</button>
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setAgentFilter("Todos"); }} className="text-xs text-[#60a5fa] hover:underline">Limpiar filtros</button>
               </div>
             )}
             {/* Pagination */}
@@ -452,7 +385,6 @@ export default function Sales() {
                 {[
                   { label: "Cliente", value: viewSale.client },
                   { label: "Fecha", value: viewSale.date },
-                  { label: "Canal", value: viewSale.channel },
                   { label: "Productos", value: viewSale.products },
                   { label: "Total", value: viewSale.total },
                   { label: "Vendedor", value: viewSale.agent },
