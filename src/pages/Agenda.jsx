@@ -223,7 +223,7 @@ export default function Agenda() {
   return (
     <div className="flex min-h-screen bg-[#0a0e1a] text-[#F8FAFC]">
       <DashSideBar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-      <div className={"flex-1 transition-all " + (sidebarCollapsed ? "ml-16" : "ml-64")}>
+      <div className="flex-1 transition-all min-w-0">
         {/* Top bar */}
         <div className="h-16 bg-[#111827] border-b border-[#1f2a40] flex items-center justify-between px-6 sticky top-0 z-30">
           <div className="flex items-center gap-3">
