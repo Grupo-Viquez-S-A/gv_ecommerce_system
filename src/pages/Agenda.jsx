@@ -320,10 +320,10 @@ export default function Agenda() {
           {/* Main content: Calendar + Sidebar */}
           <div className="flex gap-4">
             {/* Calendar */}
-            <div className="flex-1 bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden">
+            <div className="flex-1 bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden min-w-0">
               {/* Calendar header */}
-              <div className="flex border-b border-[#1f2a40]">
-                <div className="w-16 border-r border-[#1f2a40]" />
+              <div className="flex border-b border-[#1f2a40] w-full">
+                <div className="w-16 border-r border-[#1f2a40] shrink-0" />
                 {weekDays.map((d, i) => {
                   const isToday = isSameDay(d, today);
                   return (
@@ -337,7 +337,7 @@ export default function Agenda() {
               </div>
 
               {/* Calendar body */}
-              <div className="relative" style={{ height: 480 }}>
+              <div className="relative w-full" style={{ height: 480 }}>
                 {/* Time column */}
                 <div className="absolute left-0 top-0 w-16 h-full border-r border-[#1f2a40]">
                   {HOURS.map((h, i) => (
@@ -359,7 +359,7 @@ export default function Agenda() {
                 </div>
 
                 {/* Day columns */}
-                <div className="absolute left-16 right-0 top-0 h-full flex">
+                <div className="absolute left-16 right-0 top-0 h-full flex w-full">
                   {weekDays.map((day, dayIdx) => {
                     const dayEvents = filteredEvents.filter(e => isSameDay(new Date(e.date), day));
                     return (
