@@ -38,7 +38,7 @@ const STATUS_CONFIG = {
   Completado: { color: "#2563eb", bg: "rgba(37,99,235,0.15)",  label: "Completado" },
 };
 
-const HOURS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"];
+const HOURS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00"];
 const DAYS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
@@ -337,7 +337,7 @@ export default function Agenda() {
               </div>
 
               {/* Calendar body */}
-              <div className="relative w-full" style={{ height: 480 }}>
+              <div className="relative w-full" style={{ height: HOURS.length * 40 }}>
                 {/* Time column */}
                 <div className="absolute left-0 top-0 w-16 h-full border-r border-[#1f2a40]">
                   {HOURS.map((h, i) => (
@@ -359,11 +359,11 @@ export default function Agenda() {
                 </div>
 
                 {/* Day columns */}
-                <div className="absolute top-0 h-full flex" style={{ left: 64, right: 0 }}>
+                <div className="absolute top-0 h-full flex" style={{ left: 64, width: "calc(100% - 64px)" }}>
                   {weekDays.map((day, dayIdx) => {
                     const dayEvents = filteredEvents.filter(e => isSameDay(new Date(e.date), day));
                     return (
-                      <div key={dayIdx} className="relative border-r border-[#1f2a40] last:border-r-0 flex-1">
+                      <div key={dayIdx} className="relative border-r border-[#1f2a40] last:border-r-0" style={{ width: "calc(100% / " + weekDays.length + ")" }}>
                         {/* All-day events */}
                         {dayEvents.filter(e => e.start === "00:00").map(ev => {
                           const cfg = TYPE_CONFIG[ev.type] || TYPE_CONFIG.Reunion;
