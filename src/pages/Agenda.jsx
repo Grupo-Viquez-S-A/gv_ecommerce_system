@@ -24,18 +24,18 @@ import {
 const TYPE_CONFIG = {
   Visita:       { color: "#ef4444", bg: "rgba(239,68,68,0.15)",  label: "Visita" },
   Llamada:      { color: "#22c55e", bg: "rgba(34,197,94,0.15)",  label: "Llamada" },
-  Reunion:      { color: "#3B82F6", bg: "rgba(37,99,235,0.15)",  label: "Reunión" },
+  Reunion:      { color: "#C9A227", bg: "rgba(37,99,235,0.15)",  label: "Reunión" },
   Capacitacion: { color: "#a855f7", bg: "rgba(168,85,247,0.15)", label: "Capacitación" },
   Cumpleanos:   { color: "#22c55e", bg: "rgba(34,197,94,0.15)",  label: "Cumpleaños" },
   Seguimiento:  { color: "#a855f7", bg: "rgba(168,85,247,0.15)", label: "Seguimiento" },
-  Viaje:        { color: "#3B82F6", bg: "rgba(37,99,235,0.15)",  label: "Viaje" },
+  Viaje:        { color: "#C9A227", bg: "rgba(37,99,235,0.15)",  label: "Viaje" },
 };
 
 const STATUS_CONFIG = {
   Confirmado: { color: "#22c55e", bg: "rgba(34,197,94,0.15)", label: "Confirmado" },
   Pendiente:  { color: "#f59e0b", bg: "rgba(245,158,11,0.15)", label: "Pendiente" },
   Cancelado:  { color: "#ef4444", bg: "rgba(239,68,68,0.15)",  label: "Cancelado" },
-  Completado: { color: "#3B82F6", bg: "rgba(37,99,235,0.15)",  label: "Completado" },
+  Completado: { color: "#C9A227", bg: "rgba(37,99,235,0.15)",  label: "Completado" },
 };
 
 const HOURS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00"];
@@ -137,12 +137,12 @@ export default function Agenda() {
   }, 0);
 
   const metrics = [
-    { label: "EVENTOS HOY", value: eventsToday.length, change: "+14% vs. ayer", icon: RiCalendarLine, color: "#3B82F6" },
+    { label: "EVENTOS HOY", value: eventsToday.length, change: "+14% vs. ayer", icon: RiCalendarLine, color: "#C9A227" },
     { label: "TAREAS PENDIENTES", value: tasksPending.length, change: "+12% vs. ayer", icon: RiCheckboxBlankCircleLine, color: "#22c55e" },
     { label: "REUNIONES", value: meetings.length, change: "+25% vs. ayer", icon: RiCalendarLine, color: "#a855f7" },
     { label: "VENCEN HOY", value: dueToday.length, change: "-50% vs. ayer", icon: RiTimeLine, color: "#f59e0b" },
     { label: "EVENTOS ESTA SEMANA", value: eventsThisWeek.length, change: "+8% vs. semana anterior", icon: RiCalendarLine, color: "#ec4899" },
-    { label: "HORAS PROGRAMADAS", value: hoursScheduled.toFixed(1) + " h", change: "+10% vs. semana anterior", icon: RiTimeLine, color: "#3b82f6" },
+    { label: "HORAS PROGRAMADAS", value: hoursScheduled.toFixed(1) + " h", change: "+10% vs. semana anterior", icon: RiTimeLine, color: "#C9A227" },
   ];
 
   function openCreate() {
@@ -327,10 +327,10 @@ export default function Agenda() {
                 {weekDays.map((d, i) => {
                   const isToday = isSameDay(d, today);
                   return (
-                    <div key={i} className={"py-3 text-center border-r border-[#1f2a40] last:border-r-0 " + (isToday ? "bg-[#3B82F615]" : "")} style={{ width: "calc((100% - 64px) / " + weekDays.length + ")" }}>
+                    <div key={i} className={"py-3 text-center border-r border-[#1f2a40] last:border-r-0 " + (isToday ? "bg-[#C9A227]/10" : "")} style={{ width: "calc((100% - 64px) / " + weekDays.length + ")" }}>
                       <div className="text-xs text-gray-400">{DAYS[d.getDay()]}</div>
-                      <div className={"text-lg font-semibold mt-0.5 " + (isToday ? "text-[#3B82F6]" : "")}>{d.getDate()}</div>
-                      {isToday && <div className="w-6 h-6 bg-[#3B82F6] rounded-full text-white text-xs flex items-center justify-center mx-auto mt-1">{d.getDate()}</div>}
+                      <div className={"text-lg font-semibold mt-0.5 " + (isToday ? "text-[#C9A227]" : "")}>{d.getDate()}</div>
+                      {isToday && <div className="w-6 h-6 bg-[#C9A227] rounded-full text-white text-xs flex items-center justify-center mx-auto mt-1">{d.getDate()}</div>}
                     </div>
                   );
                 })}
@@ -412,7 +412,7 @@ export default function Agenda() {
                     if (!d) return <div key={i} />;
                     const isToday = isSameDay(d, today);
                     const hasEvent = events.some(e => isSameDay(new Date(e.date), d));
-                    const dayClass = isToday ? "py-1 cursor-pointer bg-[#3B82F6] text-white rounded-full" : hasEvent ? "py-1 cursor-pointer text-[#3B82F6] font-medium hover:bg-[#1f2a40] rounded" : "py-1 cursor-pointer text-gray-300 hover:bg-[#1f2a40] rounded";
+                    const dayClass = isToday ? "py-1 cursor-pointer bg-[#C9A227] text-white rounded-full" : hasEvent ? "py-1 cursor-pointer text-[#C9A227] font-medium hover:bg-[#1f2a40] rounded" : "py-1 cursor-pointer text-gray-300 hover:bg-[#1f2a40] rounded";
                     return (
                       <div key={i} className={dayClass}>
                         {d.getDate()}
@@ -440,7 +440,7 @@ export default function Agenda() {
                     );
                   })}
                 </div>
-                <button className="text-xs text-[#3B82F6] mt-3 hover:underline">Ver todos los eventos</button>
+                <button className="text-xs text-[#C9A227] mt-3 hover:underline">Ver todos los eventos</button>
               </div>
 
               {/* Pending tasks */}
@@ -461,7 +461,7 @@ export default function Agenda() {
                     </div>
                   ))}
                 </div>
-                <button className="text-xs text-[#3B82F6] mt-3 hover:underline">Ver todas las tareas</button>
+                <button className="text-xs text-[#C9A227] mt-3 hover:underline">Ver todas las tareas</button>
               </div>
             </div>
           </div>
@@ -470,7 +470,7 @@ export default function Agenda() {
           <div className="mt-6 bg-[#111827] border border-[#1f2a40] rounded-xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f2a40]">
               <h3 className="font-medium">Eventos de hoy - Jueves 27 junio</h3>
-              <button className="text-xs text-[#3B82F6] hover:underline">Ver agenda completa</button>
+              <button className="text-xs text-[#C9A227] hover:underline">Ver agenda completa</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -553,7 +553,7 @@ export default function Agenda() {
               {drawerMode === "view" && selectedEvent ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ background: (TYPE_CONFIG[selectedEvent.type]?.bg || "rgba(37,99,235,0.15)"), color: (TYPE_CONFIG[selectedEvent.type]?.color || "#3B82F6") }}>
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold" style={{ background: (TYPE_CONFIG[selectedEvent.type]?.bg || "rgba(37,99,235,0.15)"), color: (TYPE_CONFIG[selectedEvent.type]?.color || "#C9A227") }}>
                       {selectedEvent.title.charAt(0)}
                     </div>
                     <div>

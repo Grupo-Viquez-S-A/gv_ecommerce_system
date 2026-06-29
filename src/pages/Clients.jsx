@@ -37,7 +37,7 @@ import {
 
 /* ─── MOCK DATA: CLIENTES ─────────────────────────────────────────── */
 const MOCK_CLIENTS = [
-  { id: 1, initials: "HL", color: "#3b82f6", name: "Hotel Los Laureles", company: "Textiles de Occidente", sales: "18.5 M", lastPurchase: "Hace 3 días", status: "Activo", email: "contacto@loslaureles.com", phone: "+506 2222 1111", address: "Puntarenas, Costa Rica", totalOrders: 47, totalQuotes: 23, notes: "", branches: [
+  { id: 1, initials: "HL", color: "#C9A227", name: "Hotel Los Laureles", company: "Textiles de Occidente", sales: "18.5 M", lastPurchase: "Hace 3 días", status: "Activo", email: "contacto@loslaureles.com", phone: "+506 2222 1111", address: "Puntarenas, Costa Rica", totalOrders: 47, totalQuotes: 23, notes: "", branches: [
     { name: "Alajuela", address: "Av. 2, Calle 3, Alajuela Centro", phone: "2440-1122", email: "alajuela@hotelloslaureles.com", sales: "8.5 M", lastPurchase: "Hace 2 días", representatives: [
       { name: "Luis Rodríguez", role: "Gerente General", phone: "8888-8888", email: "luis@hotelloslaureles.com", status: "Activo" },
       { name: "María Gómez", role: "Jefa de Compras", phone: "8777-7777", email: "maria@hotelloslaureles.com", status: "Activo" },
@@ -93,12 +93,12 @@ const MOCK_CLIENTS = [
   ]},
 ];
 
-const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e", "#14b8a6", "#a855f7", "#ef4444"];
+const avatarColors = ["#6366f1", "#ec4899", "#C9A227", "#f59e0b", "#22c55e", "#14b8a6", "#a855f7", "#ef4444"];
 
 /* ─── HELPERS ──────────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
       {icon || label}
     </button>
   );
@@ -115,7 +115,7 @@ function FormField({ label, placeholder, value, onChange, type = "text", icon })
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors`}
+          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors`}
         />
       </div>
     </div>
@@ -270,7 +270,7 @@ export default function Clients() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={openCreateDrawer}
-                className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
               >
                 <RiAddFill size={18} />
                 Nuevo cliente
@@ -281,7 +281,7 @@ export default function Clients() {
           {/* Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#3B82F6]/40 transition-colors">
+              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/40 transition-colors">
                 <div className={`w-8 h-8 rounded-lg ${m.color} flex items-center justify-center ${m.iconColor} mb-2`}>
                   {m.icon}
                 </div>
@@ -303,7 +303,7 @@ export default function Clients() {
                 placeholder="Buscar cliente..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#C9A227] transition-colors"
               />
             </div>
             <div className="relative">
@@ -311,7 +311,7 @@ export default function Clients() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#3B82F6] transition-colors appearance-none cursor-pointer min-w-[160px]"
+                className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer min-w-[160px]"
               >
                 <option value="Todos">Todos los estados</option>
                 <option value="Activo">Activo</option>
@@ -450,8 +450,8 @@ export default function Clients() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#3B82F6]" />Nuevo Cliente</>}
-              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#3B82F6]" />Editar Cliente</>}
+              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#C9A227]" />Nuevo Cliente</>}
+              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#C9A227]" />Editar Cliente</>}
               {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle del Cliente</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
@@ -473,7 +473,7 @@ export default function Clients() {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Empresa Grupo</label>
                 <div className="relative">
-                  <select value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors appearance-none cursor-pointer">
+                  <select value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer">
                     <option value="">Seleccionar empresa del grupo</option>
                     <option>Grupo Víquez S.A</option>
                     <option>Textiles de Occidente</option>
@@ -494,7 +494,7 @@ export default function Clients() {
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}
                     rows={2}
-                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors resize-none"
+                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
                   />
                 </div>
               </div>
@@ -532,7 +532,7 @@ export default function Clients() {
                           updated[idx] = { ...updated[idx], name: e.target.value };
                           setForm({ ...form, branches: updated });
                         }}
-                        className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                        className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
                       />
                       <div className="flex gap-2">
                         <input
@@ -544,7 +544,7 @@ export default function Clients() {
                             updated[idx] = { ...updated[idx], phone: e.target.value };
                             setForm({ ...form, branches: updated });
                           }}
-                          className="flex-1 bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                          className="flex-1 bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
                         />
                         <input
                           type="text"
@@ -555,7 +555,7 @@ export default function Clients() {
                             updated[idx] = { ...updated[idx], address: e.target.value };
                             setForm({ ...form, branches: updated });
                           }}
-                          className="flex-1 bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                          className="flex-1 bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
                         />
                       </div>
                       {/* Representatives per branch */}
@@ -606,7 +606,7 @@ export default function Clients() {
                                   updated[idx] = { ...updated[idx], representatives: reps };
                                   setForm({ ...form, branches: updated });
                                 }}
-                                className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                                className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
                               />
                               <div className="flex gap-2">
                                 <input
@@ -620,7 +620,7 @@ export default function Clients() {
                                     updated[idx] = { ...updated[idx], representatives: reps };
                                     setForm({ ...form, branches: updated });
                                   }}
-                                  className="flex-1 bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                                  className="flex-1 bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
                                 />
                                 <input
                                   type="tel"
@@ -633,7 +633,7 @@ export default function Clients() {
                                     updated[idx] = { ...updated[idx], representatives: reps };
                                     setForm({ ...form, branches: updated });
                                   }}
-                                  className="flex-1 bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                                  className="flex-1 bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
                                 />
                               </div>
                               <input
@@ -647,7 +647,7 @@ export default function Clients() {
                                   updated[idx] = { ...updated[idx], representatives: reps };
                                   setForm({ ...form, branches: updated });
                                 }}
-                                className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                                className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
                               />
                               <div className="flex gap-3">
                                 {["Activo", "Inactivo"].map((s) => (
@@ -697,7 +697,7 @@ export default function Clients() {
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   rows={3}
-                  className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors resize-none"
+                  className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
                 />
               </div>
             </div>
@@ -769,14 +769,14 @@ export default function Clients() {
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button className="flex-1 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               {drawerMode === "create" ? "Guardar Cliente" : "Guardar Cambios"}
             </button>
           </div>
         )}
         {drawerMode === "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewClient), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#3B82F6] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewClient), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               <RiEditFill size={15} /> Editar Cliente
             </button>
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
@@ -836,7 +836,7 @@ export default function Clients() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(branchModal.branches || []).map((branch, idx) => (
-                    <div key={idx} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-4 hover:border-[#3B82F6]/50 transition-colors">
+                    <div key={idx} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/50 transition-colors">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[#60a5fa] flex-shrink-0">
                           <RiMapPinFill size={14} />
@@ -928,7 +928,7 @@ export default function Clients() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {(repModal.branches || []).map((branch, idx) => (
-                      <div key={idx} onClick={() => setSelectedRepBranch(branch)} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-4 hover:border-[#3B82F6]/50 cursor-pointer transition-colors">
+                      <div key={idx} onClick={() => setSelectedRepBranch(branch)} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/50 cursor-pointer transition-colors">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[#60a5fa] flex-shrink-0">
                             <RiMapPinFill size={14} />

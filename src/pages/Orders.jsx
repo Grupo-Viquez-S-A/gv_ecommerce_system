@@ -45,7 +45,7 @@ const MOCK_ORDERS = [
 const STATUS_CONFIG = {
   Pendiente:   { bg: "bg-red-500/10",    text: "text-red-400",    border: "border-red-500/20" },
   "En proceso": { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/20" },
-  Enviado:     { bg: "bg-blue-500/10",   text: "text-blue-400",   border: "border-blue-500/20" },
+  Enviado:     { bg: "bg-[#C9A227]/10",   text: "text-[#C9A227]",   border: "border-[#C9A227]/20" },
   Entregado:   { bg: "bg-green-500/10",  text: "text-green-400",  border: "border-green-500/20" },
   Cancelado:   { bg: "bg-gray-500/10",   text: "text-gray-400",   border: "border-gray-500/20" },
 };
@@ -69,7 +69,7 @@ const dailyOrdersData = [
 /* ─── HELPERS ──────────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
       {icon || label}
     </button>
   );
@@ -95,7 +95,7 @@ function Field({ icon, label, value, onChange, placeholder, type = "text" }) {
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors`}
+          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors`}
         />
       </div>
     </div>
@@ -185,11 +185,11 @@ export default function Orders() {
   const companies = ["Todas", "Grupo Víquez", "Textiles de Occidente", "Constructora Víquez", "Pacific Pet Food", "Occidente Lab", "Agro Occidente Group"];
 
   const metrics = [
-    { label: "PEDIDOS TOTALES", value: "247", growth: "+12%", growthColor: "text-green-400", color: "#3b82f6", iconColor: "text-[#3b82f6]", bg: "bg-[#3b82f6]/10" },
+    { label: "PEDIDOS TOTALES", value: "247", growth: "+12%", growthColor: "text-green-400", color: "#C9A227", iconColor: "text-[#C9A227]", bg: "bg-[#C9A227]/10" },
     { label: "VENTAS TOTALES", value: "€185 M", growth: "+14%", growthColor: "text-green-400", color: "#22c55e", iconColor: "text-[#22c55e]", bg: "bg-[#22c55e]/10" },
     { label: "PEDIDOS PENDIENTES", value: "38", growth: "+8%", growthColor: "text-green-400", color: "#f59e0b", iconColor: "text-[#f59e0b]", bg: "bg-[#f59e0b]/10" },
     { label: "EN PROCESO", value: "45", growth: "+15%", growthColor: "text-green-400", color: "#f97316", iconColor: "text-[#f97316]", bg: "bg-[#f97316]/10" },
-    { label: "ENVIADOS", value: "112", growth: "-10%", growthColor: "text-red-400", color: "#3b82f6", iconColor: "text-[#3b82f6]", bg: "bg-[#3b82f6]/10" },
+    { label: "ENVIADOS", value: "112", growth: "-10%", growthColor: "text-red-400", color: "#C9A227", iconColor: "text-[#C9A227]", bg: "bg-[#C9A227]/10" },
     { label: "ENTREGADOS", value: "47", growth: "+17%", growthColor: "text-green-400", color: "#ef4444", iconColor: "text-[#ef4444]", bg: "bg-[#ef4444]/10" },
   ];
 
@@ -249,7 +249,7 @@ export default function Orders() {
               <button className="flex items-center gap-2 bg-[#141a2a] border border-[#1f2a40] hover:bg-[#1e3a5f] text-gray-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
                 <RiExportFill size={15} /> Exportar
               </button>
-              <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+              <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20">
                 <RiAddFill size={16} /> Nuevo Pedido
               </button>
             </div>
@@ -258,7 +258,7 @@ export default function Orders() {
           {/* Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#3B82F6]/20 transition-colors">
+              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/20 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center ${m.iconColor}`}>
                     <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: m.color }} />
@@ -284,8 +284,8 @@ export default function Orders() {
                 <AreaChart data={dailyOrdersData}>
                   <defs>
                     <linearGradient id="colorOrders" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#C9A227" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#C9A227" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1f2a40" vertical={false} />
@@ -296,7 +296,7 @@ export default function Orders() {
                     itemStyle={{ color: "#fff" }}
                     formatter={(v) => [`${v} pedidos`, "Pedidos"]}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} fill="url(#colorOrders)" />
+                  <Area type="monotone" dataKey="value" stroke="#C9A227" strokeWidth={2} fill="url(#colorOrders)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -307,23 +307,23 @@ export default function Orders() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <div className="relative lg:col-span-2">
                 <RiSearchLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" placeholder="Buscar por número, cliente o producto..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors" />
+                <input type="text" placeholder="Buscar por número, cliente o producto..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors" />
               </div>
               <div>
                 <div className="relative">
                   <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors" />
+                  <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
                 </div>
               </div>
               <div>
                 <div className="relative">
                   <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors" />
+                  <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
                 </div>
               </div>
               <div>
                 <div className="relative">
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Todos los estados</option>
                     <option>Pendiente</option>
                     <option>En proceso</option>
@@ -336,7 +336,7 @@ export default function Orders() {
               </div>
               <div>
                 <div className="relative">
-                  <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Todos los pagos</option>
                     <option>Pagado</option>
                     <option>Pendiente</option>
@@ -347,7 +347,7 @@ export default function Orders() {
               </div>
               <div>
                 <div className="relative">
-                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     {agents.map((a) => <option key={a}>{a}</option>)}
                   </select>
                   <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
@@ -357,7 +357,7 @@ export default function Orders() {
                 <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setPaymentFilter("Todos"); setAgentFilter("Todos"); }} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors">
                   Limpiar filtros
                 </button>
-                <button className="flex-1 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2 rounded-lg transition-colors">
                   Buscar
                 </button>
               </div>
@@ -439,8 +439,8 @@ export default function Orders() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#3B82F6]" />Nuevo Pedido</>}
-              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#3B82F6]" />Editar Pedido</>}
+              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#C9A227]" />Nuevo Pedido</>}
+              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#C9A227]" />Editar Pedido</>}
               {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle del Pedido</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
@@ -460,7 +460,7 @@ export default function Orders() {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Estado</label>
                 <div className="relative">
-                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Pendiente</option>
                     <option>En proceso</option>
                     <option>Enviado</option>
@@ -473,7 +473,7 @@ export default function Orders() {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Pago</label>
                 <div className="relative">
-                  <select value={form.payment} onChange={(e) => setForm({ ...form, payment: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={form.payment} onChange={(e) => setForm({ ...form, payment: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Pagado</option>
                     <option>Pendiente</option>
                     <option>Reembolsado</option>
@@ -484,7 +484,7 @@ export default function Orders() {
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Vendedor</label>
                 <div className="relative">
-                  <select value={form.agent} onChange={(e) => setForm({ ...form, agent: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={form.agent} onChange={(e) => setForm({ ...form, agent: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option value="">Seleccionar vendedor</option>
                     {agents.filter((a) => a !== "Todos").map((a) => <option key={a}>{a}</option>)}
                   </select>
@@ -528,14 +528,14 @@ export default function Orders() {
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button onClick={handleSaveOrder} className="flex-1 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={handleSaveOrder} className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               {drawerMode === "create" ? "Guardar Pedido" : "Guardar Cambios"}
             </button>
           </div>
         )}
         {drawerMode === "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewOrder), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#3B82F6] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewOrder), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               <RiEditFill size={15} /> Editar Pedido
             </button>
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">

@@ -34,7 +34,7 @@ import {
 
 /* ─── MOCK DATA: AGENTES ─────────────────────────────────────────── */
 const MOCK_AGENTS = [
-  { id: 1, initials: "JC", color: "#3b82f6", name: "Jean Carlo Víquez", company: "Grupo Víquez", sales: "24.8 M", clientsCount: 18, status: "Activo", email: "jeancarlo@grupoviquez.com", phone: "+506 8888 1111", territory: "Occidente", totalQuotes: 67, totalOrders: 142, commission: "2.5%", notes: "" },
+  { id: 1, initials: "JC", color: "#C9A227", name: "Jean Carlo Víquez", company: "Grupo Víquez", sales: "24.8 M", clientsCount: 18, status: "Activo", email: "jeancarlo@grupoviquez.com", phone: "+506 8888 1111", territory: "Occidente", totalQuotes: 67, totalOrders: 142, commission: "2.5%", notes: "" },
   { id: 2, initials: "MR", color: "#22c55e", name: "María Rodríguez", company: "Textiles de Occidente", sales: "19.3 M", clientsCount: 14, status: "Activo", email: "maria@textilesoccidente.com", phone: "+506 8888 2222", territory: "Centro", totalQuotes: 45, totalOrders: 98, commission: "2.0%", notes: "" },
   { id: 3, initials: "CP", color: "#f59e0b", name: "Carlos Pérez", company: "Constructora Víquez", sales: "15.7 M", clientsCount: 11, status: "Activo", email: "carlos@constructoraviquez.com", phone: "+506 8888 3333", territory: "Occidente", totalQuotes: 38, totalOrders: 76, commission: "2.0%", notes: "" },
   { id: 4, initials: "AL", color: "#ec4899", name: "Ana López", company: "Pacific Pet Food", sales: "12.1 M", clientsCount: 9, status: "Activo", email: "ana@pacificpetfood.com", phone: "+506 8888 4444", territory: "Nacional", totalQuotes: 32, totalOrders: 65, commission: "2.5%", notes: "" },
@@ -44,12 +44,12 @@ const MOCK_AGENTS = [
   { id: 8, initials: "LF", color: "#ef4444", name: "Laura Fernández", company: "Textiles de Occidente", sales: "5.6 M", clientsCount: 5, status: "Activo", email: "laura@textilesoccidente.com", phone: "+506 8888 8888", territory: "Sur", totalQuotes: 18, totalOrders: 41, commission: "2.0%", notes: "" },
 ];
 
-const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e", "#14b8a6", "#a855f7", "#ef4444"];
+const avatarColors = ["#6366f1", "#ec4899", "#C9A227", "#f59e0b", "#22c55e", "#14b8a6", "#a855f7", "#ef4444"];
 
 /* ─── HELPERS ──────────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
       {icon || label}
     </button>
   );
@@ -66,7 +66,7 @@ function Field({ icon, label, value, onChange, placeholder, type = "text" }) {
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors`}
+          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors`}
         />
       </div>
     </div>
@@ -217,7 +217,7 @@ export default function Agents() {
               <h1 className="text-xl font-bold text-white">Agentes</h1>
               <p className="text-sm text-gray-400 mt-0.5">Administra todos los agentes comerciales del grupo.</p>
             </div>
-            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20">
               <RiAddFill size={16} /> Nuevo agente
             </button>
           </div>
@@ -225,7 +225,7 @@ export default function Agents() {
           {/* Metrics */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#3B82F6]/30 transition-colors">
+              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/30 transition-colors">
                 <div className="flex items-center justify-between mb-2">
                   <div className={`w-8 h-8 rounded-lg ${m.color} flex items-center justify-center ${m.iconColor}`}>{m.icon}</div>
                   <span className={`text-xs font-medium ${m.growthColor}`}>{m.growth}</span>
@@ -245,7 +245,7 @@ export default function Agents() {
                 placeholder="Buscar agente..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-[#111827] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors"
+                className="w-full bg-[#111827] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
               />
             </div>
             <div className="flex gap-2">
@@ -253,7 +253,7 @@ export default function Agents() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none bg-[#111827] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer"
+                  className="appearance-none bg-[#111827] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
                 >
                   <option>Todos los estados</option>
                   <option>Activo</option>
@@ -265,7 +265,7 @@ export default function Agents() {
                 <select
                   value={companyFilter}
                   onChange={(e) => setCompanyFilter(e.target.value)}
-                  className="appearance-none bg-[#111827] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer"
+                  className="appearance-none bg-[#111827] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
                 >
                   {companies.map((c) => <option key={c}>{c}</option>)}
                 </select>
@@ -405,8 +405,8 @@ export default function Agents() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#3B82F6]" />Nuevo Agente</>}
-              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#3B82F6]" />Editar Agente</>}
+              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#C9A227]" />Nuevo Agente</>}
+              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#C9A227]" />Editar Agente</>}
               {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle del Agente</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
@@ -429,7 +429,7 @@ export default function Agents() {
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Empresa</label>
                 <div className="relative">
                   <RiBriefcaseFill size={14} className="absolute left-3 top-3 text-gray-500" />
-                  <select value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option value="">Seleccionar empresa</option>
                     {companies.slice(1).map((c) => <option key={c}>{c}</option>)}
                   </select>
@@ -441,7 +441,7 @@ export default function Agents() {
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Comisión</label>
                 <div className="relative">
                   <RiStarFill size={14} className="absolute left-3 top-3 text-gray-500" />
-                  <input type="text" placeholder="Ej. 2.5%" value={form.commission} onChange={(e) => setForm({ ...form, commission: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors" />
+                  <input type="text" placeholder="Ej. 2.5%" value={form.commission} onChange={(e) => setForm({ ...form, commission: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors" />
                 </div>
               </div>
               <div>
@@ -459,7 +459,7 @@ export default function Agents() {
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Notas</label>
-                <textarea placeholder="Notas internas sobre el agente..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors resize-none" />
+                <textarea placeholder="Notas internas sobre el agente..." value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors resize-none" />
               </div>
             </div>
           )}
@@ -531,14 +531,14 @@ export default function Agents() {
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cancelar
             </button>
-            <button className="flex-1 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               {drawerMode === "create" ? "Guardar Agente" : "Guardar Cambios"}
             </button>
           </div>
         )}
         {drawerMode === "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewAgent), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#3B82F6] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewAgent), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               <RiEditFill size={15} /> Editar Agente
             </button>
             <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">

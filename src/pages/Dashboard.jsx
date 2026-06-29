@@ -35,7 +35,7 @@ import {
 
 const companies = [
   { id: "grupo-viquez", name: "Grupo Víquez", color: "#c9a227" },
-  { id: "constructora", name: "Constructora Víquez", color: "#3b82f6" },
+  { id: "constructora", name: "Constructora Víquez", color: "#C9A227" },
   { id: "occidente-lab", name: "Occidente Lab", color: "#22c55e" },
   { id: "textiles", name: "Textiles de Occidente", color: "#6366f1" },
   { id: "agro", name: "Agro Occidente Group", color: "#f59e0b" },
@@ -55,7 +55,7 @@ const donutData = [
   { name: "Textiles de Occidente", value: 45, color: "#6366f1" },
   { name: "Occidente Lab", value: 25, color: "#22c55e" },
   { name: "Pacific Pet Food", value: 52, color: "#ec4899" },
-  { name: "Constructora Víquez", value: 38, color: "#3b82f6" },
+  { name: "Constructora Víquez", value: 38, color: "#C9A227" },
   { name: "Occidente Capital Group", value: 25, color: "#f59e0b" },
 ];
 
@@ -71,7 +71,7 @@ const performance = [
   { name: "Textiles de Occidente", amount: "₡45 M", percentage: 92, color: "#6366f1" },
   { name: "Occidente Lab", amount: "₡25 M", percentage: 88, color: "#22c55e" },
   { name: "Pacific Pet Food", amount: "₡52 M", percentage: 105, color: "#ec4899" },
-  { name: "Constructora Víquez", amount: "₡38 M", percentage: 95, color: "#3b82f6" },
+  { name: "Constructora Víquez", amount: "₡38 M", percentage: 95, color: "#C9A227" },
   { name: "Occidente Capital Group", amount: "₡25 M", percentage: 63, color: "#f59e0b" },
 ];
 
@@ -91,7 +91,7 @@ const activities = [
   { user: "Kevin Araya", action: "generó una cotización", target: "Pet Shop San Rafael - Pacific Pet Food", time: "Ayer, 3:15 p.m.", icon: "file" },
 ];
 
-const avatarColors = ["#6366f1", "#ec4899", "#3b82f6", "#f59e0b", "#22c55e"];
+const avatarColors = ["#6366f1", "#ec4899", "#C9A227", "#f59e0b", "#22c55e"];
 
 function Dashboard() {
   const { user } = useAuth();
@@ -207,7 +207,7 @@ function Dashboard() {
               label="Clientes Totales"
               value="2,845"
               growth="+16%"
-              colorClass="bg-[#3b82f6]"
+              colorClass="bg-[#C9A227]"
             />
             <StatCard
               icon={<RiBarChartBoxFill size={20} />}
@@ -255,14 +255,14 @@ function Dashboard() {
                     <Bar dataKey="textiles" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="lab" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="petfood" stackId="a" fill="#ec4899" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="constructora" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="constructora" stackId="a" fill="#C9A227" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="capital" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
                     <Bar dataKey="grupo" stackId="a" fill="#c9a227" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
               <div className="flex flex-wrap gap-4 mt-3">
-                {["#6366f1", "#22c55e", "#ec4899", "#3b82f6", "#f59e0b", "#c9a227"].map((c, i) => (
+                {["#6366f1", "#22c55e", "#ec4899", "#C9A227", "#f59e0b", "#c9a227"].map((c, i) => (
                   <div key={i} className="flex items-center gap-1.5 text-xs text-gray-400">
                     <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: c }} />
                     {donutData[i]?.name || "Grupo Víquez"}
@@ -271,7 +271,7 @@ function Dashboard() {
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#1f2a40]">
                 <span className="text-xs text-gray-500">Total acumulado del año</span>
-                <span className="text-sm font-bold text-[#3b82f6]">₡1,050 M</span>
+                <span className="text-sm font-bold text-[#C9A227]">₡1,050 M</span>
               </div>
             </div>
 
@@ -331,7 +331,7 @@ function Dashboard() {
           <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Top 5 Clientes por Ventas</h3>
-              <button className="text-xs text-[#3b82f6] hover:text-white flex items-center gap-1">
+              <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                 Este mes <RiArrowDownSFill size={12} />
               </button>
             </div>
@@ -352,7 +352,7 @@ function Dashboard() {
               ))}
             </div>
             <div className="mt-3 pt-3 border-t border-[#1f2a40] flex justify-end">
-              <button className="text-xs text-[#3b82f6] hover:text-white flex items-center gap-1">
+              <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                 Ver todos los clientes <RiArrowRightSLine size={12} />
               </button>
             </div>
@@ -385,7 +385,7 @@ function Dashboard() {
                 ))}
               </div>
               <div className="mt-3 pt-3 border-t border-[#1f2a40] flex justify-end">
-                <button className="text-xs text-[#3b82f6] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                   Ver reporte completo <RiArrowRightSLine size={12} />
                 </button>
               </div>
@@ -395,7 +395,7 @@ function Dashboard() {
             <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Rendimiento por Asesor (Ventas del mes)</h3>
-                <button className="text-xs text-[#3b82f6] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                   Este mes <RiArrowDownSFill size={12} />
                 </button>
               </div>
@@ -426,7 +426,7 @@ function Dashboard() {
                 ))}
               </div>
               <div className="mt-3 pt-3 border-t border-[#1f2a40] flex justify-end">
-                <button className="text-xs text-[#3b82f6] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                   Ver ranking completo <RiArrowRightSLine size={12} />
                 </button>
               </div>
@@ -436,7 +436,7 @@ function Dashboard() {
             <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Actividad Reciente (Todo el equipo)</h3>
-                <button className="text-xs text-[#3b82f6] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                   Ver todo <RiArrowRightSLine size={12} />
                 </button>
               </div>
@@ -444,7 +444,7 @@ function Dashboard() {
                 {activities.map((act, i) => (
                   <div key={i} className="flex items-start gap-3 pb-3 border-b border-[#1f2a40] last:border-0">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      act.icon === "user" ? "bg-[#3b82f6]/20 text-[#3b82f6]" :
+                      act.icon === "user" ? "bg-[#C9A227]/20 text-[#C9A227]" :
                       act.icon === "file" ? "bg-[#6366f1]/20 text-[#6366f1]" :
                       act.icon === "cart" ? "bg-[#22c55e]/20 text-[#22c55e]" :
                       "bg-[#f59e0b]/20 text-[#f59e0b]"

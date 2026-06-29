@@ -75,7 +75,7 @@ function DashSideBar({
             sidebarCollapsed ? "justify-center px-0" : "px-4 gap-3"
           }`}
         >
-          <div className="w-8 h-8 rounded bg-blue-800 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded bg-[#C9A227] flex items-center justify-center flex-shrink-0">
             <img className="w-6 h-6" src={GVLogo} alt="GV" />
           </div>
           {!sidebarCollapsed && (
@@ -219,7 +219,7 @@ function DashSideBar({
         >
           {sidebarCollapsed ? (
             <>
-              <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">
+              <div className="w-8 h-8 rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold">
                 {user?.fullName
                   ? user.fullName
                       .split(" ")
@@ -240,7 +240,7 @@ function DashSideBar({
           ) : (
             <>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold flex-shrink-0">
                   {user?.fullName
                     ? user.fullName
                         .split(" ")
@@ -381,7 +381,7 @@ function DashSideBar({
           </nav>
           <div className="p-4 border-t border-[#1f2a40]">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">
+              <div className="w-8 h-8 rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold">
                 {user?.fullName
                   ? user.fullName
                       .split(" ")

@@ -53,7 +53,7 @@ const MOCK_QUOTATIONS = [
 /* ─── STATUS CONFIG ─────────────────────────────────────────────────────────────── */
 const STATUS_CONFIG = {
   Pendiente:   { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/20" },
-  "En revisión": { bg: "bg-blue-500/10",   text: "text-blue-400",   border: "border-blue-500/20" },
+  "En revisión": { bg: "bg-[#C9A227]/10",   text: "text-[#C9A227]",   border: "border-[#C9A227]/20" },
   Aprobada:    { bg: "bg-green-500/10",  text: "text-green-400",  border: "border-green-500/20" },
   Rechazada:   { bg: "bg-red-500/10",    text: "text-red-400",    border: "border-red-500/20" },
   Vencida:     { bg: "bg-pink-500/10",   text: "text-pink-400",   border: "border-pink-500/20" },
@@ -62,7 +62,7 @@ const STATUS_CONFIG = {
 
 const STATUS_COLORS = {
   Pendiente: "#f59e0b",
-  "En revisión": "#3b82f6",
+  "En revisión": "#C9A227",
   Aprobada: "#22c55e",
   Rechazada: "#ef4444",
   Vencida: "#ec4899",
@@ -96,7 +96,7 @@ const lineData = [
 /* ─── HELPERS ──────────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#3B82F6] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
       {icon || label}
     </button>
   );
@@ -157,7 +157,7 @@ export default function Quotations() {
   const metrics = [
     { label: "COTIZACIONES TOTALES", value: "172", growth: "+15%", growthColor: "text-green-400", color: "#8b5cf6", iconColor: "text-[#8b5cf6]", bg: "bg-[#8b5cf6]/10" },
     { label: "PENDIENTES", value: "28", growth: "+12%", growthColor: "text-red-400", color: "#f59e0b", iconColor: "text-[#f59e0b]", bg: "bg-[#f59e0b]/10" },
-    { label: "EN REVISIÓN", value: "16", growth: "+6%", growthColor: "text-green-400", color: "#3b82f6", iconColor: "text-[#3b82f6]", bg: "bg-[#3b82f6]/10" },
+    { label: "EN REVISIÓN", value: "16", growth: "+6%", growthColor: "text-green-400", color: "#C9A227", iconColor: "text-[#C9A227]", bg: "bg-[#C9A227]/10" },
     { label: "APROBADAS", value: "82", growth: "+18%", growthColor: "text-green-400", color: "#22c55e", iconColor: "text-[#22c55e]", bg: "bg-[#22c55e]/10" },
     { label: "RECHAZADAS", value: "12", growth: "-4%", growthColor: "text-red-400", color: "#ef4444", iconColor: "text-[#ef4444]", bg: "bg-[#ef4444]/10" },
     { label: "VENCIDAS", value: "22", growth: "+10%", growthColor: "text-green-400", color: "#ec4899", iconColor: "text-[#ec4899]", bg: "bg-[#ec4899]/10" },
@@ -215,7 +215,7 @@ export default function Quotations() {
               <h1 className="text-xl font-bold text-white">Cotizaciones</h1>
               <p className="text-sm text-gray-400 mt-0.5">Gestiona y da seguimiento a todas las cotizaciones del grupo.</p>
             </div>
-            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
+            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20">
               <RiAddFill size={16} /> Nueva Cotización
             </button>
           </div>
@@ -223,7 +223,7 @@ export default function Quotations() {
           {/* Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#3B82F6]/20 transition-colors">
+              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/20 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center ${m.iconColor}`}>
                     <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: m.color }} />
@@ -241,12 +241,12 @@ export default function Quotations() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="relative">
                 <RiSearchLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" placeholder="Buscar por número o cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6] transition-colors" />
+                <input type="text" placeholder="Buscar por número o cliente..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors" />
               </div>
               <div>
                 <label className="block text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Cliente</label>
                 <div className="relative">
-                  <select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={clientFilter} onChange={(e) => setClientFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     {clients.map((c) => <option key={c}>{c}</option>)}
                   </select>
                   <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
@@ -255,7 +255,7 @@ export default function Quotations() {
               <div>
                 <label className="block text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Empresa</label>
                 <div className="relative">
-                  <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     {companies.map((c) => <option key={c}>{c}</option>)}
                   </select>
                   <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
@@ -264,7 +264,7 @@ export default function Quotations() {
               <div>
                 <label className="block text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Estado</label>
                 <div className="relative">
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Todos los estados</option>
                     <option>Pendiente</option>
                     <option>En revisión</option>
@@ -279,7 +279,7 @@ export default function Quotations() {
               <div>
                 <label className="block text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Vendedor</label>
                 <div className="relative">
-                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors cursor-pointer">
+                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     {agents.map((a) => <option key={a}>{a}</option>)}
                   </select>
                   <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
@@ -289,21 +289,21 @@ export default function Quotations() {
                 <label className="block text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Fecha desde</label>
                 <div className="relative">
                   <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors" />
+                  <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
                 </div>
               </div>
               <div>
                 <label className="block text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">Fecha hasta</label>
                 <div className="relative">
                   <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#3B82F6] transition-colors" />
+                  <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
                 </div>
               </div>
               <div className="flex items-end gap-2">
                 <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setCompanyFilter("Todas"); setAgentFilter("Todos"); setClientFilter("Todos"); }} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-1.5 rounded-lg transition-colors">
                   Limpiar filtros
                 </button>
-                <button className="flex-1 bg-[#3B82F6] hover:bg-[#1d4ed8] text-white text-sm font-medium py-1.5 rounded-lg transition-colors">
+                <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-1.5 rounded-lg transition-colors">
                   Buscar
                 </button>
               </div>
@@ -430,8 +430,8 @@ export default function Quotations() {
                   <AreaChart data={areaData}>
                     <defs>
                       <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#C9A227" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#C9A227" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1f2a40" vertical={false} />
@@ -441,7 +441,7 @@ export default function Quotations() {
                       contentStyle={{ backgroundColor: "#111827", border: "1px solid #1f2a40", borderRadius: "8px", fontSize: "12px", color: "#fff" }}
                       itemStyle={{ color: "#fff" }}
                     />
-                    <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} fill="url(#colorValue)" />
+                    <Area type="monotone" dataKey="value" stroke="#C9A227" strokeWidth={2} fill="url(#colorValue)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -479,7 +479,7 @@ export default function Quotations() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#3B82F6]" />Nueva Cotización</>}
+              {drawerMode === "create" && <><RiAddFill size={20} className="text-[#C9A227]" />Nueva Cotización</>}
               {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle de Cotización</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
