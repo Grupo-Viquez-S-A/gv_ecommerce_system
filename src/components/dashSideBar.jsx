@@ -170,6 +170,7 @@ function DashSideBar({
           <NavItem
             icon={<RiFileListFill size={18} />}
             label="Pedidos"
+            to="/pedidos"
             collapsed={sidebarCollapsed}
           />
 
@@ -346,6 +347,7 @@ function DashSideBar({
             <NavItem
               icon={<RiFileListFill size={18} />}
               label="Pedidos"
+              to="/pedidos"
               collapsed={false}
             />
             <div className="px-4 pb-1 pt-4">

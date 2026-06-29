@@ -7,6 +7,7 @@ import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
 import Sales from "./pages/Sales";
+import Orders from "./pages/Orders";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
@@ -59,6 +60,15 @@ function App() {
           }
         />
         <Route path="/ventas-dev" element={<Sales />} />
+        <Route
+          path="/pedidos"
+          element={
+            <ProtectedRoute>
+              <Orders />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/pedidos-dev" element={<Orders />} />
         <Route
           path="/admin/usuarios"
           element={
