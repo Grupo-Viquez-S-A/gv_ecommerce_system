@@ -65,7 +65,7 @@ function DashSideBar({
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-[#0f1623] border-r border-[#1f2a40] h-full flex-shrink-0 transition-all duration-300 overflow-hidden ${
+        className={`hidden lg:flex flex-col bg-[#0f1623] border-r border-[#1f2a40] min-h-screen flex-shrink-0 transition-all duration-300 overflow-hidden ${
           sidebarCollapsed ? "w-[64px]" : "w-64"
         }`}
       >
