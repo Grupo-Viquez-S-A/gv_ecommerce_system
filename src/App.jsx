@@ -8,6 +8,7 @@ import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
 import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
+import Agenda from "./pages/Agenda";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
@@ -69,6 +70,15 @@ function App() {
           }
         />
         <Route path="/pedidos-dev" element={<Orders />} />
+        <Route
+          path="/agenda"
+          element={
+            <ProtectedRoute>
+              <Agenda />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/agenda-dev" element={<Agenda />} />
         <Route
           path="/admin/usuarios"
           element={

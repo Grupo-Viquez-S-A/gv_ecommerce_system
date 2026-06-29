@@ -188,6 +188,7 @@ function DashSideBar({
           <NavItem
             icon={<RiCalendarFill size={18} />}
             label="Agenda"
+            to="/agenda"
             collapsed={sidebarCollapsed}
           />
 
@@ -358,6 +359,7 @@ function DashSideBar({
             <NavItem
               icon={<RiCalendarFill size={18} />}
               label="Agenda"
+              to="/agenda"
               collapsed={false}
             />
             <NavItem
