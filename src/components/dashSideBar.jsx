@@ -158,6 +158,7 @@ function DashSideBar({
           <NavItem
             icon={<RiClipboardFill size={18} />}
             label="Cotizaciones"
+            to="/cotizaciones"
             collapsed={sidebarCollapsed}
           />
           <NavItem
@@ -187,11 +188,6 @@ function DashSideBar({
             label="Agenda"
             collapsed={sidebarCollapsed}
           />
-          <NavItem
-            icon={<RiExchangeFill size={18} />}
-            label="Transferencias"
-            collapsed={sidebarCollapsed}
-          />
 
           {/* SISTEMA */}
           {!sidebarCollapsed && (
@@ -206,7 +202,7 @@ function DashSideBar({
           )}
           <NavItem
             icon={<RiSettings4Fill size={18} />}
-            label="Configuración"
+            label="Administración de Usuarios"
             to="/admin/usuarios"
             collapsed={sidebarCollapsed}
           />
@@ -215,15 +211,20 @@ function DashSideBar({
         {/* User profile */}
         <div
           className={`border-t border-[#1f2a40] flex-shrink-0 ${
-            sidebarCollapsed
-              ? "py-3 flex flex-col items-center gap-2"
-              : "p-4"
+            sidebarCollapsed ? "py-3 flex flex-col items-center gap-2" : "p-4"
           }`}
         >
           {sidebarCollapsed ? (
             <>
               <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">
-                {user?.fullName ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "U"}
+                {user?.fullName
+                  ? user.fullName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()
+                  : "U"}
               </div>
               <button
                 onClick={signOut}
@@ -237,12 +238,22 @@ function DashSideBar({
             <>
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  {user?.fullName ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "U"}
+                  {user?.fullName
+                    ? user.fullName
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()
+                    : "U"}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">{user?.fullName || "Usuario"}</div>
+                  <div className="text-sm font-medium truncate">
+                    {user?.fullName || "Usuario"}
+                  </div>
                   <div className="text-xs text-gray-500 truncate">
-                    {user?.role?.name || "Usuario"}{user?.department?.name ? ` - ${user.department.name}` : ""}
+                    {user?.role?.name || "Usuario"}
+                    {user?.department?.name ? ` - ${user.department.name}` : ""}
                   </div>
                 </div>
               </div>
@@ -322,6 +333,7 @@ function DashSideBar({
             <NavItem
               icon={<RiClipboardFill size={18} />}
               label="Cotizaciones"
+              to="/cotizaciones"
               collapsed={false}
             />
             <NavItem
@@ -364,11 +376,23 @@ function DashSideBar({
           <div className="p-4 border-t border-[#1f2a40]">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-[#3b82f6] flex items-center justify-center text-xs font-bold">
-                {user?.fullName ? user.fullName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() : "U"}
+                {user?.fullName
+                  ? user.fullName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)
+                      .toUpperCase()
+                  : "U"}
               </div>
               <div>
-                <div className="text-sm font-medium">{user?.fullName || "Usuario"}</div>
-                <div className="text-xs text-gray-500">{user?.role?.name || "Usuario"}{user?.department?.name ? ` - ${user.department.name}` : ""}</div>
+                <div className="text-sm font-medium">
+                  {user?.fullName || "Usuario"}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {user?.role?.name || "Usuario"}
+                  {user?.department?.name ? ` - ${user.department.name}` : ""}
+                </div>
               </div>
             </div>
             <button

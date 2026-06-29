@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
+import Quotations from "./pages/Quotations";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
@@ -39,6 +40,15 @@ function App() {
           }
         />
         <Route path="/agentes-dev" element={<Agents />} />
+        <Route
+          path="/cotizaciones"
+          element={
+            <ProtectedRoute>
+              <Quotations />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/cotizaciones-dev" element={<Quotations />} />
         <Route
           path="/admin/usuarios"
           element={
