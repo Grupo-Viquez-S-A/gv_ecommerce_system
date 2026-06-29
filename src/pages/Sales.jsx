@@ -17,6 +17,9 @@ import {
   RiMoreFill,
   RiCalendarLine,
   RiExportFill,
+  RiUserFill,
+  RiStoreFill,
+  RiMoneyDollarCircleFill,
 } from "react-icons/ri";
 import {
   ResponsiveContainer,
@@ -74,6 +77,24 @@ function StatusBadge({ status }) {
   );
 }
 
+function Field({ icon, label, value, onChange, placeholder, type = "text" }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{label}</label>
+      <div className="relative">
+        {icon && <span className="absolute left-3 top-3 text-gray-500">{icon}</span>}
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#2563eb] transition-colors`}
+        />
+      </div>
+    </div>
+  );
+}
+
 /* ─── MAIN COMPONENT ─────────────────────────────────────── */
 export default function Sales() {
   const { user } = useAuth();
@@ -93,15 +114,57 @@ export default function Sales() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("create");
   const [viewSale, setViewSale] = useState(null);
+  const [editSale, setEditSale] = useState(null);
+  const [sales, setSales] = useState(MOCK_SALES);
+  const [nextId, setNextId] = useState(248);
+
+  const [form, setForm] = useState({ client: "", date: "", products: "", total: "", status: "Completada", agent: "" });
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
   const toggleCollapse = () => setSidebarCollapsed(!sidebarCollapsed);
 
-  const openCreateDrawer = () => { setDrawerMode("create"); setViewSale(null); setDrawerOpen(true); };
-  const openViewDrawer = (s) => { setDrawerMode("view"); setViewSale(s); setDrawerOpen(true); };
-  const closeDrawer = () => { setDrawerOpen(false); setTimeout(() => { setDrawerMode("create"); setViewSale(null); }, 300); };
+  const openCreateDrawer = () => {
+    setDrawerMode("create");
+    setViewSale(null);
+    setEditSale(null);
+    setForm({ client: "", date: "", products: "", total: "", status: "Completada", agent: "" });
+    setDrawerOpen(true);
+  };
+  const openEditDrawer = (s) => {
+    setDrawerMode("edit");
+    setEditSale(s);
+    setViewSale(null);
+    setForm({ client: s.client, date: s.date, products: s.products, total: s.total, status: s.status, agent: s.agent });
+    setDrawerOpen(true);
+  };
+  const openViewDrawer = (s) => { setDrawerMode("view"); setViewSale(s); setEditSale(null); setDrawerOpen(true); };
+  const closeDrawer = () => { setDrawerOpen(false); setTimeout(() => { setDrawerMode("create"); setViewSale(null); setEditSale(null); }, 300); };
 
-  const filtered = MOCK_SALES.filter((s) => {
+  const handleSaveSale = () => {
+    if (drawerMode === "create") {
+      const newNumber = `VEN-${String(nextId).padStart(6, "0")}`;
+      const avatar = form.agent.split(" ").map((n) => n[0]).join("").toUpperCase();
+      const newSale = {
+        id: nextId,
+        number: newNumber,
+        client: form.client,
+        date: form.date,
+        products: Number(form.products) || 0,
+        total: form.total,
+        status: form.status,
+        agent: form.agent,
+        avatar: avatar || "NA",
+      };
+      setSales((prev) => [newSale, ...prev]);
+      setNextId((prev) => prev + 1);
+    } else if (drawerMode === "edit" && editSale) {
+      const avatar = form.agent.split(" ").map((n) => n[0]).join("").toUpperCase();
+      setSales((prev) => prev.map((s) => s.id === editSale.id ? { ...s, client: form.client, date: form.date, products: Number(form.products) || 0, total: form.total, status: form.status, agent: form.agent, avatar: avatar || "NA" } : s));
+    }
+    closeDrawer();
+  };
+
+  const filtered = sales.filter((s) => {
     const sq = search.toLowerCase();
     const matchSearch = s.number.toLowerCase().includes(sq) || s.client.toLowerCase().includes(sq);
     const matchStatus = statusFilter === "Todos" || s.status === statusFilter;
@@ -323,7 +386,7 @@ export default function Sales() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-0.5">
                         <button onClick={() => openViewDrawer(s)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver"><RiEyeFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar"><RiEditFill size={13} /></button>
+                        <button onClick={() => openEditDrawer(s)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar"><RiEditFill size={13} /></button>
                         <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Descargar"><RiDownloadFill size={13} /></button>
                         <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Más"><RiMoreFill size={13} /></button>
                       </div>
@@ -361,10 +424,11 @@ export default function Sales() {
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               {drawerMode === "create" && <><RiAddFill size={20} className="text-[#2563eb]" />Nueva Venta</>}
+              {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#2563eb]" />Editar Venta</>}
               {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle de Venta</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
-              {drawerMode === "create" ? "Registra una nueva venta." : "Información completa de la venta."}
+              {drawerMode === "create" ? "Registra una nueva venta." : drawerMode === "edit" ? "Modifica los datos de la venta." : "Información completa de la venta."}
             </p>
           </div>
           <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
@@ -372,6 +436,38 @@ export default function Sales() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">
+          {(drawerMode === "create" || drawerMode === "edit") && (
+            <div className="space-y-4">
+              <Field icon={<RiUserFill size={14} />} label="Cliente" placeholder="Nombre del cliente" value={form.client} onChange={(e) => setForm({ ...form, client: e.target.value })} />
+              <Field icon={<RiCalendarLine size={14} />} label="Fecha" placeholder="DD/MM/YYYY HH:mm" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <Field icon={<RiStoreFill size={14} />} label="Productos" placeholder="Cantidad" type="number" value={form.products} onChange={(e) => setForm({ ...form, products: e.target.value })} />
+                <Field icon={<RiMoneyDollarCircleFill size={14} />} label="Total" placeholder="€0.000.000" value={form.total} onChange={(e) => setForm({ ...form, total: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Estado</label>
+                <div className="relative">
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors cursor-pointer">
+                    <option>Completada</option>
+                    <option>En proceso</option>
+                    <option>Cancelada</option>
+                  </select>
+                  <RiArrowDownSFill size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Vendedor</label>
+                <div className="relative">
+                  <select value={form.agent} onChange={(e) => setForm({ ...form, agent: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#2563eb] transition-colors cursor-pointer">
+                    <option value="">Seleccionar vendedor</option>
+                    {agents.filter((a) => a !== "Todos").map((a) => <option key={a}>{a}</option>)}
+                  </select>
+                  <RiArrowDownSFill size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          )}
+
           {drawerMode === "view" && viewSale && (
             <div className="space-y-5">
               <div className="flex items-center gap-4 pb-5 border-b border-[#1f2a40]">
@@ -398,9 +494,26 @@ export default function Sales() {
             </div>
           )}
         </div>
+
+        {/* Drawer footer */}
+        {drawerMode !== "view" && (
+          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
+            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+              Cancelar
+            </button>
+            <button onClick={handleSaveSale} className="flex-1 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+              {drawerMode === "create" ? "Guardar Venta" : "Guardar Cambios"}
+            </button>
+          </div>
+        )}
         {drawerMode === "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">Cerrar</button>
+            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewSale), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#2563eb] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+              <RiEditFill size={15} /> Editar Venta
+            </button>
+            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+              Cerrar
+            </button>
           </div>
         )}
       </div>
