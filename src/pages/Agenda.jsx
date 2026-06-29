@@ -221,11 +221,11 @@ export default function Agenda() {
     .slice(0, 5);
 
   return (
-    <div className="flex min-h-screen bg-[#0a0e1a] text-[#F8FAFC]">
+    <div className="flex h-screen bg-[#0a0e1a] text-[#F8FAFC] overflow-hidden">
       <DashSideBar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-      <div className="flex-1 transition-all min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <div className="h-16 bg-[#111827] border-b border-[#1f2a40] flex items-center justify-between px-6 sticky top-0 z-30">
+        <div className="h-16 bg-[#111827] border-b border-[#1f2a40] flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 hover:bg-[#1f2a40] rounded-lg transition-colors">
               <RiMenuFill size={20} />
@@ -250,7 +250,7 @@ export default function Agenda() {
           </div>
         </div>
 
-        <div className="p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -532,7 +532,7 @@ export default function Agenda() {
               </table>
             </div>
           </div>
-        </div>
+        </main>
       </div>
 
       {/* Drawer */}
