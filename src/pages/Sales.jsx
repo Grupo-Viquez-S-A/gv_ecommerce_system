@@ -388,7 +388,6 @@ export default function Sales() {
                         <button onClick={() => openViewDrawer(s)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver"><RiEyeFill size={13} /></button>
                         <button onClick={() => openEditDrawer(s)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar"><RiEditFill size={13} /></button>
                         <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Descargar"><RiDownloadFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Más"><RiMoreFill size={13} /></button>
                       </div>
                     </td>
                   </tr>
