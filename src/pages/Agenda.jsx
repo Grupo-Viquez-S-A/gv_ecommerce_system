@@ -323,11 +323,11 @@ export default function Agenda() {
             <div className="flex-1 bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden min-w-0">
               {/* Calendar header */}
               <div className="flex border-b border-[#1f2a40] w-full">
-                <div className="w-16 border-r border-[#1f2a40] shrink-0" />
+                <div className="shrink-0 border-r border-[#1f2a40]" style={{ width: 64 }} />
                 {weekDays.map((d, i) => {
                   const isToday = isSameDay(d, today);
                   return (
-                    <div key={i} className={"flex-1 py-3 text-center border-r border-[#1f2a40] last:border-r-0 " + (isToday ? "bg-[#2563eb15]" : "")}>
+                    <div key={i} className={"py-3 text-center border-r border-[#1f2a40] last:border-r-0 " + (isToday ? "bg-[#2563eb15]" : "")} style={{ width: "calc((100% - 64px) / " + weekDays.length + ")" }}>
                       <div className="text-xs text-gray-400">{DAYS[d.getDay()]}</div>
                       <div className={"text-lg font-semibold mt-0.5 " + (isToday ? "text-[#2563eb]" : "")}>{d.getDate()}</div>
                       {isToday && <div className="w-6 h-6 bg-[#2563eb] rounded-full text-white text-xs flex items-center justify-center mx-auto mt-1">{d.getDate()}</div>}
@@ -348,7 +348,7 @@ export default function Agenda() {
                 </div>
 
                 {/* Grid lines */}
-                <div className="absolute left-16 right-0 top-0 h-full">
+                <div className="absolute right-0 top-0 h-full" style={{ left: 64 }}>
                   {HOURS.map((_, i) => (
                     <div key={i} className="border-b border-[#1f2a40]" style={{ height: 40 }} />
                   ))}
@@ -359,11 +359,11 @@ export default function Agenda() {
                 </div>
 
                 {/* Day columns */}
-                <div className="absolute left-16 right-0 top-0 h-full flex w-full">
+                <div className="absolute top-0 h-full flex" style={{ left: 64, right: 0 }}>
                   {weekDays.map((day, dayIdx) => {
                     const dayEvents = filteredEvents.filter(e => isSameDay(new Date(e.date), day));
                     return (
-                      <div key={dayIdx} className="flex-1 relative border-r border-[#1f2a40] last:border-r-0">
+                      <div key={dayIdx} className="relative border-r border-[#1f2a40] last:border-r-0 flex-1">
                         {/* All-day events */}
                         {dayEvents.filter(e => e.start === "00:00").map(ev => {
                           const cfg = TYPE_CONFIG[ev.type] || TYPE_CONFIG.Reunion;
