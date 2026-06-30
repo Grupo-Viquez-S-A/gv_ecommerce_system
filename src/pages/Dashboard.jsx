@@ -140,7 +140,7 @@ function Dashboard() {
         {/* Navbar */}
         <header className="h-14 bg-[#1c2538] border-b border-[#2a3550] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
+            <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white cursor-pointer">
               <RiMenuFill size={22} />
             </button>
             <div className="relative">
@@ -169,14 +169,14 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
+            <button className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer">
               <RiNotification3Fill size={16} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
+            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer">
               <RiSettings4Fill size={16} />
             </button>
-            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
+            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer">
               <RiLogoutBoxLine size={16} />
             </button>
           </div>
@@ -193,7 +193,7 @@ function Dashboard() {
 
           {/* Date selector */}
           <div className="flex items-center justify-end mb-4">
-            <button className="flex items-center gap-2 text-sm text-gray-400 bg-[#1c2538] border border-[#2a3550] rounded-lg px-3 py-2 hover:text-white transition-colors">
+            <button className="flex items-center gap-2 text-sm text-gray-400 bg-[#1c2538] border border-[#2a3550] rounded-lg px-3 py-2 hover:text-white transition-colors cursor-pointer">
               <RiCalendarCheckFill size={14} />
               1 - 30 de junio, 2024
               <RiArrowDownSFill size={14} />
@@ -238,7 +238,7 @@ function Dashboard() {
             <div className="lg:col-span-2 bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Ventas Consolidadas del Grupo (Todas las empresas)</h3>
-                <button className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+                <button className="text-xs text-gray-400 hover:text-white flex items-center gap-1 cursor-pointer">
                   Este año <RiArrowDownSFill size={12} />
                 </button>
               </div>
@@ -279,7 +279,7 @@ function Dashboard() {
             <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Ventas por Empresa (Acumulado del mes)</h3>
-                <button className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+                <button className="text-xs text-gray-400 hover:text-white flex items-center gap-1 cursor-pointer">
                   <RiEyeLine size={12} />
                 </button>
               </div>
@@ -331,7 +331,7 @@ function Dashboard() {
           <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Top 5 Clientes por Ventas</h3>
-              <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
+              <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1 cursor-pointer">
                 Este mes <RiArrowDownSFill size={12} />
               </button>
             </div>
@@ -352,7 +352,7 @@ function Dashboard() {
               ))}
             </div>
             <div className="mt-3 pt-3 border-t border-[#2a3550] flex justify-end">
-              <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
+              <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1 cursor-pointer">
                 Ver todos los clientes <RiArrowRightSLine size={12} />
               </button>
             </div>
@@ -385,7 +385,7 @@ function Dashboard() {
                 ))}
               </div>
               <div className="mt-3 pt-3 border-t border-[#2a3550] flex justify-end">
-                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1 cursor-pointer">
                   Ver reporte completo <RiArrowRightSLine size={12} />
                 </button>
               </div>
@@ -395,7 +395,7 @@ function Dashboard() {
             <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Rendimiento por Asesor (Ventas del mes)</h3>
-                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1 cursor-pointer">
                   Este mes <RiArrowDownSFill size={12} />
                 </button>
               </div>
@@ -426,7 +426,7 @@ function Dashboard() {
                 ))}
               </div>
               <div className="mt-3 pt-3 border-t border-[#2a3550] flex justify-end">
-                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1 cursor-pointer">
                   Ver ranking completo <RiArrowRightSLine size={12} />
                 </button>
               </div>
@@ -436,7 +436,7 @@ function Dashboard() {
             <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Actividad Reciente (Todo el equipo)</h3>
-                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
+                <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1 cursor-pointer">
                   Ver todo <RiArrowRightSLine size={12} />
                 </button>
               </div>

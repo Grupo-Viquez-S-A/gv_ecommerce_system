@@ -96,7 +96,7 @@ const lineData = [
 /* ─── HELPERS ──────────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#C9A227]/15"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#C9A227]/15"} cursor-pointer`}>
       {icon || label}
     </button>
   );
@@ -178,7 +178,7 @@ export default function Quotations() {
         {/* Header */}
         <header className="h-14 border-b border-[#2a3550] flex items-center justify-between px-5 flex-shrink-0 bg-[#0B1120]">
           <div className="flex items-center gap-3">
-            <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
+            <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white cursor-pointer">
               <RiMenuFill size={20} />
             </button>
             <span className="text-xs text-gray-500">Comercial</span>
@@ -187,7 +187,7 @@ export default function Quotations() {
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <button onClick={() => setCompanyDropdown(!companyDropdown)} className="flex items-center gap-2 text-sm text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors">
+              <button onClick={() => setCompanyDropdown(!companyDropdown)} className="flex items-center gap-2 text-sm text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color }} />
                 <span className="hidden sm:inline">{currentCompany.name}</span>
                 <RiArrowDownSFill size={14} className="text-gray-500" />
@@ -195,16 +195,16 @@ export default function Quotations() {
               {companyDropdown && (
                 <div className="absolute right-0 mt-2 w-56 bg-[#141d2e] border border-[#2a3550] rounded-xl shadow-xl z-50 py-1">
                   {companies.slice(1).map((c) => (
-                    <button key={c} onClick={() => { setCurrentCompany({ name: c, color: "#c9a227" }); setCompanyDropdown(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors">{c}</button>
+                    <button key={c} onClick={() => { setCurrentCompany({ name: c, color: "#c9a227" }); setCompanyDropdown(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer">{c}</button>
                   ))}
                 </div>
               )}
             </div>
-            <button className="relative text-gray-400 hover:text-white transition-colors">
+            <button className="relative text-gray-400 hover:text-white transition-colors cursor-pointer">
               <RiNotification3Fill size={18} />
               <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="text-gray-400 hover:text-white transition-colors"><RiSettings4Fill size={18} /></button>
+            <button className="text-gray-400 hover:text-white transition-colors cursor-pointer"><RiSettings4Fill size={18} /></button>
           </div>
         </header>
 
@@ -215,7 +215,7 @@ export default function Quotations() {
               <h1 className="text-xl font-bold text-white">Cotizaciones</h1>
               <p className="text-sm text-gray-400 mt-0.5">Gestiona y da seguimiento a todas las cotizaciones del grupo.</p>
             </div>
-            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20">
+            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20 cursor-pointer">
               <RiAddFill size={16} /> Nueva Cotización
             </button>
           </div>
@@ -300,10 +300,10 @@ export default function Quotations() {
                 </div>
               </div>
               <div className="flex items-end gap-2">
-                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setCompanyFilter("Todas"); setAgentFilter("Todos"); setClientFilter("Todos"); }} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-1.5 rounded-lg transition-colors">
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setCompanyFilter("Todas"); setAgentFilter("Todos"); setClientFilter("Todos"); }} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-1.5 rounded-lg transition-colors cursor-pointer">
                   Limpiar filtros
                 </button>
-                <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-1.5 rounded-lg transition-colors">
+                <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-1.5 rounded-lg transition-colors cursor-pointer">
                   Buscar
                 </button>
               </div>
@@ -314,7 +314,7 @@ export default function Quotations() {
           <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-6">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#2a3550]">
               <h3 className="text-sm font-semibold text-white">Listado de Cotizaciones</h3>
-              <button className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
+              <button className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer">
                 <RiExportFill size={13} /> Exportar <RiArrowDownSFill size={12} />
               </button>
             </div>
@@ -350,12 +350,12 @@ export default function Quotations() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-0.5">
-                        <button onClick={() => openViewDrawer(q)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Ver"><RiEyeFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Editar"><RiEditFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Descargar"><RiDownloadFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Enviar"><RiMailSendFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Clonar"><RiFileCopyFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Más"><RiMoreFill size={13} /></button>
+                        <button onClick={() => openViewDrawer(q)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Ver"><RiEyeFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Editar"><RiEditFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Descargar"><RiDownloadFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Enviar"><RiMailSendFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Clonar"><RiFileCopyFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Más"><RiMoreFill size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -366,7 +366,7 @@ export default function Quotations() {
               <div className="flex flex-col items-center justify-center py-14 gap-3">
                 <RiSearchLine size={28} className="text-gray-600" />
                 <p className="text-sm text-gray-500">No se encontraron cotizaciones</p>
-                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setCompanyFilter("Todas"); setAgentFilter("Todos"); setClientFilter("Todos"); }} className="text-xs text-[#C9A227] hover:underline">Limpiar filtros</button>
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setCompanyFilter("Todas"); setAgentFilter("Todos"); setClientFilter("Todos"); }} className="text-xs text-[#C9A227] hover:underline cursor-pointer">Limpiar filtros</button>
               </div>
             )}
             {/* Pagination */}
@@ -474,7 +474,7 @@ export default function Quotations() {
       </div>
 
       {/* Drawer */}
-      {drawerOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={closeDrawer} />}
+      {drawerOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-pointer" onClick={closeDrawer} />}
       <div className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#141d2e] border-l border-[#2a3550] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
           <div>
@@ -486,7 +486,7 @@ export default function Quotations() {
               {drawerMode === "create" ? "Completa los datos de la nueva cotización." : "Información completa de la cotización."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
+          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5 cursor-pointer">
             <RiCloseLine size={18} />
           </button>
         </div>
@@ -520,7 +520,7 @@ export default function Quotations() {
         </div>
         {drawerMode === "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">Cerrar</button>
+            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">Cerrar</button>
           </div>
         )}
       </div>

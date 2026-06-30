@@ -193,7 +193,7 @@ export default function Reports() {
         {/* Navbar */}
         <header className="h-14 bg-[#141d2e] border-b border-[#2a3550] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
+            <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white cursor-pointer">
               <RiMenuFill size={22} />
             </button>
             <div className="relative">
@@ -221,14 +221,14 @@ export default function Reports() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
+            <button className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer">
               <RiNotification3Fill size={16} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
+            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer">
               <RiSettings4Fill size={16} />
             </button>
-            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
+            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer">
               <RiExportFill size={16} />
             </button>
           </div>
@@ -248,11 +248,11 @@ export default function Reports() {
               <p className="text-sm text-gray-400 mt-0.5">Analiza el desempeño de tu negocio con reportes detallados y personalizados.</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+              <button className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
                 <RiExportFill size={14} />
                 Exportar
               </button>
-              <button className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+              <button className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer">
                 <RiCalendarLine size={14} />
                 Programar reporte
               </button>
@@ -292,7 +292,7 @@ export default function Reports() {
             <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold">Tendencia de ventas</h3>
-                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-[#1c2538] px-2 py-1 rounded-lg transition-colors">
+                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-[#1c2538] px-2 py-1 rounded-lg transition-colors cursor-pointer">
                   Este mes <RiArrowDownSFill size={12} />
                 </button>
               </div>
@@ -319,7 +319,7 @@ export default function Reports() {
             <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold">Ventas por empresa</h3>
-                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-[#1c2538] px-2 py-1 rounded-lg transition-colors">
+                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-[#1c2538] px-2 py-1 rounded-lg transition-colors cursor-pointer">
                   Este mes <RiArrowDownSFill size={12} />
                 </button>
               </div>
@@ -347,7 +347,7 @@ export default function Reports() {
             <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold">Ventas por categoría</h3>
-                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-[#1c2538] px-2 py-1 rounded-lg transition-colors">
+                <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white bg-[#1c2538] px-2 py-1 rounded-lg transition-colors cursor-pointer">
                   Este mes <RiArrowDownSFill size={12} />
                 </button>
               </div>
@@ -433,13 +433,13 @@ export default function Reports() {
                             </td>
                             <td className="px-5 py-3.5">
                               <div className="flex items-center justify-end gap-1">
-                                <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Descargar">
+                                <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Descargar">
                                   <RiDownloadFill size={13} />
                                 </button>
-                                <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Ver">
+                                <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Ver">
                                   <RiEyeFill size={13} />
                                 </button>
-                                <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Más opciones">
+                                <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Más opciones">
                                   <RiMoreFill size={13} />
                                 </button>
                               </div>
@@ -465,7 +465,7 @@ export default function Reports() {
                     <RiFilter3Fill size={14} className="text-[#C9A227]" />
                     Filtros
                   </h3>
-                  <button className="text-xs text-gray-400 hover:text-white transition-colors">Limpiar</button>
+                  <button className="text-xs text-gray-400 hover:text-white transition-colors cursor-pointer">Limpiar</button>
                 </div>
                 <div className="space-y-3">
                   <div>
@@ -537,7 +537,7 @@ export default function Reports() {
                       <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${includeTax ? "translate-x-5" : "translate-x-0.5"}`} />
                     </button>
                   </div>
-                  <button className="w-full bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                  <button className="w-full bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                     Aplicar filtros
                   </button>
                 </div>
@@ -560,7 +560,7 @@ export default function Reports() {
                     );
                   })}
                 </div>
-                <button className="w-full text-center text-xs text-[#C9A227] hover:text-white mt-3 py-2 transition-colors">
+                <button className="w-full text-center text-xs text-[#C9A227] hover:text-white mt-3 py-2 transition-colors cursor-pointer">
                   Ver todos los reportes guardados
                 </button>
               </div>
@@ -572,11 +572,11 @@ export default function Reports() {
       {/* Drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
+          <div className="absolute inset-0 bg-black/50 cursor-pointer" onClick={() => setDrawerOpen(false)} />
           <div className="relative w-full max-w-lg bg-[#141d2e] border-l border-[#2a3550] h-full overflow-y-auto">
             <div className="sticky top-0 bg-[#141d2e] border-b border-[#2a3550] px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold">Nuevo reporte</h2>
-              <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors">
+              <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer">
                 <RiCloseLine size={18} />
               </button>
             </div>
@@ -617,13 +617,13 @@ export default function Reports() {
               <div>
                 <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Formato de exportación</label>
                 <div className="grid grid-cols-3 gap-2">
-                  <button className="bg-[#C9A227]/15 border border-[#C9A227]/30 text-[#C9A227] text-sm font-medium py-2 rounded-lg">PDF</button>
-                  <button className="bg-[#1c2538] border border-[#2a3550] text-gray-300 text-sm font-medium py-2 rounded-lg hover:text-white hover:bg-[#C9A227]/15">Excel</button>
-                  <button className="bg-[#1c2538] border border-[#2a3550] text-gray-300 text-sm font-medium py-2 rounded-lg hover:text-white hover:bg-[#C9A227]/15">CSV</button>
+                  <button className="bg-[#C9A227]/15 border border-[#C9A227]/30 text-[#C9A227] text-sm font-medium py-2 rounded-lg cursor-pointer">PDF</button>
+                  <button className="bg-[#1c2538] border border-[#2a3550] text-gray-300 text-sm font-medium py-2 rounded-lg hover:text-white hover:bg-[#C9A227]/15 cursor-pointer">Excel</button>
+                  <button className="bg-[#1c2538] border border-[#2a3550] text-gray-300 text-sm font-medium py-2 rounded-lg hover:text-white hover:bg-[#C9A227]/15 cursor-pointer">CSV</button>
                 </div>
               </div>
               <div className="pt-4 border-t border-[#2a3550]">
-                <button className="w-full bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button className="w-full bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Generar reporte
                 </button>
               </div>

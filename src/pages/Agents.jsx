@@ -217,7 +217,7 @@ export default function Agents() {
               <h1 className="text-xl font-bold text-white">Agentes</h1>
               <p className="text-sm text-gray-400 mt-0.5">Administra todos los agentes comerciales de la empresa.</p>
             </div>
-            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20">
+            <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20 cursor-pointer">
               <RiAddFill size={16} /> Nuevo agente
             </button>
           </div>
@@ -317,16 +317,16 @@ export default function Agents() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openViewDrawer(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Ver agente">
+                        <button onClick={() => openViewDrawer(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Ver agente">
                           <RiEyeFill size={14} />
                         </button>
-                        <button onClick={() => openEditDrawer(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Editar">
+                        <button onClick={() => openEditDrawer(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Editar">
                           <RiEditFill size={14} />
                         </button>
-                        <button onClick={() => setDeactivateModal(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors" title="Desactivar">
+                        <button onClick={() => setDeactivateModal(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors cursor-pointer" title="Desactivar">
                           <RiUserSharedFill size={14} />
                         </button>
-                        <button onClick={() => setDeleteModal(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Eliminar">
+                        <button onClick={() => setDeleteModal(a)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors cursor-pointer" title="Eliminar">
                           <RiDeleteBinFill size={14} />
                         </button>
                       </div>
@@ -531,17 +531,15 @@ export default function Agents() {
             <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cancelar
             </button>
-            <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               {drawerMode === "create" ? "Guardar Agente" : "Guardar Cambios"}
             </button>
           </div>
         )}
         {drawerMode === "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewAgent), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#C9A227]/15 text-[#C9A227] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-              <RiEditFill size={15} /> Editar Agente
-            </button>
-            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cerrar
             </button>
           </div>
@@ -565,7 +563,7 @@ export default function Agents() {
                 <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
-                <button onClick={handleDeactivate} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={handleDeactivate} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Desactivar
                 </button>
               </div>

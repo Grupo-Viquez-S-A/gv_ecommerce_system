@@ -227,7 +227,7 @@ export default function Agenda() {
         {/* Top bar */}
         <div className="h-16 bg-[#141d2e] border-b border-[#2a3550] flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors">
+            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors cursor-pointer">
               <RiMenuFill size={20} />
             </button>
             <span className="text-sm text-gray-400">Operaciones</span>
@@ -240,11 +240,11 @@ export default function Agenda() {
               <span className="text-gray-300">Grupo Víquez S.A</span>
               <RiArrowDownSFill size={16} className="text-gray-500" />
             </div>
-            <button className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors relative">
+            <button className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors relative cursor-pointer">
               <RiNotification3Fill size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors">
+            <button className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors cursor-pointer">
               <RiSettings4Fill size={20} />
             </button>
           </div>
@@ -258,14 +258,14 @@ export default function Agenda() {
               <p className="text-gray-400 text-sm mt-1">Gestiona tus tareas, reuniones y actividades programadas.</p>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={goToday} className="px-4 py-2 bg-[#141d2e] border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors">
+              <button onClick={goToday} className="px-4 py-2 bg-[#141d2e] border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors cursor-pointer">
                 Hoy
               </button>
               <div className="flex items-center bg-[#141d2e] border border-[#2a3550] rounded-lg">
-                <button onClick={prevWeek} className="p-2 hover:bg-[#2a3550] rounded-l-lg transition-colors">
+                <button onClick={prevWeek} className="p-2 hover:bg-[#2a3550] rounded-l-lg transition-colors cursor-pointer">
                   <RiArrowLeftSLine size={18} />
                 </button>
-                <button onClick={nextWeek} className="p-2 hover:bg-[#2a3550] rounded-r-lg transition-colors">
+                <button onClick={nextWeek} className="p-2 hover:bg-[#2a3550] rounded-r-lg transition-colors cursor-pointer">
                   <RiArrowRightSLine size={18} />
                 </button>
               </div>
@@ -273,11 +273,11 @@ export default function Agenda() {
                 {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
                 <RiArrowDownSFill size={14} />
               </div>
-              <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 bg-[#141d2e] border border-[#2a3550] rounded-lg text-sm flex items-center gap-2 hover:bg-[#2a3550] transition-colors">
+              <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 bg-[#141d2e] border border-[#2a3550] rounded-lg text-sm flex items-center gap-2 hover:bg-[#2a3550] transition-colors cursor-pointer">
                 <RiFilterLine size={16} />
                 Filtros
               </button>
-              <button onClick={openCreate} className="px-4 py-2 bg-[#C9A227] hover:bg-[#B8921F] rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+              <button onClick={openCreate} className="px-4 py-2 bg-[#C9A227] hover:bg-[#B8921F] rounded-lg text-sm font-medium flex items-center gap-2 transition-colors cursor-pointer">
                 <RiAddFill size={16} />
                 Nuevo evento
               </button>
@@ -293,7 +293,7 @@ export default function Agenda() {
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm">
                 {statuses.map(s => <option key={s} value={s}>{s === "Todos" ? "Todos los estados" : STATUS_CONFIG[s]?.label || s}</option>)}
               </select>
-              <button onClick={() => { setFilterType("Todos"); setFilterStatus("Todos"); }} className="px-4 py-2 border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors">
+              <button onClick={() => { setFilterType("Todos"); setFilterStatus("Todos"); }} className="px-4 py-2 border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors cursor-pointer">
                 Limpiar filtros
               </button>
             </div>
@@ -400,8 +400,8 @@ export default function Agenda() {
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium">{MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
                   <div className="flex gap-1">
-                    <button onClick={prevWeek} className="p-1 hover:bg-[#2a3550] rounded"><RiArrowLeftSLine size={14} /></button>
-                    <button onClick={nextWeek} className="p-1 hover:bg-[#2a3550] rounded"><RiArrowRightSLine size={14} /></button>
+                    <button onClick={prevWeek} className="p-1 hover:bg-[#2a3550] rounded cursor-pointer"><RiArrowLeftSLine size={14} /></button>
+                    <button onClick={nextWeek} className="p-1 hover:bg-[#2a3550] rounded cursor-pointer"><RiArrowRightSLine size={14} /></button>
                   </div>
                 </div>
                 <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-1">
@@ -440,7 +440,7 @@ export default function Agenda() {
                     );
                   })}
                 </div>
-                <button className="text-xs text-[#C9A227] mt-3 hover:underline">Ver todos los eventos</button>
+                <button className="text-xs text-[#C9A227] mt-3 hover:underline cursor-pointer">Ver todos los eventos</button>
               </div>
 
               {/* Pending tasks */}
@@ -449,7 +449,7 @@ export default function Agenda() {
                 <div className="space-y-2">
                   {tasks.slice(0, 5).map(t => (
                     <div key={t.id} className="flex items-start gap-2">
-                      <button onClick={() => toggleTask(t.id)} className="mt-0.5 shrink-0">
+                      <button onClick={() => toggleTask(t.id)} className="mt-0.5 shrink-0 cursor-pointer">
                         {t.done ? <RiCheckboxCircleFill size={16} className="text-green-500" /> : <RiCheckboxBlankCircleLine size={16} className="text-gray-500" />}
                       </button>
                       <div className="flex-1 min-w-0">
@@ -461,7 +461,7 @@ export default function Agenda() {
                     </div>
                   ))}
                 </div>
-                <button className="text-xs text-[#C9A227] mt-3 hover:underline">Ver todas las tareas</button>
+                <button className="text-xs text-[#C9A227] mt-3 hover:underline cursor-pointer">Ver todas las tareas</button>
               </div>
             </div>
           </div>
@@ -470,7 +470,7 @@ export default function Agenda() {
           <div className="mt-6 bg-[#141d2e] border border-[#2a3550] rounded-xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a3550]">
               <h3 className="font-medium">Eventos de hoy - Jueves 27 junio</h3>
-              <button className="text-xs text-[#C9A227] hover:underline">Ver agenda completa</button>
+              <button className="text-xs text-[#C9A227] hover:underline cursor-pointer">Ver agenda completa</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -511,13 +511,13 @@ export default function Agenda() {
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openView(ev)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-[#C9A227]">
+                            <button onClick={() => openView(ev)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-[#C9A227] cursor-pointer">
                               <RiEyeFill size={14} />
                             </button>
-                            <button onClick={() => openEdit(ev)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-green-400">
+                            <button onClick={() => openEdit(ev)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-green-400 cursor-pointer">
                               <RiEditFill size={14} />
                             </button>
-                            <button onClick={() => deleteEvent(ev.id)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-red-400">
+                            <button onClick={() => deleteEvent(ev.id)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-red-400 cursor-pointer">
                               <RiDeleteBinFill size={14} />
                             </button>
                           </div>
@@ -538,13 +538,13 @@ export default function Agenda() {
       {/* Drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
+          <div className="absolute inset-0 bg-black/50 cursor-pointer" onClick={() => setDrawerOpen(false)} />
           <div className="relative w-[480px] bg-[#141d2e] border-l border-[#2a3550] h-full overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b border-[#2a3550]">
               <h2 className="text-lg font-semibold">
                 {drawerMode === "create" ? "Nuevo Evento" : drawerMode === "edit" ? "Editar Evento" : "Detalles del Evento"}
               </h2>
-              <button onClick={() => setDrawerOpen(false)} className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors">
+              <button onClick={() => setDrawerOpen(false)} className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors cursor-pointer">
                 <RiCloseLine size={20} />
               </button>
             </div>
@@ -586,10 +586,10 @@ export default function Agenda() {
                     <div className="text-sm">{selectedEvent.participants}</div>
                   </div>
                   <div className="flex gap-3 pt-4">
-                    <button onClick={() => openEdit(selectedEvent)} className="flex-1 py-2.5 bg-[#C9A227] hover:bg-[#B8921F] rounded-lg text-sm font-medium transition-colors">
+                    <button onClick={() => openEdit(selectedEvent)} className="flex-1 py-2.5 bg-[#C9A227] hover:bg-[#B8921F] rounded-lg text-sm font-medium transition-colors cursor-pointer">
                       Editar evento
                     </button>
-                    <button onClick={() => deleteEvent(selectedEvent.id)} className="px-4 py-2.5 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-lg text-sm transition-colors">
+                    <button onClick={() => deleteEvent(selectedEvent.id)} className="px-4 py-2.5 border border-red-500/30 text-red-400 hover:bg-red-500/10 rounded-lg text-sm transition-colors cursor-pointer">
                       Eliminar
                     </button>
                   </div>
@@ -637,10 +637,10 @@ export default function Agenda() {
                     <input type="text" value={form.participants} onChange={e => setForm({ ...form, participants: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" placeholder="Ej: Equipo comercial" />
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button onClick={saveEvent} className="flex-1 py-2.5 bg-[#C9A227] hover:bg-[#B8921F] rounded-lg text-sm font-medium transition-colors">
+                    <button onClick={saveEvent} className="flex-1 py-2.5 bg-[#C9A227] hover:bg-[#B8921F] rounded-lg text-sm font-medium transition-colors cursor-pointer">
                       {drawerMode === "create" ? "Crear evento" : "Guardar cambios"}
                     </button>
-                    <button onClick={() => setDrawerOpen(false)} className="px-4 py-2.5 border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors">
+                    <button onClick={() => setDrawerOpen(false)} className="px-4 py-2.5 border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors cursor-pointer">
                       Cancelar
                     </button>
                   </div>
