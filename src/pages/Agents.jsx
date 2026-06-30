@@ -215,7 +215,7 @@ export default function Agents() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h1 className="text-xl font-bold text-white">Agentes</h1>
-              <p className="text-sm text-gray-400 mt-0.5">Administra todos los agentes comerciales del grupo.</p>
+              <p className="text-sm text-gray-400 mt-0.5">Administra todos los agentes comerciales de la empresa.</p>
             </div>
             <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20">
               <RiAddFill size={16} /> Nuevo agente
@@ -528,7 +528,7 @@ export default function Agents() {
         {/* Drawer footer */}
         {drawerMode !== "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cancelar
             </button>
             <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
@@ -541,7 +541,7 @@ export default function Agents() {
             <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewAgent), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               <RiEditFill size={15} /> Editar Agente
             </button>
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cerrar
             </button>
           </div>
@@ -562,7 +562,7 @@ export default function Agents() {
                 ¿Desactivar a <span className="text-white font-medium">{deactivateModal.name}</span>? El agente pasará a estado inactivo y no podrá realizar ventas.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
                 <button onClick={handleDeactivate} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
@@ -588,10 +588,10 @@ export default function Agents() {
                 ¿Eliminar a <span className="text-white font-medium">{deleteModal.name}</span>? Esta acción no se puede deshacer.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#1f2a40] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
-                <button onClick={handleDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={handleDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Eliminar
                 </button>
               </div>

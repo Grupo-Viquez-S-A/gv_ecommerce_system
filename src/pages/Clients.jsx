@@ -270,7 +270,7 @@ export default function Clients() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={openCreateDrawer}
-                className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
               >
                 <RiAddFill size={18} />
                 Nuevo cliente
@@ -358,19 +358,19 @@ export default function Clients() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver sucursales">
+                        <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Ver sucursales">
                           <RiStoreFill size={14} />
                         </button>
-                        <button onClick={() => { setRepModal(c); setSelectedRepBranch(null); }} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver representantes">
+                        <button onClick={() => { setRepModal(c); setSelectedRepBranch(null); }} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Ver representantes">
                           <RiTeamFill size={14} />
                         </button>
-                        <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver cliente">
+                        <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Ver cliente">
                           <RiEyeFill size={14} />
                         </button>
-                        <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar">
+                        <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Editar">
                           <RiEditFill size={14} />
                         </button>
-                        <button onClick={() => setDeactivateModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors" title="Desactivar">
+                        <button onClick={() => setDeactivateModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors cursor-pointer" title="Desactivar">
                           <RiUserSharedFill size={14} />
                         </button>
                       </div>
@@ -766,20 +766,18 @@ export default function Clients() {
         {/* Drawer footer */}
         {drawerMode !== "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cancelar
             </button>
-            <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               {drawerMode === "create" ? "Guardar Cliente" : "Guardar Cambios"}
             </button>
           </div>
         )}
         {drawerMode === "view" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewClient), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
-              <RiEditFill size={15} /> Editar Cliente
-            </button>
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+           
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cerrar
             </button>
           </div>
@@ -889,7 +887,7 @@ export default function Clients() {
 
               {/* Footer */}
               <div className="flex items-center justify-end px-6 py-4 border-t border-[#1f2a40] sticky bottom-0 bg-[#111827] rounded-b-2xl">
-                <button onClick={() => setBranchModal(null)} className="bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors">
+                <button onClick={() => setBranchModal(null)} className="bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors cursor-pointer">
                   Cerrar
                 </button>
               </div>
@@ -1034,7 +1032,7 @@ export default function Clients() {
                     ? `${selectedRepBranch.representatives?.length || 0} representante(s)`
                     : `${repModal.branches?.length || 0} sucursal(es)`}
                 </span>
-                <button onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} className="bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors">
+                <button onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} className="bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors cursor-pointer">
                   Cerrar
                 </button>
               </div>
@@ -1057,10 +1055,10 @@ export default function Clients() {
                 ¿Desactivar a <span className="text-white font-medium">{deactivateModal.name}</span>? El cliente pasará a estado inactivo y no podrá realizar compras.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
-                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Desactivar
                 </button>
               </div>

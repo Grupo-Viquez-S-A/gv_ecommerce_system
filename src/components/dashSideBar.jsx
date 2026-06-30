@@ -38,8 +38,8 @@ function DashSideBar({
           collapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4"
         } ${
           isActive
-            ? "text-white bg-[#1e3a5f] border-r-2 border-[#C9A227]"
-            : "text-gray-400 hover:text-white hover:bg-[#141a2a] " +
+            ? "text-white bg-[#C9A227]/15 border-r-2 border-[#C9A227]"
+            : "text-gray-300 hover:text-white hover:bg-[#1c2538] " +
               (collapsed ? "rounded-lg" : "")
         }`}
       >
@@ -65,13 +65,13 @@ function DashSideBar({
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden lg:flex flex-col bg-[#0f1623] border-r border-[#1f2a40] min-h-screen flex-shrink-0 transition-all duration-300 overflow-hidden ${
+        className={`hidden lg:flex flex-col bg-[#141d2e] border-r border-[#2a3550] min-h-screen flex-shrink-0 transition-all duration-300 overflow-hidden ${
           sidebarCollapsed ? "w-[64px]" : "w-64"
         }`}
       >
         {/* Logo + collapse toggle */}
         <div
-          className={`flex items-center border-b border-[#1f2a40] h-14 flex-shrink-0 ${
+          className={`flex items-center border-b border-[#2a3550] h-14 flex-shrink-0 ${
             sidebarCollapsed ? "justify-center px-0" : "px-4 gap-3"
           }`}
         >
@@ -86,7 +86,7 @@ function DashSideBar({
           {!sidebarCollapsed && (
             <button
               onClick={toggleCollapse}
-              className="ml-auto text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-[#141a2a]"
+              className="ml-auto text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-[#1c2538]"
               title="Colapsar menú"
             >
               <RiArrowLeftSLine size={18} />
@@ -95,7 +95,7 @@ function DashSideBar({
           {sidebarCollapsed && (
             <button
               onClick={toggleCollapse}
-              className="text-gray-500 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors"
               title="Expandir menú"
             >
               <RiArrowRightSLine size={18} />
@@ -107,13 +107,13 @@ function DashSideBar({
           {/* COMERCIAL */}
           {!sidebarCollapsed && (
             <div className="px-4 pb-1 pt-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Comercial
               </span>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#1f2a40]" />
+            <div className="my-1 mx-3 border-t border-[#2a3550]" />
           )}
           <NavItem
             icon={<RiDashboardFill size={18} />}
@@ -130,13 +130,13 @@ function DashSideBar({
           {/* VENTAS */}
           {!sidebarCollapsed && (
             <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Ventas
               </span>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#1f2a40]" />
+            <div className="my-1 mx-3 border-t border-[#2a3550]" />
           )}
           <NavItem
             icon={<RiShoppingBagFill size={18} />}
@@ -177,13 +177,13 @@ function DashSideBar({
           {/* OPERACIONES */}
           {!sidebarCollapsed && (
             <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Operaciones
               </span>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#1f2a40]" />
+            <div className="my-1 mx-3 border-t border-[#2a3550]" />
           )}
           <NavItem
             icon={<RiCalendarFill size={18} />}
@@ -195,13 +195,13 @@ function DashSideBar({
           {/* SISTEMA */}
           {!sidebarCollapsed && (
             <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Sistema
               </span>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#1f2a40]" />
+            <div className="my-1 mx-3 border-t border-[#2a3550]" />
           )}
           <NavItem
             icon={<RiSettings4Fill size={18} />}
@@ -213,7 +213,7 @@ function DashSideBar({
 
         {/* User profile */}
         <div
-          className={`border-t border-[#1f2a40] flex-shrink-0 ${
+          className={`border-t border-[#2a3550] flex-shrink-0 ${
             sidebarCollapsed ? "py-3 flex flex-col items-center gap-2" : "p-4"
           }`}
         >
@@ -231,7 +231,7 @@ function DashSideBar({
               </div>
               <button
                 onClick={signOut}
-                className="text-gray-500 hover:text-red-400 transition-colors cursor-pointer"
+                className="text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
                 title="Cerrar sesión"
               >
                 <RiLogoutBoxLine size={16} />
@@ -254,7 +254,7 @@ function DashSideBar({
                   <div className="text-sm font-medium truncate">
                     {user?.fullName || "Usuario"}
                   </div>
-                  <div className="text-xs text-gray-500 truncate">
+                  <div className="text-xs text-gray-400 truncate">
                     {user?.role?.name || "Usuario"}
                     {user?.department?.name ? ` - ${user.department.name}` : ""}
                   </div>
@@ -262,7 +262,7 @@ function DashSideBar({
               </div>
               <button
                 onClick={signOut}
-                className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+                className="flex items-center gap-2 text-sm text-gray-300 hover:text-red-400 transition-colors cursor-pointer"
               >
                 <RiLogoutBoxLine size={16} />
                 Cerrar sesión
@@ -274,8 +274,8 @@ function DashSideBar({
 
       {/* Mobile Sidebar (overlay) */}
       {sidebarOpen && (
-        <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[#0f1623] border-r border-[#1f2a40]">
-          <div className="flex items-center gap-3 px-4 h-14 border-b border-[#1f2a40]">
+        <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[#141d2e] border-r border-[#2a3550]">
+          <div className="flex items-center gap-3 px-4 h-14 border-b border-[#2a3550]">
             <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center flex-shrink-0">
               <span className="font-bold text-[#0B1120] text-sm">GV</span>
             </div>
@@ -284,13 +284,13 @@ function DashSideBar({
             </span>
             <button
               onClick={toggleSidebar}
-              className="ml-auto text-gray-500 hover:text-white"
+              className="ml-auto text-gray-400 hover:text-white"
             >
               <RiArrowLeftSLine size={20} />
             </button>
           </div>
-          <div className="px-4 py-3 border-b border-[#1f2a40]">
-            <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+          <div className="px-4 py-3 border-b border-[#2a3550]">
+            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
               Vista activa
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-200">
@@ -303,7 +303,7 @@ function DashSideBar({
           </div>
           <nav className="flex-1 overflow-y-auto py-3">
             <div className="px-4 pb-1 pt-2">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Comercial
               </span>
             </div>
@@ -319,7 +319,7 @@ function DashSideBar({
               collapsed={false}
             />
             <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Ventas
               </span>
             </div>
@@ -352,7 +352,7 @@ function DashSideBar({
               collapsed={false}
             />
             <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Operaciones
               </span>
             </div>
@@ -368,7 +368,7 @@ function DashSideBar({
               collapsed={false}
             />
             <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Sistema
               </span>
             </div>
@@ -379,7 +379,7 @@ function DashSideBar({
               collapsed={false}
             />
           </nav>
-          <div className="p-4 border-t border-[#1f2a40]">
+          <div className="p-4 border-t border-[#2a3550]">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold">
                 {user?.fullName
@@ -395,7 +395,7 @@ function DashSideBar({
                 <div className="text-sm font-medium">
                   {user?.fullName || "Usuario"}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-400">
                   {user?.role?.name || "Usuario"}
                   {user?.department?.name ? ` - ${user.department.name}` : ""}
                 </div>
@@ -403,7 +403,7 @@ function DashSideBar({
             </div>
             <button
               onClick={signOut}
-              className="flex items-center gap-2 text-sm text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-sm text-gray-300 hover:text-red-400 transition-colors cursor-pointer"
             >
               <RiLogoutBoxLine size={16} />
               Cerrar sesión
