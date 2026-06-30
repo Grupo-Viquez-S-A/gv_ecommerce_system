@@ -1129,7 +1129,7 @@ export default function AdminConfig() {
                 ¿Estás seguro de que deseas eliminar a <span className="text-white font-medium">{deleteModal.name}</span>? Esta acción no se puede deshacer.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#FF0303] hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#1c2538] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
                 <button onClick={() => setDeleteModal(null)} className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
