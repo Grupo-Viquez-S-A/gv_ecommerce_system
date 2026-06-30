@@ -97,6 +97,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/admin/usuarios-dev" element={<AdminConfig />} />
       </Routes>
     </BrowserRouter>
   );

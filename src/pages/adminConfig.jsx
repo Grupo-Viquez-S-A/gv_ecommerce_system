@@ -17,7 +17,6 @@ import {
   RiSearchLine,
   RiFilterLine,
   RiAddFill,
-  RiCloseLine,
   RiDeleteBinFill,
   RiArrowLeftSLine,
   RiArrowRightSFill,
@@ -126,7 +125,7 @@ function Toggle({ checked, onChange }) {
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 ${checked ? "bg-[#C9A227]" : "bg-[#2a3448]"}`}
+      className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 cursor-pointer ${checked ? "bg-[#C9A227]" : "bg-[#2a3448]"}`}
     >
       <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${checked ? "left-5" : "left-0.5"}`} />
     </button>
@@ -308,7 +307,7 @@ export default function AdminConfig() {
             <div className="relative">
               <button
                 onClick={() => setCompanyDropdown(!companyDropdown)}
-                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
               >
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color || "#c9a227" }} />
                 {currentCompany.name}
@@ -366,14 +365,14 @@ export default function AdminConfig() {
                 <>
                   <button
                     onClick={openRoleDrawer}
-                    className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
                   >
                     <RiShieldStarFill size={16} className="text-[#f59e0b]" />
                     Nuevo Rol
                   </button>
                   <button
                     onClick={openCreateDrawer}
-                    className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
                   >
                     <RiAddFill size={18} />
                     Nuevo Usuario
@@ -383,7 +382,7 @@ export default function AdminConfig() {
               {activeTab === "roles" && (
                 <button
                   onClick={openRoleDrawer}
-                  className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                  className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
                 >
                   <RiAddFill size={18} />
                   Nuevo Rol
@@ -414,7 +413,7 @@ export default function AdminConfig() {
               <button
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
-                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${
                   activeTab === t.key
                     ? "border-[#C9A227] text-white"
                     : "border-transparent text-gray-500 hover:text-gray-300"
@@ -447,9 +446,6 @@ export default function AdminConfig() {
                     </button>
                     <button className="flex items-center gap-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
                       <RiDeleteBinFill size={13} /> Eliminar
-                    </button>
-                    <button onClick={() => setSelectedUsers([])} className="w-6 h-6 rounded flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer">
-                      <RiCloseLine size={14} />
                     </button>
                   </div>
                 </div>
@@ -668,7 +664,7 @@ export default function AdminConfig() {
                           <td className="px-5 py-4">
                             <button
                               onClick={() => openEditRoleDrawer(role)}
-                              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white bg-[#1c2538] hover:bg-[#C9A227]/15 border border-[#2a3550] px-3 py-1.5 rounded-lg transition-colors"
+                              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white bg-[#1c2538] hover:bg-[#C9A227]/15 border border-[#2a3550] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                             >
                               <RiEditFill size={12} /> Editar Rol
                             </button>
@@ -886,9 +882,6 @@ export default function AdminConfig() {
               {drawerMode === "profile" && "Información completa del usuario."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5 cursor-pointer">
-            <RiCloseLine size={18} />
-          </button>
         </div>
 
         {/* Drawer body */}
@@ -909,7 +902,7 @@ export default function AdminConfig() {
                     <label key={company} className="flex items-center gap-3 cursor-pointer group p-2 rounded-lg hover:bg-[#1c2538] transition-colors">
                       <div
                         onClick={() => toggleCompanyInForm(company)}
-                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.companies.includes(company) ? "border-[#C9A227] bg-[#C9A227]" : "border-[#2a3448]"}`}
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${form.companies.includes(company) ? "border-[#C9A227] bg-[#C9A227]" : "border-[#2a3448]"}`}
                       >
                         {form.companies.includes(company) && <RiCheckLine size={10} className="text-white" />}
                       </div>
@@ -1005,7 +998,7 @@ export default function AdminConfig() {
                             [editRole.name]: { ...prev[editRole.name], [section.key]: allChecked ? [] : indices },
                           }));
                         }}
-                        className={`text-xs font-medium transition-colors ${allChecked ? "text-[#C9A227] hover:text-gray-400" : "text-gray-500 hover:text-[#C9A227]"}`}
+                        className={`text-xs font-medium transition-colors cursor-pointer ${allChecked ? "text-[#C9A227] hover:text-gray-400" : "text-gray-500 hover:text-[#C9A227]"}`}
                       >
                         {allChecked ? "Desmarcar todos" : "Seleccionar todos"}
                       </button>
@@ -1015,7 +1008,7 @@ export default function AdminConfig() {
                         <label key={idx} className="flex items-center gap-3 cursor-pointer group p-1.5 rounded-lg hover:bg-[#1c2538] transition-colors">
                           <div
                             onClick={() => togglePermission(editRole.name, section.key, idx)}
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${active.includes(idx) ? "border-[#C9A227] bg-[#C9A227]" : "border-[#2a3448]"}`}
+                            className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${active.includes(idx) ? "border-[#C9A227] bg-[#C9A227]" : "border-[#2a3448]"}`}
                           >
                             {active.includes(idx) && <RiCheckLine size={10} className="text-white" />}
                           </div>
@@ -1102,7 +1095,7 @@ export default function AdminConfig() {
         {/* Drawer footer */}
         {drawerMode !== "profile" && (
           <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cancelar
             </button>
             <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
@@ -1115,7 +1108,7 @@ export default function AdminConfig() {
             <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(profileUser), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#C9A227]/15 text-[#C9A227] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               <RiEditFill size={15} /> Editar Usuario
             </button>
-            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cerrar
             </button>
           </div>
@@ -1136,7 +1129,7 @@ export default function AdminConfig() {
                 ¿Estás seguro de que deseas eliminar a <span className="text-white font-medium">{deleteModal.name}</span>? Esta acción no se puede deshacer.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#FF0303] hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
                 <button onClick={() => setDeleteModal(null)} className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
@@ -1162,7 +1155,7 @@ export default function AdminConfig() {
                 ¿Desactivar a <span className="text-white font-medium">{deactivateModal.name}</span>? El usuario perderá acceso al sistema de inmediato.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#FF0303] hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
                 <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
