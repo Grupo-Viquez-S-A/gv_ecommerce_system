@@ -106,7 +106,7 @@ function Dashboard() {
   const toggleCollapse = () => setSidebarCollapsed(!sidebarCollapsed);
 
   const StatCard = ({ icon, label, value, growth, colorClass }) => (
-    <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5 flex-1 min-w-[200px]">
+    <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5 flex-1 min-w-[200px]">
       <div className="flex items-center gap-3 mb-3">
         <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${colorClass}`}>
           {icon}
@@ -138,7 +138,7 @@ function Dashboard() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Navbar */}
-        <header className="h-14 bg-[#0f1623] border-b border-[#1f2a40] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+        <header className="h-14 bg-[#1c2538] border-b border-[#2a3550] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
               <RiMenuFill size={22} />
@@ -146,19 +146,19 @@ function Dashboard() {
             <div className="relative">
               <button
                 onClick={() => setCompanyDropdown(!companyDropdown)}
-                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#141a2a] px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors"
               >
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color }} />
                 {currentCompany.name}
                 <RiArrowDownSFill size={16} className="text-gray-400" />
               </button>
               {companyDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-[#141a2a] border border-[#1f2a40] rounded-lg shadow-xl z-50 py-1">
+                <div className="absolute top-full left-0 mt-1 w-56 bg-[#1c2538] border border-[#2a3550] rounded-lg shadow-xl z-50 py-1">
                   {(user?.companies || companies).map((c, i) => (
                     <button
                       key={c.id}
                       onClick={() => { setCurrentCompany({ ...c, color: c.color || avatarColors[i % avatarColors.length] }); setCompanyDropdown(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#1e3a5f] transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
                     >
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color || avatarColors[i % avatarColors.length] }} />
                       {c.name}
@@ -169,14 +169,14 @@ function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiNotification3Fill size={16} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiSettings4Fill size={16} />
             </button>
-            <button className="w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiLogoutBoxLine size={16} />
             </button>
           </div>
@@ -193,7 +193,7 @@ function Dashboard() {
 
           {/* Date selector */}
           <div className="flex items-center justify-end mb-4">
-            <button className="flex items-center gap-2 text-sm text-gray-400 bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 hover:text-white transition-colors">
+            <button className="flex items-center gap-2 text-sm text-gray-400 bg-[#1c2538] border border-[#2a3550] rounded-lg px-3 py-2 hover:text-white transition-colors">
               <RiCalendarCheckFill size={14} />
               1 - 30 de junio, 2024
               <RiArrowDownSFill size={14} />
@@ -235,7 +235,7 @@ function Dashboard() {
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
             {/* Bar Chart */}
-            <div className="lg:col-span-2 bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5">
+            <div className="lg:col-span-2 bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Ventas Consolidadas del Grupo (Todas las empresas)</h3>
                 <button className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
@@ -245,11 +245,11 @@ function Dashboard() {
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={barData} barCategoryGap="20%">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2a40" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2a3550" vertical={false} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 12 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: "#64748b", fontSize: 12 }} tickFormatter={(v) => `₡${v} M`} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#141a2a", border: "1px solid #1f2a40", borderRadius: "8px", fontSize: "12px" }}
+                      contentStyle={{ backgroundColor: "#1c2538", border: "1px solid #2a3550", borderRadius: "8px", fontSize: "12px" }}
                       itemStyle={{ color: "#e2e8f0" }}
                     />
                     <Bar dataKey="textiles" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
@@ -269,14 +269,14 @@ function Dashboard() {
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#1f2a40]">
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#2a3550]">
                 <span className="text-xs text-gray-500">Total acumulado del año</span>
                 <span className="text-sm font-bold text-[#C9A227]">₡1,050 M</span>
               </div>
             </div>
 
             {/* Donut Chart */}
-            <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5">
+            <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Ventas por Empresa (Acumulado del mes)</h3>
                 <button className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
@@ -301,7 +301,7 @@ function Dashboard() {
                       ))}
                     </Pie>
                     <Tooltip
-                      contentStyle={{ backgroundColor: "#141a2a", border: "1px solid #1f2a40", borderRadius: "8px", fontSize: "12px" }}
+                      contentStyle={{ backgroundColor: "#1c2538", border: "1px solid #2a3550", borderRadius: "8px", fontSize: "12px" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -328,7 +328,7 @@ function Dashboard() {
           </div>
 
           {/* Top Clients */}
-          <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5 mb-6">
+          <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Top 5 Clientes por Ventas</h3>
               <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
@@ -337,9 +337,9 @@ function Dashboard() {
             </div>
             <div className="space-y-3">
               {topClients.map((client, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-[#1f2a40] last:border-0">
+                <div key={i} className="flex items-center justify-between py-2 border-b border-[#2a3550] last:border-0">
                   <div className="flex items-center gap-3">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-[#c9a227] text-[#0B1120]" : "bg-[#1e3a5f] text-white"}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-[#c9a227] text-[#0B1120]" : "bg-[#C9A227]/15 text-white"}`}>
                       {client.rank}
                     </div>
                     <div>
@@ -351,7 +351,7 @@ function Dashboard() {
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-[#1f2a40] flex justify-end">
+            <div className="mt-3 pt-3 border-t border-[#2a3550] flex justify-end">
               <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                 Ver todos los clientes <RiArrowRightSLine size={12} />
               </button>
@@ -361,7 +361,7 @@ function Dashboard() {
           {/* Bottom Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
             {/* Performance by Company */}
-            <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5">
+            <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Rendimiento por Empresa (Acumulado del mes)</h3>
               </div>
@@ -370,21 +370,21 @@ function Dashboard() {
                   <div key={i}>
                     <div className="flex items-center justify-between text-xs mb-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded bg-[#1e3a5f] flex items-center justify-center text-xs" style={{ color: item.color }}>
+                        <div className="w-7 h-7 rounded bg-[#C9A227]/15 flex items-center justify-center text-xs" style={{ color: item.color }}>
                           {i + 1}
                         </div>
                         <span className="text-gray-300">{item.name}</span>
                       </div>
                       <span className="text-white font-medium">{item.amount}</span>
                     </div>
-                    <div className="w-full h-2 bg-[#1e3a5f] rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-[#C9A227]/15 rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${Math.min(item.percentage, 100)}%`, backgroundColor: item.color }} />
                     </div>
                     <div className="text-right text-xs text-gray-500 mt-0.5">{item.percentage}%</div>
                   </div>
                 ))}
               </div>
-              <div className="mt-3 pt-3 border-t border-[#1f2a40] flex justify-end">
+              <div className="mt-3 pt-3 border-t border-[#2a3550] flex justify-end">
                 <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                   Ver reporte completo <RiArrowRightSLine size={12} />
                 </button>
@@ -392,7 +392,7 @@ function Dashboard() {
             </div>
 
             {/* Advisor Ranking */}
-            <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5">
+            <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Rendimiento por Asesor (Ventas del mes)</h3>
                 <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
@@ -404,7 +404,7 @@ function Dashboard() {
                   <div key={i}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? "bg-[#c9a227] text-[#0B1120]" : "bg-[#1e3a5f] text-white"}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? "bg-[#c9a227] text-[#0B1120]" : "bg-[#C9A227]/15 text-white"}`}>
                           {i + 1}
                         </div>
                         <div>
@@ -419,13 +419,13 @@ function Dashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="w-full h-1.5 bg-[#1e3a5f] rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-[#C9A227]/15 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${advisor.percentage >= 100 ? "bg-green-400" : "bg-[#c9a227]"}`} style={{ width: `${Math.min(advisor.percentage, 100)}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
-              <div className="mt-3 pt-3 border-t border-[#1f2a40] flex justify-end">
+              <div className="mt-3 pt-3 border-t border-[#2a3550] flex justify-end">
                 <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
                   Ver ranking completo <RiArrowRightSLine size={12} />
                 </button>
@@ -433,7 +433,7 @@ function Dashboard() {
             </div>
 
             {/* Activity Feed */}
-            <div className="bg-[#141a2a] border border-[#1f2a40] rounded-xl p-5">
+            <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-white">Actividad Reciente (Todo el equipo)</h3>
                 <button className="text-xs text-[#C9A227] hover:text-white flex items-center gap-1">
@@ -442,7 +442,7 @@ function Dashboard() {
               </div>
               <div className="space-y-3">
                 {activities.map((act, i) => (
-                  <div key={i} className="flex items-start gap-3 pb-3 border-b border-[#1f2a40] last:border-0">
+                  <div key={i} className="flex items-start gap-3 pb-3 border-b border-[#2a3550] last:border-0">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                       act.icon === "user" ? "bg-[#C9A227]/20 text-[#C9A227]" :
                       act.icon === "file" ? "bg-[#6366f1]/20 text-[#6366f1]" :

@@ -225,9 +225,9 @@ export default function Agenda() {
       <DashSideBar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top bar */}
-        <div className="h-16 bg-[#111827] border-b border-[#1f2a40] flex items-center justify-between px-6 flex-shrink-0">
+        <div className="h-16 bg-[#141d2e] border-b border-[#2a3550] flex items-center justify-between px-6 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 hover:bg-[#1f2a40] rounded-lg transition-colors">
+            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors">
               <RiMenuFill size={20} />
             </button>
             <span className="text-sm text-gray-400">Operaciones</span>
@@ -240,11 +240,11 @@ export default function Agenda() {
               <span className="text-gray-300">Grupo Víquez S.A</span>
               <RiArrowDownSFill size={16} className="text-gray-500" />
             </div>
-            <button className="p-2 hover:bg-[#1f2a40] rounded-lg transition-colors relative">
+            <button className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors relative">
               <RiNotification3Fill size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="p-2 hover:bg-[#1f2a40] rounded-lg transition-colors">
+            <button className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors">
               <RiSettings4Fill size={20} />
             </button>
           </div>
@@ -258,22 +258,22 @@ export default function Agenda() {
               <p className="text-gray-400 text-sm mt-1">Gestiona tus tareas, reuniones y actividades programadas.</p>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={goToday} className="px-4 py-2 bg-[#111827] border border-[#1f2a40] rounded-lg text-sm hover:bg-[#1f2a40] transition-colors">
+              <button onClick={goToday} className="px-4 py-2 bg-[#141d2e] border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors">
                 Hoy
               </button>
-              <div className="flex items-center bg-[#111827] border border-[#1f2a40] rounded-lg">
-                <button onClick={prevWeek} className="p-2 hover:bg-[#1f2a40] rounded-l-lg transition-colors">
+              <div className="flex items-center bg-[#141d2e] border border-[#2a3550] rounded-lg">
+                <button onClick={prevWeek} className="p-2 hover:bg-[#2a3550] rounded-l-lg transition-colors">
                   <RiArrowLeftSLine size={18} />
                 </button>
-                <button onClick={nextWeek} className="p-2 hover:bg-[#1f2a40] rounded-r-lg transition-colors">
+                <button onClick={nextWeek} className="p-2 hover:bg-[#2a3550] rounded-r-lg transition-colors">
                   <RiArrowRightSLine size={18} />
                 </button>
               </div>
-              <div className="px-4 py-2 bg-[#111827] border border-[#1f2a40] rounded-lg text-sm flex items-center gap-2">
+              <div className="px-4 py-2 bg-[#141d2e] border border-[#2a3550] rounded-lg text-sm flex items-center gap-2">
                 {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
                 <RiArrowDownSFill size={14} />
               </div>
-              <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 bg-[#111827] border border-[#1f2a40] rounded-lg text-sm flex items-center gap-2 hover:bg-[#1f2a40] transition-colors">
+              <button onClick={() => setShowFilters(!showFilters)} className="px-4 py-2 bg-[#141d2e] border border-[#2a3550] rounded-lg text-sm flex items-center gap-2 hover:bg-[#2a3550] transition-colors">
                 <RiFilterLine size={16} />
                 Filtros
               </button>
@@ -286,14 +286,14 @@ export default function Agenda() {
 
           {/* Filters */}
           {showFilters && (
-            <div className="mb-4 p-4 bg-[#111827] border border-[#1f2a40] rounded-xl flex items-center gap-4">
-              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm">
+            <div className="mb-4 p-4 bg-[#141d2e] border border-[#2a3550] rounded-xl flex items-center gap-4">
+              <select value={filterType} onChange={e => setFilterType(e.target.value)} className="px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm">
                 {types.map(t => <option key={t} value={t}>{t === "Todos" ? "Todos los tipos" : TYPE_CONFIG[t]?.label || t}</option>)}
               </select>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm">
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm">
                 {statuses.map(s => <option key={s} value={s}>{s === "Todos" ? "Todos los estados" : STATUS_CONFIG[s]?.label || s}</option>)}
               </select>
-              <button onClick={() => { setFilterType("Todos"); setFilterStatus("Todos"); }} className="px-4 py-2 border border-[#1f2a40] rounded-lg text-sm hover:bg-[#1f2a40] transition-colors">
+              <button onClick={() => { setFilterType("Todos"); setFilterStatus("Todos"); }} className="px-4 py-2 border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors">
                 Limpiar filtros
               </button>
             </div>
@@ -302,7 +302,7 @@ export default function Agenda() {
           {/* Metrics */}
           <div className="grid grid-cols-6 gap-4 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+              <div key={i} className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="p-1.5 rounded-lg" style={{ background: m.color + "20" }}>
                     <m.icon size={16} style={{ color: m.color }} />
@@ -320,14 +320,14 @@ export default function Agenda() {
           {/* Main content: Calendar + Sidebar */}
           <div className="flex gap-4">
             {/* Calendar */}
-            <div className="flex-1 bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden min-w-0">
+            <div className="flex-1 bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden min-w-0">
               {/* Calendar header */}
-              <div className="flex border-b border-[#1f2a40] w-full">
-                <div className="shrink-0 border-r border-[#1f2a40]" style={{ width: 64 }} />
+              <div className="flex border-b border-[#2a3550] w-full">
+                <div className="shrink-0 border-r border-[#2a3550]" style={{ width: 64 }} />
                 {weekDays.map((d, i) => {
                   const isToday = isSameDay(d, today);
                   return (
-                    <div key={i} className={"py-3 text-center border-r border-[#1f2a40] last:border-r-0 " + (isToday ? "bg-[#C9A227]/10" : "")} style={{ width: "calc((100% - 64px) / " + weekDays.length + ")" }}>
+                    <div key={i} className={"py-3 text-center border-r border-[#2a3550] last:border-r-0 " + (isToday ? "bg-[#C9A227]/10" : "")} style={{ width: "calc((100% - 64px) / " + weekDays.length + ")" }}>
                       <div className="text-xs text-gray-400">{DAYS[d.getDay()]}</div>
                       <div className={"text-lg font-semibold mt-0.5 " + (isToday ? "text-[#C9A227]" : "")}>{d.getDate()}</div>
                       {isToday && <div className="w-6 h-6 bg-[#C9A227] rounded-full text-white text-xs flex items-center justify-center mx-auto mt-1">{d.getDate()}</div>}
@@ -339,7 +339,7 @@ export default function Agenda() {
               {/* Calendar body */}
               <div className="relative w-full" style={{ height: HOURS.length * 40 }}>
                 {/* Time column */}
-                <div className="absolute left-0 top-0 w-16 h-full border-r border-[#1f2a40]">
+                <div className="absolute left-0 top-0 w-16 h-full border-r border-[#2a3550]">
                   {HOURS.map((h, i) => (
                     <div key={i} className="text-xs text-gray-500 text-right pr-2" style={{ height: 40, lineHeight: "40px" }}>
                       {h}
@@ -350,7 +350,7 @@ export default function Agenda() {
                 {/* Grid lines */}
                 <div className="absolute right-0 top-0 h-full" style={{ left: 64 }}>
                   {HOURS.map((_, i) => (
-                    <div key={i} className="border-b border-[#1f2a40]" style={{ height: 40 }} />
+                    <div key={i} className="border-b border-[#2a3550]" style={{ height: 40 }} />
                   ))}
                   {/* Current time line */}
                   <div className="absolute left-0 right-0 border-t-2 border-red-500 z-10" style={{ top: 320 }}>
@@ -363,7 +363,7 @@ export default function Agenda() {
                   {weekDays.map((day, dayIdx) => {
                     const dayEvents = filteredEvents.filter(e => isSameDay(new Date(e.date), day));
                     return (
-                      <div key={dayIdx} className="relative border-r border-[#1f2a40] last:border-r-0" style={{ width: "calc(100% / " + weekDays.length + ")" }}>
+                      <div key={dayIdx} className="relative border-r border-[#2a3550] last:border-r-0" style={{ width: "calc(100% / " + weekDays.length + ")" }}>
                         {/* All-day events */}
                         {dayEvents.filter(e => e.start === "00:00").map(ev => {
                           const cfg = TYPE_CONFIG[ev.type] || TYPE_CONFIG.Reunion;
@@ -396,12 +396,12 @@ export default function Agenda() {
             {/* Right sidebar */}
             <div className="w-72 space-y-4">
               {/* Mini calendar */}
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+              <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium">{MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
                   <div className="flex gap-1">
-                    <button onClick={prevWeek} className="p-1 hover:bg-[#1f2a40] rounded"><RiArrowLeftSLine size={14} /></button>
-                    <button onClick={nextWeek} className="p-1 hover:bg-[#1f2a40] rounded"><RiArrowRightSLine size={14} /></button>
+                    <button onClick={prevWeek} className="p-1 hover:bg-[#2a3550] rounded"><RiArrowLeftSLine size={14} /></button>
+                    <button onClick={nextWeek} className="p-1 hover:bg-[#2a3550] rounded"><RiArrowRightSLine size={14} /></button>
                   </div>
                 </div>
                 <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-1">
@@ -412,7 +412,7 @@ export default function Agenda() {
                     if (!d) return <div key={i} />;
                     const isToday = isSameDay(d, today);
                     const hasEvent = events.some(e => isSameDay(new Date(e.date), d));
-                    const dayClass = isToday ? "py-1 cursor-pointer bg-[#C9A227] text-white rounded-full" : hasEvent ? "py-1 cursor-pointer text-[#C9A227] font-medium hover:bg-[#1f2a40] rounded" : "py-1 cursor-pointer text-gray-300 hover:bg-[#1f2a40] rounded";
+                    const dayClass = isToday ? "py-1 cursor-pointer bg-[#C9A227] text-white rounded-full" : hasEvent ? "py-1 cursor-pointer text-[#C9A227] font-medium hover:bg-[#2a3550] rounded" : "py-1 cursor-pointer text-gray-300 hover:bg-[#2a3550] rounded";
                     return (
                       <div key={i} className={dayClass}>
                         {d.getDate()}
@@ -423,13 +423,13 @@ export default function Agenda() {
               </div>
 
               {/* Upcoming events */}
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+              <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
                 <h3 className="text-sm font-medium mb-3">Próximos eventos</h3>
                 <div className="space-y-3">
                   {upcomingEvents.map(ev => {
                     const cfg = TYPE_CONFIG[ev.type] || TYPE_CONFIG.Reunion;
                     return (
-                      <div key={ev.id} className="flex items-start gap-2 cursor-pointer hover:bg-[#1f2a40] rounded-lg p-1.5 -mx-1.5 transition-colors" onClick={() => openView(ev)}>
+                      <div key={ev.id} className="flex items-start gap-2 cursor-pointer hover:bg-[#2a3550] rounded-lg p-1.5 -mx-1.5 transition-colors" onClick={() => openView(ev)}>
                         <div className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ background: cfg.color }} />
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-medium truncate">{ev.title}</div>
@@ -444,7 +444,7 @@ export default function Agenda() {
               </div>
 
               {/* Pending tasks */}
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+              <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
                 <h3 className="text-sm font-medium mb-3">Tareas pendientes</h3>
                 <div className="space-y-2">
                   {tasks.slice(0, 5).map(t => (
@@ -467,15 +467,15 @@ export default function Agenda() {
           </div>
 
           {/* Today's events table */}
-          <div className="mt-6 bg-[#111827] border border-[#1f2a40] rounded-xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#1f2a40]">
+          <div className="mt-6 bg-[#141d2e] border border-[#2a3550] rounded-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#2a3550]">
               <h3 className="font-medium">Eventos de hoy - Jueves 27 junio</h3>
               <button className="text-xs text-[#C9A227] hover:underline">Ver agenda completa</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#1f2a40]">
+                  <tr className="border-b border-[#2a3550]">
                     <th className="text-left px-5 py-3 text-xs text-gray-400 font-medium">Hora</th>
                     <th className="text-left px-5 py-3 text-xs text-gray-400 font-medium">Tipo</th>
                     <th className="text-left px-5 py-3 text-xs text-gray-400 font-medium">Evento</th>
@@ -489,7 +489,7 @@ export default function Agenda() {
                     const tcfg = TYPE_CONFIG[ev.type] || TYPE_CONFIG.Reunion;
                     const scfg = STATUS_CONFIG[ev.status] || STATUS_CONFIG.Pendiente;
                     return (
-                      <tr key={ev.id} className="border-b border-[#1f2a40] hover:bg-[#1f2a4030] transition-colors">
+                      <tr key={ev.id} className="border-b border-[#2a3550] hover:bg-[#2a355030] transition-colors">
                         <td className="px-5 py-3 text-gray-300">{ev.start} - {ev.end}</td>
                         <td className="px-5 py-3">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: tcfg.bg, color: tcfg.color }}>
@@ -511,13 +511,13 @@ export default function Agenda() {
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openView(ev)} className="p-1.5 hover:bg-[#1f2a40] rounded-lg transition-colors text-gray-400 hover:text-[#C9A227]">
+                            <button onClick={() => openView(ev)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-[#C9A227]">
                               <RiEyeFill size={14} />
                             </button>
-                            <button onClick={() => openEdit(ev)} className="p-1.5 hover:bg-[#1f2a40] rounded-lg transition-colors text-gray-400 hover:text-green-400">
+                            <button onClick={() => openEdit(ev)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-green-400">
                               <RiEditFill size={14} />
                             </button>
-                            <button onClick={() => deleteEvent(ev.id)} className="p-1.5 hover:bg-[#1f2a40] rounded-lg transition-colors text-gray-400 hover:text-red-400">
+                            <button onClick={() => deleteEvent(ev.id)} className="p-1.5 hover:bg-[#2a3550] rounded-lg transition-colors text-gray-400 hover:text-red-400">
                               <RiDeleteBinFill size={14} />
                             </button>
                           </div>
@@ -539,12 +539,12 @@ export default function Agenda() {
       {drawerOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setDrawerOpen(false)} />
-          <div className="relative w-[480px] bg-[#111827] border-l border-[#1f2a40] h-full overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-[#1f2a40]">
+          <div className="relative w-[480px] bg-[#141d2e] border-l border-[#2a3550] h-full overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-[#2a3550]">
               <h2 className="text-lg font-semibold">
                 {drawerMode === "create" ? "Nuevo Evento" : drawerMode === "edit" ? "Editar Evento" : "Detalles del Evento"}
               </h2>
-              <button onClick={() => setDrawerOpen(false)} className="p-2 hover:bg-[#1f2a40] rounded-lg transition-colors">
+              <button onClick={() => setDrawerOpen(false)} className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors">
                 <RiCloseLine size={20} />
               </button>
             </div>
@@ -562,26 +562,26 @@ export default function Agenda() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#0B1120] border border-[#1f2a40] rounded-lg p-3">
+                    <div className="bg-[#0B1120] border border-[#2a3550] rounded-lg p-3">
                       <div className="text-xs text-gray-400 mb-1">Hora</div>
                       <div className="text-sm flex items-center gap-1"><RiTimeLine size={14} className="text-gray-500" />{selectedEvent.start} - {selectedEvent.end}</div>
                     </div>
-                    <div className="bg-[#0B1120] border border-[#1f2a40] rounded-lg p-3">
+                    <div className="bg-[#0B1120] border border-[#2a3550] rounded-lg p-3">
                       <div className="text-xs text-gray-400 mb-1">Fecha</div>
                       <div className="text-sm flex items-center gap-1"><RiCalendarLine size={14} className="text-gray-500" />{selectedEvent.date}</div>
                     </div>
-                    <div className="bg-[#0B1120] border border-[#1f2a40] rounded-lg p-3">
+                    <div className="bg-[#0B1120] border border-[#2a3550] rounded-lg p-3">
                       <div className="text-xs text-gray-400 mb-1">Ubicación</div>
                       <div className="text-sm flex items-center gap-1"><RiMapPinFill size={14} className="text-gray-500" />{selectedEvent.location}</div>
                     </div>
-                    <div className="bg-[#0B1120] border border-[#1f2a40] rounded-lg p-3">
+                    <div className="bg-[#0B1120] border border-[#2a3550] rounded-lg p-3">
                       <div className="text-xs text-gray-400 mb-1">Estado</div>
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: (STATUS_CONFIG[selectedEvent.status]?.bg || "rgba(245,158,11,0.15)"), color: (STATUS_CONFIG[selectedEvent.status]?.color || "#f59e0b") }}>
                         {STATUS_CONFIG[selectedEvent.status]?.label || selectedEvent.status}
                       </span>
                     </div>
                   </div>
-                  <div className="bg-[#0B1120] border border-[#1f2a40] rounded-lg p-3">
+                  <div className="bg-[#0B1120] border border-[#2a3550] rounded-lg p-3">
                     <div className="text-xs text-gray-400 mb-1">Participantes</div>
                     <div className="text-sm">{selectedEvent.participants}</div>
                   </div>
@@ -598,18 +598,18 @@ export default function Agenda() {
                 <>
                   <div>
                     <label className="text-xs text-gray-400 mb-1.5 block">Título del evento</label>
-                    <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" placeholder="Ej: Reunión con cliente" />
+                    <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" placeholder="Ej: Reunión con cliente" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs text-gray-400 mb-1.5 block">Tipo</label>
-                      <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]">
+                      <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]">
                         {Object.keys(TYPE_CONFIG).map(t => <option key={t} value={t}>{TYPE_CONFIG[t].label}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="text-xs text-gray-400 mb-1.5 block">Estado</label>
-                      <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]">
+                      <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]">
                         {Object.keys(STATUS_CONFIG).map(s => <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>)}
                       </select>
                     </div>
@@ -617,30 +617,30 @@ export default function Agenda() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs text-gray-400 mb-1.5 block">Hora inicio</label>
-                      <input type="time" value={form.start} onChange={e => setForm({ ...form, start: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" />
+                      <input type="time" value={form.start} onChange={e => setForm({ ...form, start: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" />
                     </div>
                     <div>
                       <label className="text-xs text-gray-400 mb-1.5 block">Hora fin</label>
-                      <input type="time" value={form.end} onChange={e => setForm({ ...form, end: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" />
+                      <input type="time" value={form.end} onChange={e => setForm({ ...form, end: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs text-gray-400 mb-1.5 block">Fecha</label>
-                    <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" />
+                    <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" />
                   </div>
                   <div>
                     <label className="text-xs text-gray-400 mb-1.5 block">Ubicación</label>
-                    <input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" placeholder="Ej: Sala de juntas" />
+                    <input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" placeholder="Ej: Sala de juntas" />
                   </div>
                   <div>
                     <label className="text-xs text-gray-400 mb-1.5 block">Participantes</label>
-                    <input type="text" value={form.participants} onChange={e => setForm({ ...form, participants: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#1f2a40] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" placeholder="Ej: Equipo comercial" />
+                    <input type="text" value={form.participants} onChange={e => setForm({ ...form, participants: e.target.value })} className="w-full px-3 py-2 bg-[#0B1120] border border-[#2a3550] rounded-lg text-sm focus:outline-none focus:border-[#C9A227]" placeholder="Ej: Equipo comercial" />
                   </div>
                   <div className="flex gap-3 pt-2">
                     <button onClick={saveEvent} className="flex-1 py-2.5 bg-[#C9A227] hover:bg-[#B8921F] rounded-lg text-sm font-medium transition-colors">
                       {drawerMode === "create" ? "Crear evento" : "Guardar cambios"}
                     </button>
-                    <button onClick={() => setDrawerOpen(false)} className="px-4 py-2.5 border border-[#1f2a40] rounded-lg text-sm hover:bg-[#1f2a40] transition-colors">
+                    <button onClick={() => setDrawerOpen(false)} className="px-4 py-2.5 border border-[#2a3550] rounded-lg text-sm hover:bg-[#2a3550] transition-colors">
                       Cancelar
                     </button>
                   </div>

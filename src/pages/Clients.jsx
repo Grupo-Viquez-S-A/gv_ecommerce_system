@@ -98,7 +98,7 @@ const avatarColors = ["#6366f1", "#ec4899", "#C9A227", "#f59e0b", "#22c55e", "#1
 /* ─── HELPERS ──────────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#C9A227]/15"}`}>
       {icon || label}
     </button>
   );
@@ -107,7 +107,7 @@ function PagBtn({ icon, label, active }) {
 function FormField({ label, placeholder, value, onChange, type = "text", icon }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">{label}</label>
       <div className="relative">
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{icon}</span>}
         <input
@@ -115,7 +115,7 @@ function FormField({ label, placeholder, value, onChange, type = "text", icon })
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors`}
+          className={`w-full bg-[#222e44] border border-[#2a3550] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors`}
         />
       </div>
     </div>
@@ -189,7 +189,7 @@ export default function Clients() {
 
   /* Metrics */
   const metrics = [
-    { label: "Clientes Totales", value: "42", icon: <RiUserFill size={20} />, color: "bg-[#1e3a5f]", iconColor: "text-[#60a5fa]", growth: "+5", growthColor: "text-green-400" },
+    { label: "Clientes Totales", value: "42", icon: <RiUserFill size={20} />, color: "bg-[#C9A227]/15", iconColor: "text-[#C9A227]", growth: "+5", growthColor: "text-green-400" },
     { label: "Activos", value: "38", icon: <RiCheckboxCircleFill size={20} />, color: "bg-[#14301a]", iconColor: "text-[#4ade80]", growth: "+3", growthColor: "text-green-400" },
     { label: "Inactivos", value: "4", icon: <RiCloseCircleFill size={20} />, color: "bg-[#3b1a1a]", iconColor: "text-[#f87171]", growth: "-1", growthColor: "text-red-400" },
     { label: "Ventas Acumuladas", value: "₡62.9 M", icon: <RiMoneyDollarCircleFill size={20} />, color: "bg-[#2d200a]", iconColor: "text-[#fbbf24]", growth: "+12%", growthColor: "text-green-400" },
@@ -208,7 +208,7 @@ export default function Clients() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Navbar */}
-        <header className="h-14 bg-[#0f1623] border-b border-[#1f2a40] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+        <header className="h-14 bg-[#1c2538] border-b border-[#2a3550] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
               <RiMenuFill size={22} />
@@ -216,19 +216,19 @@ export default function Clients() {
             <div className="relative">
               <button
                 onClick={() => setCompanyDropdown(!companyDropdown)}
-                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#141a2a] px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors"
               >
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color || "#c9a227" }} />
                 {currentCompany.name}
                 <RiArrowDownSFill size={16} className="text-gray-400" />
               </button>
               {companyDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-[#141a2a] border border-[#1f2a40] rounded-lg shadow-xl z-50 py-1">
+                <div className="absolute top-full left-0 mt-1 w-56 bg-[#1c2538] border border-[#2a3550] rounded-lg shadow-xl z-50 py-1">
                   {(user?.companies || [{ name: "Grupo Víquez S.A", color: "#c9a227" }]).map((c, i) => (
                     <button
                       key={c.id || i}
                       onClick={() => { setCurrentCompany({ ...c, color: c.color || avatarColors[i % avatarColors.length] }); setCompanyDropdown(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#1e3a5f] transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
                     >
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color || avatarColors[i % avatarColors.length] }} />
                       {c.name}
@@ -239,14 +239,14 @@ export default function Clients() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiNotification3Fill size={16} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiSettings4Fill size={16} />
             </button>
-            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiLogoutBoxLine size={16} />
             </button>
           </div>
@@ -281,7 +281,7 @@ export default function Clients() {
           {/* Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/40 transition-colors">
+              <div key={i} className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/40 transition-colors">
                 <div className={`w-8 h-8 rounded-lg ${m.color} flex items-center justify-center ${m.iconColor} mb-2`}>
                   {m.icon}
                 </div>
@@ -303,7 +303,7 @@ export default function Clients() {
                 placeholder="Buscar cliente..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#C9A227] transition-colors"
+                className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
               />
             </div>
             <div className="relative">
@@ -311,7 +311,7 @@ export default function Clients() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer min-w-[160px]"
+                className="bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer min-w-[160px]"
               >
                 <option value="Todos">Todos los estados</option>
                 <option value="Activo">Activo</option>
@@ -319,16 +319,16 @@ export default function Clients() {
               </select>
               <RiArrowDownSFill size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
             </div>
-            <button className="flex items-center gap-2 bg-[#111827] hover:bg-[#1e3a5f] border border-[#1f2a40] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            <button className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
               <RiFilterLine size={15} /> Filtros
             </button>
           </div>
 
           {/* Table — desktop */}
-          <div className="hidden md:block bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden mb-6">
+          <div className="hidden md:block bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-6">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#1f2a40]">
+                <tr className="border-b border-[#2a3550]">
                   {["CLIENTE", "EMPRESA", "VENTAS ACUMULADAS", "ÚLTIMA COMPRA", "ESTADO", "ACCIONES"].map((col) => (
                     <th key={col} className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-5 py-3">
                       {col}
@@ -338,7 +338,7 @@ export default function Clients() {
               </thead>
               <tbody>
                 {filtered.map((c) => (
-                  <tr key={c.id} className="border-b border-[#1f2a40] last:border-0 hover:bg-[#141a2a] transition-colors">
+                  <tr key={c.id} className="border-b border-[#2a3550] last:border-0 hover:bg-[#1c2538] transition-colors">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: c.color }}>
@@ -358,16 +358,16 @@ export default function Clients() {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Ver sucursales">
+                        <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Ver sucursales">
                           <RiStoreFill size={14} />
                         </button>
-                        <button onClick={() => { setRepModal(c); setSelectedRepBranch(null); }} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Ver representantes">
+                        <button onClick={() => { setRepModal(c); setSelectedRepBranch(null); }} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Ver representantes">
                           <RiTeamFill size={14} />
                         </button>
-                        <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Ver cliente">
+                        <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Ver cliente">
                           <RiEyeFill size={14} />
                         </button>
-                        <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors cursor-pointer" title="Editar">
+                        <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Editar">
                           <RiEditFill size={14} />
                         </button>
                         <button onClick={() => setDeactivateModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors cursor-pointer" title="Desactivar">
@@ -381,15 +381,15 @@ export default function Clients() {
             </table>
             {filtered.length === 0 && (
               <div className="flex flex-col items-center justify-center py-14 gap-3">
-                <div className="w-14 h-14 rounded-full bg-[#1f2a40] flex items-center justify-center text-gray-600">
+                <div className="w-14 h-14 rounded-full bg-[#2a3550] flex items-center justify-center text-gray-600">
                   <RiUserFill size={28} />
                 </div>
                 <p className="text-sm text-gray-500">No se encontraron clientes</p>
-                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); }} className="text-xs text-[#60a5fa] hover:underline">Limpiar filtros</button>
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); }} className="text-xs text-[#C9A227] hover:underline">Limpiar filtros</button>
               </div>
             )}
             {/* Pagination */}
-            <div className="flex items-center justify-between px-5 py-3 border-t border-[#1f2a40]">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
               <span className="text-xs text-gray-500">Mostrando 1 a {filtered.length} de 42 clientes</span>
               <div className="flex items-center gap-1">
                 <PagBtn icon={<RiArrowLeftSLine size={14} />} />
@@ -402,7 +402,7 @@ export default function Clients() {
           {/* Mobile cards */}
           <div className="md:hidden space-y-3 mb-6">
             {filtered.map((c) => (
-              <div key={c.id} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+              <div key={c.id} className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: c.color }}>
@@ -422,11 +422,11 @@ export default function Clients() {
                   <span className="text-white font-semibold">{c.sales}</span>
                   <span className="text-gray-500 text-xs">{c.lastPurchase}</span>
                 </div>
-                <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#1f2a40]">
-                  <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiStoreFill size={13} /></button>
-                  <button onClick={() => { setRepModal(c); setSelectedRepBranch(null); }} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiTeamFill size={13} /></button>
-                  <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEyeFill size={13} /></button>
-                  <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEditFill size={13} /></button>
+                <div className="flex items-center gap-1 mt-3 pt-3 border-t border-[#2a3550]">
+                  <button onClick={() => setBranchModal(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors"><RiStoreFill size={13} /></button>
+                  <button onClick={() => { setRepModal(c); setSelectedRepBranch(null); }} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors"><RiTeamFill size={13} /></button>
+                  <button onClick={() => openViewDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors"><RiEyeFill size={13} /></button>
+                  <button onClick={() => openEditDrawer(c)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors"><RiEditFill size={13} /></button>
                   <button onClick={() => setDeactivateModal(c)} className="w-7 h-7 rounded-lg text-yellow-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors"><RiUserSharedFill size={13} /></button>
                 </div>
               </div>
@@ -442,23 +442,23 @@ export default function Clients() {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#111827] border-l border-[#1f2a40] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#141d2e] border-l border-[#2a3550] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Drawer header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               {drawerMode === "create" && <><RiAddFill size={20} className="text-[#C9A227]" />Nuevo Cliente</>}
               {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#C9A227]" />Editar Cliente</>}
-              {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle del Cliente</>}
+              {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#C9A227]" />Detalle del Cliente</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
               {drawerMode === "create" ? "Completa la información del nuevo cliente." : drawerMode === "edit" ? "Modifica la información del cliente." : "Información completa del cliente."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
+          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
             <RiCloseLine size={18} />
           </button>
         </div>
@@ -471,9 +471,9 @@ export default function Clients() {
               <FormField label="Correo Electrónico" placeholder="Ej. contacto@empresa.com" value={form.email} onChange={(v) => setForm({ ...form, email: v })} type="email" icon={<RiMailFill size={14} />} />
               <FormField label="Teléfono" placeholder="Ej. +506 8888 8888" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} type="tel" icon={<RiPhoneFill size={14} />} />
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Empresa Grupo</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Empresa Grupo</label>
                 <div className="relative">
-                  <select value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer">
+                  <select value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer">
                     <option value="">Seleccionar empresa del grupo</option>
                     <option>Grupo Víquez S.A</option>
                     <option>Textiles de Occidente</option>
@@ -486,7 +486,7 @@ export default function Clients() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Dirección</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Dirección</label>
                 <div className="relative">
                   <RiMapPinFill size={14} className="absolute left-3 top-3 text-gray-500" />
                   <textarea
@@ -494,24 +494,24 @@ export default function Clients() {
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}
                     rows={2}
-                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
+                    className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
                   />
                 </div>
               </div>
               {/* Sucursales */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Sucursales</label>
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">Sucursales</label>
                   <button
                     onClick={() => setForm({ ...form, branches: [...form.branches, { name: "", phone: "", address: "", representatives: [] }] })}
-                    className="flex items-center gap-1 text-xs text-[#60a5fa] hover:text-white font-medium transition-colors"
+                    className="flex items-center gap-1 text-xs text-[#C9A227] hover:text-white font-medium transition-colors"
                   >
                     <RiAddLine size={14} /> Agregar sucursal
                   </button>
                 </div>
                 <div className="space-y-3">
                   {form.branches.map((branch, idx) => (
-                    <div key={idx} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3 space-y-2">
+                    <div key={idx} className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-500 font-medium">Sucursal {idx + 1}</span>
                         {form.branches.length > 1 && (
@@ -532,7 +532,7 @@ export default function Clients() {
                           updated[idx] = { ...updated[idx], name: e.target.value };
                           setForm({ ...form, branches: updated });
                         }}
-                        className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
+                        className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                       />
                       <div className="flex gap-2">
                         <input
@@ -544,7 +544,7 @@ export default function Clients() {
                             updated[idx] = { ...updated[idx], phone: e.target.value };
                             setForm({ ...form, branches: updated });
                           }}
-                          className="flex-1 bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
+                          className="flex-1 bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                         />
                         <input
                           type="text"
@@ -555,11 +555,11 @@ export default function Clients() {
                             updated[idx] = { ...updated[idx], address: e.target.value };
                             setForm({ ...form, branches: updated });
                           }}
-                          className="flex-1 bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
+                          className="flex-1 bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                         />
                       </div>
                       {/* Representatives per branch */}
-                      <div className="pt-2 border-t border-[#1f2a40]">
+                      <div className="pt-2 border-t border-[#2a3550]">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-gray-500 font-medium">Representantes</span>
                           <button
@@ -571,14 +571,14 @@ export default function Clients() {
                               };
                               setForm({ ...form, branches: updated });
                             }}
-                            className="flex items-center gap-1 text-xs text-[#60a5fa] hover:text-white font-medium transition-colors"
+                            className="flex items-center gap-1 text-xs text-[#C9A227] hover:text-white font-medium transition-colors"
                           >
                             <RiAddLine size={12} /> Agregar
                           </button>
                         </div>
                         <div className="space-y-2">
                           {(branch.representatives || []).map((rep, rIdx) => (
-                            <div key={rIdx} className="bg-[#141a2a] border border-[#1f2a40] rounded-lg p-2 space-y-2">
+                            <div key={rIdx} className="bg-[#1c2538] border border-[#2a3550] rounded-lg p-2 space-y-2">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-gray-600">Representante {rIdx + 1}</span>
                                 <button
@@ -606,7 +606,7 @@ export default function Clients() {
                                   updated[idx] = { ...updated[idx], representatives: reps };
                                   setForm({ ...form, branches: updated });
                                 }}
-                                className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
+                                className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                               />
                               <div className="flex gap-2">
                                 <input
@@ -620,7 +620,7 @@ export default function Clients() {
                                     updated[idx] = { ...updated[idx], representatives: reps };
                                     setForm({ ...form, branches: updated });
                                   }}
-                                  className="flex-1 bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
+                                  className="flex-1 bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                                 />
                                 <input
                                   type="tel"
@@ -633,7 +633,7 @@ export default function Clients() {
                                     updated[idx] = { ...updated[idx], representatives: reps };
                                     setForm({ ...form, branches: updated });
                                   }}
-                                  className="flex-1 bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
+                                  className="flex-1 bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                                 />
                               </div>
                               <input
@@ -647,7 +647,7 @@ export default function Clients() {
                                   updated[idx] = { ...updated[idx], representatives: reps };
                                   setForm({ ...form, branches: updated });
                                 }}
-                                className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors"
+                                className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                               />
                               <div className="flex gap-3">
                                 {["Activo", "Inactivo"].map((s) => (
@@ -678,7 +678,7 @@ export default function Clients() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Estado</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">Estado</label>
                 <div className="flex gap-5">
                   {["Activo", "Inactivo"].map((s) => (
                     <label key={s} className="flex items-center gap-2 cursor-pointer">
@@ -691,13 +691,13 @@ export default function Clients() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Notas</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Notas</label>
                 <textarea
                   placeholder="Notas internas sobre el cliente..."
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
                   rows={3}
-                  className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
+                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
                 />
               </div>
             </div>
@@ -706,7 +706,7 @@ export default function Clients() {
           {drawerMode === "view" && viewClient && (
             <div className="space-y-5">
               {/* Avatar header */}
-              <div className="flex items-center gap-4 pb-5 border-b border-[#1f2a40]">
+              <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
                 <div className="w-16 h-16 rounded-xl flex items-center justify-center text-xl font-bold text-white" style={{ backgroundColor: viewClient.color }}>
                   {viewClient.initials}
                 </div>
@@ -727,7 +727,7 @@ export default function Clients() {
                     { label: "Teléfono", value: viewClient.phone, icon: <RiPhoneFill size={12} /> },
                     { label: "Dirección", value: viewClient.address, icon: <RiMapPinFill size={12} /> },
                   ].map(({ label, value, icon }) => (
-                    <div key={label} className="flex items-center gap-3 py-2 border-b border-[#1f2a40]">
+                    <div key={label} className="flex items-center gap-3 py-2 border-b border-[#2a3550]">
                       <span className="text-gray-500">{icon}</span>
                       <div>
                         <div className="text-xs text-gray-500">{label}</div>
@@ -749,7 +749,7 @@ export default function Clients() {
                     { label: "Total de Órdenes", value: viewClient.totalOrders, icon: <RiBarChartFill size={12} /> },
                     { label: "Cotizaciones", value: viewClient.totalQuotes, icon: <RiClipboardFill size={12} /> },
                   ].map(({ label, value, icon }) => (
-                    <div key={label} className="flex items-center gap-3 py-2 border-b border-[#1f2a40]">
+                    <div key={label} className="flex items-center gap-3 py-2 border-b border-[#2a3550]">
                       <span className="text-gray-500">{icon}</span>
                       <div>
                         <div className="text-xs text-gray-500">{label}</div>
@@ -765,8 +765,8 @@ export default function Clients() {
 
         {/* Drawer footer */}
         {drawerMode !== "view" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cancelar
             </button>
             <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
@@ -775,9 +775,9 @@ export default function Clients() {
           </div>
         )}
         {drawerMode === "view" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
+          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
            
-            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+            <button onClick={closeDrawer} className="flex-1 bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
               Cerrar
             </button>
           </div>
@@ -789,9 +789,9 @@ export default function Clients() {
         <>
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setBranchModal(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-[#141d2e] border border-[#2a3550] rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f2a40] sticky top-0 bg-[#111827] z-10 rounded-t-2xl">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a3550] sticky top-0 bg-[#141d2e] z-10 rounded-t-2xl">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ backgroundColor: branchModal.color }}>
                     {branchModal.initials}
@@ -801,26 +801,26 @@ export default function Clients() {
                     <p className="text-sm text-gray-400">{branchModal.company}</p>
                   </div>
                 </div>
-                <button onClick={() => setBranchModal(null)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors">
+                <button onClick={() => setBranchModal(null)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors">
                   <RiCloseLine size={18} />
                 </button>
               </div>
 
               {/* Stats row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 border-b border-[#1f2a40]">
-                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 border-b border-[#2a3550]">
+                <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-3">
                   <div className="text-xs text-gray-500 mb-1">Ventas acumuladas</div>
                   <div className="text-base font-bold text-white">{branchModal.sales}</div>
                 </div>
-                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+                <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-3">
                   <div className="text-xs text-gray-500 mb-1">Cotizaciones activas</div>
                   <div className="text-base font-bold text-white">{branchModal.totalQuotes}</div>
                 </div>
-                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+                <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-3">
                   <div className="text-xs text-gray-500 mb-1">Pedidos activos</div>
                   <div className="text-base font-bold text-white">{branchModal.totalOrders}</div>
                 </div>
-                <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-3">
+                <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-3">
                   <div className="text-xs text-gray-500 mb-1">Sucursales</div>
                   <div className="text-base font-bold text-white">{branchModal.branches?.length || 0}</div>
                 </div>
@@ -834,9 +834,9 @@ export default function Clients() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(branchModal.branches || []).map((branch, idx) => (
-                    <div key={idx} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/50 transition-colors">
+                    <div key={idx} className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/50 transition-colors">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[#60a5fa] flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[#C9A227] flex-shrink-0">
                           <RiMapPinFill size={14} />
                         </div>
                         <div>
@@ -864,7 +864,7 @@ export default function Clients() {
                           </div>
                         )}
                       </div>
-                      <div className="mt-3 pt-3 border-t border-[#1f2a40] flex items-center justify-between">
+                      <div className="mt-3 pt-3 border-t border-[#2a3550] flex items-center justify-between">
                         <div className="text-xs text-gray-500">
                           Ventas: <span className="text-white font-medium">{branch.sales || "N/A"}</span>
                         </div>
@@ -877,7 +877,7 @@ export default function Clients() {
                 </div>
                 {(!branchModal.branches || branchModal.branches.length === 0) && (
                   <div className="flex flex-col items-center justify-center py-10 gap-3">
-                    <div className="w-12 h-12 rounded-full bg-[#1f2a40] flex items-center justify-center text-gray-600">
+                    <div className="w-12 h-12 rounded-full bg-[#2a3550] flex items-center justify-center text-gray-600">
                       <RiStoreFill size={24} />
                     </div>
                     <p className="text-sm text-gray-500">Este cliente no tiene sucursales registradas</p>
@@ -886,8 +886,8 @@ export default function Clients() {
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end px-6 py-4 border-t border-[#1f2a40] sticky bottom-0 bg-[#111827] rounded-b-2xl">
-                <button onClick={() => setBranchModal(null)} className="bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors cursor-pointer">
+              <div className="flex items-center justify-end px-6 py-4 border-t border-[#2a3550] sticky bottom-0 bg-[#141d2e] rounded-b-2xl">
+                <button onClick={() => setBranchModal(null)} className="bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors cursor-pointer">
                   Cerrar
                 </button>
               </div>
@@ -901,9 +901,9 @@ export default function Clients() {
         <>
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} />
           <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-[#141d2e] border border-[#2a3550] rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#1f2a40] sticky top-0 bg-[#111827] z-10 rounded-t-2xl">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#2a3550] sticky top-0 bg-[#141d2e] z-10 rounded-t-2xl">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0" style={{ backgroundColor: repModal.color }}>
                     {repModal.initials}
@@ -913,7 +913,7 @@ export default function Clients() {
                     <p className="text-sm text-gray-400">{repModal.company}</p>
                   </div>
                 </div>
-                <button onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors">
+                <button onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors">
                   <RiCloseLine size={18} />
                 </button>
               </div>
@@ -926,9 +926,9 @@ export default function Clients() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {(repModal.branches || []).map((branch, idx) => (
-                      <div key={idx} onClick={() => setSelectedRepBranch(branch)} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/50 cursor-pointer transition-colors">
+                      <div key={idx} onClick={() => setSelectedRepBranch(branch)} className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/50 cursor-pointer transition-colors">
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[#60a5fa] flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[#C9A227] flex-shrink-0">
                             <RiMapPinFill size={14} />
                           </div>
                           <div className="flex-1 min-w-0">
@@ -956,7 +956,7 @@ export default function Clients() {
                   </div>
                   {(!repModal.branches || repModal.branches.length === 0) && (
                     <div className="flex flex-col items-center justify-center py-10 gap-3">
-                      <div className="w-12 h-12 rounded-full bg-[#1f2a40] flex items-center justify-center text-gray-600">
+                      <div className="w-12 h-12 rounded-full bg-[#2a3550] flex items-center justify-center text-gray-600">
                         <RiStoreFill size={24} />
                       </div>
                       <p className="text-sm text-gray-500">Este cliente no tiene sucursales registradas</p>
@@ -967,7 +967,7 @@ export default function Clients() {
                 <div className="px-6 py-5">
                   {/* Branch detail header */}
                   <div className="flex items-center gap-3 mb-4">
-                    <button onClick={() => setSelectedRepBranch(null)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors">
+                    <button onClick={() => setSelectedRepBranch(null)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors">
                       <RiArrowLeftSLine size={16} />
                     </button>
                     <div>
@@ -977,24 +977,24 @@ export default function Clients() {
                   </div>
 
                   {/* Representatives table */}
-                  <div className="bg-[#0f1623] border border-[#1f2a40] rounded-xl overflow-hidden">
+                  <div className="bg-[#1c2538] border border-[#2a3550] rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-[#1f2a40]">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Nombre</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Puesto</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Teléfono</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Correo</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Estado</th>
+                          <tr className="border-b border-[#2a3550]">
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Nombre</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Puesto</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Teléfono</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Correo</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Estado</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#1f2a40]">
+                        <tbody className="divide-y divide-[#2a3550]">
                           {(selectedRepBranch.representatives || []).map((rep, idx) => (
-                            <tr key={idx} className="hover:bg-[#141a2a]/50 transition-colors">
+                            <tr key={idx} className="hover:bg-[#1c2538]/50 transition-colors">
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[#60a5fa] flex-shrink-0 text-xs font-bold">
+                                  <div className="w-8 h-8 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[#C9A227] flex-shrink-0 text-xs font-bold">
                                     {rep.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                                   </div>
                                   <span className="text-white font-medium text-sm">{rep.name}</span>
@@ -1015,7 +1015,7 @@ export default function Clients() {
                     </div>
                     {(!selectedRepBranch.representatives || selectedRepBranch.representatives.length === 0) && (
                       <div className="flex flex-col items-center justify-center py-10 gap-3">
-                        <div className="w-12 h-12 rounded-full bg-[#1f2a40] flex items-center justify-center text-gray-600">
+                        <div className="w-12 h-12 rounded-full bg-[#2a3550] flex items-center justify-center text-gray-600">
                           <RiUserLine size={24} />
                         </div>
                         <p className="text-sm text-gray-500">Esta sucursal no tiene representantes</p>
@@ -1026,13 +1026,13 @@ export default function Clients() {
               )}
 
               {/* Footer */}
-              <div className="flex items-center justify-between px-6 py-4 border-t border-[#1f2a40] sticky bottom-0 bg-[#111827] rounded-b-2xl">
+              <div className="flex items-center justify-between px-6 py-4 border-t border-[#2a3550] sticky bottom-0 bg-[#141d2e] rounded-b-2xl">
                 <span className="text-xs text-gray-500">
                   {selectedRepBranch
                     ? `${selectedRepBranch.representatives?.length || 0} representante(s)`
                     : `${repModal.branches?.length || 0} sucursal(es)`}
                 </span>
-                <button onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} className="bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors cursor-pointer">
+                <button onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} className="bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-colors cursor-pointer">
                   Cerrar
                 </button>
               </div>
@@ -1046,7 +1046,7 @@ export default function Clients() {
         <>
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setDeactivateModal(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="bg-[#141d2e] border border-[#2a3550] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
               <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-4">
                 <RiUserSharedFill size={24} className="text-yellow-400" />
               </div>
@@ -1055,7 +1055,7 @@ export default function Clients() {
                 ¿Desactivar a <span className="text-white font-medium">{deactivateModal.name}</span>? El cliente pasará a estado inactivo y no podrá realizar compras.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#FF0303] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#FF0303] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">
                   Cancelar
                 </button>
                 <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer">

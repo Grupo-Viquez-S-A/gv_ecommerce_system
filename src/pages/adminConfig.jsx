@@ -43,7 +43,7 @@ import {
 
 /* ─── MOCK DATA ─────────────────────────────────────────────── */
 const MOCK_USERS = [
-  { id: 1, initials: "JG", color: "#C9A227", name: "José González", email: "jose@grupoviquez.com", phone: "+506 8421 1234", role: "Administrador", roleColor: "bg-[#1e3a5f] text-[#60a5fa]", companies: ["Grupo Víquez S.A", "Constructora Víquez"], status: "Activo", lastAccess: "Hace 2 horas", created: "12 Ene 2024", department: "Tecnología", sales: 0, quotes: 14, clients: 8, orders: 21, has2fa: true },
+  { id: 1, initials: "JG", color: "#C9A227", name: "José González", email: "jose@grupoviquez.com", phone: "+506 8421 1234", role: "Administrador", roleColor: "bg-[#C9A227]/15 text-[#C9A227]", companies: ["Grupo Víquez S.A", "Constructora Víquez"], status: "Activo", lastAccess: "Hace 2 horas", created: "12 Ene 2024", department: "Tecnología", sales: 0, quotes: 14, clients: 8, orders: 21, has2fa: true },
   { id: 2, initials: "MC", color: "#ec4899", name: "María Castillo", email: "maria.castillo@grupoviquez.com", phone: "+506 8815 6789", role: "Supervisor", roleColor: "bg-[#2d1b4e] text-[#c084fc]", companies: ["Grupo Víquez S.A"], status: "Activo", lastAccess: "Hace 1 día", created: "03 Mar 2024", department: "Ventas", sales: 45, quotes: 62, clients: 23, orders: 58, has2fa: true },
   { id: 3, initials: "LP", color: "#6366f1", name: "Luis Pérez", email: "luis.perez@grupoviquez.com", phone: "+506 8350 2244", role: "Vendedor", roleColor: "bg-[#1a2e1a] text-[#4ade80]", companies: ["Textiles de Occidente"], status: "Activo", lastAccess: "Hace 3 horas", created: "18 Feb 2024", department: "Ventas", sales: 112, quotes: 88, clients: 41, orders: 130, has2fa: false },
   { id: 4, initials: "AC", color: "#f59e0b", name: "Ana Córdoba", email: "ana.cordoba@grupoviquez.com", phone: "+506 8560 3311", role: "Contabilidad", roleColor: "bg-[#2d200a] text-[#fbbf24]", companies: ["Grupo Víquez S.A", "Pacific Pet Food"], status: "Activo", lastAccess: "Hace 5 horas", created: "07 Abr 2024", department: "Finanzas", sales: 0, quotes: 0, clients: 12, orders: 0, has2fa: true },
@@ -52,7 +52,7 @@ const MOCK_USERS = [
 ];
 
 const MOCK_ROLES = [
-  { id: 1, name: "Administrador", badge: "bg-[#1e3a5f] text-[#60a5fa]", users: 2, permissions: 16, status: "Activo" },
+  { id: 1, name: "Administrador", badge: "bg-[#C9A227]/15 text-[#C9A227]", users: 2, permissions: 16, status: "Activo" },
   { id: 2, name: "Supervisor", badge: "bg-[#2d1b4e] text-[#c084fc]", users: 2, permissions: 12, status: "Activo" },
   { id: 3, name: "Vendedor", badge: "bg-[#1a2e1a] text-[#4ade80]", users: 2, permissions: 8, status: "Activo" },
   { id: 4, name: "Contabilidad", badge: "bg-[#2d200a] text-[#fbbf24]", users: 1, permissions: 6, status: "Activo" },
@@ -98,7 +98,7 @@ const avatarColors = ["#6366f1", "#ec4899", "#C9A227", "#f59e0b", "#22c55e"];
 /* ─── SMALL HELPERS ─────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#C9A227]/15"}`}>
       {icon || label}
     </button>
   );
@@ -107,7 +107,7 @@ function PagBtn({ icon, label, active }) {
 function FormField({ label, placeholder, value, onChange, type = "text", icon }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">{label}</label>
       <div className="relative">
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-base leading-none">{icon}</span>}
         <input
@@ -115,7 +115,7 @@ function FormField({ label, placeholder, value, onChange, type = "text", icon })
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors`}
+          className={`w-full bg-[#222e44] border border-[#2a3550] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors`}
         />
       </div>
     </div>
@@ -135,14 +135,14 @@ function Toggle({ checked, onChange }) {
 
 function ActivityIcon({ type }) {
   const map = {
-    login:  { icon: <RiKey2Fill size={12} />, color: "bg-[#1e3a5f] text-[#60a5fa]" },
+    login:  { icon: <RiKey2Fill size={12} />, color: "bg-[#C9A227]/15 text-[#C9A227]" },
     quote:  { icon: <RiFileListFill size={12} />, color: "bg-[#2d1b4e] text-[#c084fc]" },
     client: { icon: <RiTeamFill size={12} />, color: "bg-[#1a2e1a] text-[#4ade80]" },
-    sale:   { icon: <RiBarChartFill size={12} />, color: "bg-[#1e3a5f] text-[#60a5fa]" },
+    sale:   { icon: <RiBarChartFill size={12} />, color: "bg-[#C9A227]/15 text-[#C9A227]" },
     report: { icon: <RiBarChartFill size={12} />, color: "bg-[#2d200a] text-[#fbbf24]" },
     delete: { icon: <RiDeleteBinFill size={12} />, color: "bg-[#3b1a1a] text-[#f87171]" },
     export: { icon: <RiFileListFill size={12} />, color: "bg-[#1a2e1a] text-[#4ade80]" },
-    create: { icon: <RiUserAddFill size={12} />, color: "bg-[#1e3a5f] text-[#60a5fa]" },
+    create: { icon: <RiUserAddFill size={12} />, color: "bg-[#C9A227]/15 text-[#C9A227]" },
     approve:{ icon: <RiCheckboxCircleFill size={12} />, color: "bg-[#14301a] text-[#4ade80]" },
   };
   const { icon, color } = map[type] || map.login;
@@ -270,7 +270,7 @@ export default function AdminConfig() {
 
   /* Metrics */
   const metrics = [
-    { label: "Usuarios Totales", value: "124", icon: <RiUserFill size={20} />, color: "bg-[#1e3a5f]", iconColor: "text-[#60a5fa]", growth: "+8%", growthColor: "text-green-400" },
+    { label: "Usuarios Totales", value: "124", icon: <RiUserFill size={20} />, color: "bg-[#C9A227]/15", iconColor: "text-[#C9A227]", growth: "+8%", growthColor: "text-green-400" },
     { label: "Usuarios Activos", value: "112", icon: <RiUserFollowFill size={20} />, color: "bg-[#14301a]", iconColor: "text-[#4ade80]", growth: "+10%", growthColor: "text-green-400" },
     { label: "Usuarios Inactivos", value: "12", icon: <RiUserUnfollowFill size={20} />, color: "bg-[#3b1a1a]", iconColor: "text-[#f87171]", growth: "-14%", growthColor: "text-red-400" },
     { label: "Roles Registrados", value: "6", icon: <RiShieldUserFill size={20} />, color: "bg-[#2d200a]", iconColor: "text-[#fbbf24]", growth: "+2%", growthColor: "text-green-400" },
@@ -300,7 +300,7 @@ export default function AdminConfig() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Navbar */}
-        <header className="h-14 bg-[#0f1623] border-b border-[#1f2a40] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+        <header className="h-14 bg-[#1c2538] border-b border-[#2a3550] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
               <RiMenuFill size={22} />
@@ -308,19 +308,19 @@ export default function AdminConfig() {
             <div className="relative">
               <button
                 onClick={() => setCompanyDropdown(!companyDropdown)}
-                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#141a2a] px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors"
               >
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color || "#c9a227" }} />
                 {currentCompany.name}
                 <RiArrowDownSFill size={16} className="text-gray-400" />
               </button>
               {companyDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-[#141a2a] border border-[#1f2a40] rounded-lg shadow-xl z-50 py-1">
+                <div className="absolute top-full left-0 mt-1 w-56 bg-[#1c2538] border border-[#2a3550] rounded-lg shadow-xl z-50 py-1">
                   {(user?.companies || [{ name: "Grupo Víquez S.A", color: "#c9a227" }]).map((c, i) => (
                     <button
                       key={c.id || i}
                       onClick={() => { setCurrentCompany({ ...c, color: c.color || avatarColors[i % avatarColors.length] }); setCompanyDropdown(false); }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#1e3a5f] transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
                     >
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color || avatarColors[i % avatarColors.length] }} />
                       {c.name}
@@ -331,14 +331,14 @@ export default function AdminConfig() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="relative w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiNotification3Fill size={16} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <button className="w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiSettings4Fill size={16} />
             </button>
-            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-[#141a2a] border border-[#1f2a40] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#1e3a5f] transition-colors">
+            <button onClick={signOut} className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors">
               <RiLogoutBoxLine size={16} />
             </button>
           </div>
@@ -366,7 +366,7 @@ export default function AdminConfig() {
                 <>
                   <button
                     onClick={openRoleDrawer}
-                    className="flex items-center gap-2 bg-[#111827] hover:bg-[#1e3a5f] border border-[#1f2a40] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                    className="flex items-center gap-2 bg-[#141d2e] hover:bg-[#C9A227]/15 border border-[#2a3550] text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
                   >
                     <RiShieldStarFill size={16} className="text-[#f59e0b]" />
                     Nuevo Rol
@@ -395,7 +395,7 @@ export default function AdminConfig() {
           {/* Metric Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/40 transition-colors">
+              <div key={i} className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/40 transition-colors">
                 <div className={`w-8 h-8 rounded-lg ${m.color} flex items-center justify-center ${m.iconColor} mb-2`}>
                   {m.icon}
                 </div>
@@ -409,7 +409,7 @@ export default function AdminConfig() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b border-[#1f2a40] mb-6">
+          <div className="flex gap-1 border-b border-[#2a3550] mb-6">
             {TABS.map((t) => (
               <button
                 key={t.key}
@@ -431,9 +431,9 @@ export default function AdminConfig() {
             <>
               {/* Bulk action bar */}
               {selectedUsers.length > 0 && (
-                <div className="mb-4 bg-[#1e3a5f] border border-[#C9A227]/50 rounded-xl px-5 py-3 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="mb-4 bg-[#C9A227]/15 border border-[#C9A227]/50 rounded-xl px-5 py-3 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
                   <span className="text-sm font-medium text-white">
-                    <span className="text-[#60a5fa] font-bold">{selectedUsers.length}</span> usuarios seleccionados
+                    <span className="text-[#C9A227] font-bold">{selectedUsers.length}</span> usuarios seleccionados
                   </span>
                   <div className="flex items-center gap-2">
                     <button className="flex items-center gap-1.5 bg-green-500/20 text-green-400 hover:bg-green-500/30 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
@@ -442,7 +442,7 @@ export default function AdminConfig() {
                     <button className="flex items-center gap-1.5 bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                       <RiCloseCircleFill size={13} /> Desactivar
                     </button>
-                    <button className="flex items-center gap-1.5 bg-[#1f2a40] text-gray-300 hover:bg-[#2a3448] text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
+                    <button className="flex items-center gap-1.5 bg-[#2a3550] text-gray-300 hover:bg-[#2a3448] text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
                       <RiShieldUserFill size={13} /> Cambiar Rol
                     </button>
                     <button className="flex items-center gap-1.5 bg-red-500/20 text-red-400 hover:bg-red-500/30 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors">
@@ -464,7 +464,7 @@ export default function AdminConfig() {
                     placeholder="Buscar usuario..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#C9A227] transition-colors"
+                    className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                   />
                 </div>
                 <div className="relative">
@@ -472,7 +472,7 @@ export default function AdminConfig() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer min-w-[160px]"
+                    className="bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer min-w-[160px]"
                   >
                     <option value="Todos">Todos los estados</option>
                     <option value="Activo">Activo</option>
@@ -483,10 +483,10 @@ export default function AdminConfig() {
               </div>
 
               {/* Table desktop */}
-              <div className="hidden md:block bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden mb-5">
+              <div className="hidden md:block bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-5">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[#1f2a40]">
+                    <tr className="border-b border-[#2a3550]">
                       <th className="px-4 py-3 w-10">
                         <input
                           type="checkbox"
@@ -506,7 +506,7 @@ export default function AdminConfig() {
                     {filtered.map((u) => (
                       <tr
                         key={u.id}
-                        className={`border-b border-[#1f2a40] last:border-0 hover:bg-[#141a2a] transition-colors ${selectedUsers.includes(u.id) ? "bg-[#1e3a5f]/20" : ""}`}
+                        className={`border-b border-[#2a3550] last:border-0 hover:bg-[#1c2538] transition-colors ${selectedUsers.includes(u.id) ? "bg-[#C9A227]/15/20" : ""}`}
                       >
                         <td className="px-4 py-3">
                           <input
@@ -539,13 +539,13 @@ export default function AdminConfig() {
                         <td className="px-4 py-3 text-gray-500 text-xs">{u.lastAccess}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
-                            <button onClick={() => openProfileDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver perfil">
+                            <button onClick={() => openProfileDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Ver perfil">
                               <RiEyeFill size={14} />
                             </button>
-                            <button onClick={() => openEditDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar">
+                            <button onClick={() => openEditDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Editar">
                               <RiEditFill size={14} />
                             </button>
-                            <button onClick={() => setDeactivateModal(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Desactivar">
+                            <button onClick={() => setDeactivateModal(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Desactivar">
                               <RiUserSharedFill size={14} />
                             </button>
                             <button onClick={() => setDeleteModal(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors" title="Eliminar">
@@ -559,14 +559,14 @@ export default function AdminConfig() {
                 </table>
                 {filtered.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-14 gap-3">
-                    <div className="w-14 h-14 rounded-full bg-[#1f2a40] flex items-center justify-center text-gray-600">
+                    <div className="w-14 h-14 rounded-full bg-[#2a3550] flex items-center justify-center text-gray-600">
                       <RiUserFill size={28} />
                     </div>
                     <p className="text-sm text-gray-500">No se encontraron usuarios</p>
-                    <button onClick={() => { setSearch(""); setStatusFilter("Todos"); }} className="text-xs text-[#60a5fa] hover:underline">Limpiar filtros</button>
+                    <button onClick={() => { setSearch(""); setStatusFilter("Todos"); }} className="text-xs text-[#C9A227] hover:underline">Limpiar filtros</button>
                   </div>
                 )}
-                <div className="flex items-center justify-between px-5 py-3 border-t border-[#1f2a40]">
+                <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
                   <span className="text-xs text-gray-500">Mostrando 1 a {filtered.length} de 124 usuarios</span>
                   <div className="flex items-center gap-1">
                     <PagBtn icon={<RiArrowLeftSLine size={14} />} />
@@ -581,7 +581,7 @@ export default function AdminConfig() {
               {/* Mobile cards */}
               <div className="md:hidden space-y-3 mb-5">
                 {filtered.map((u) => (
-                  <div key={u.id} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4">
+                  <div key={u.id} className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: u.color }}>
@@ -604,8 +604,8 @@ export default function AdminConfig() {
                         <span className="text-xs text-gray-500">{u.companies?.[0] || u.company}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openProfileDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEyeFill size={13} /></button>
-                        <button onClick={() => openEditDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors"><RiEditFill size={13} /></button>
+                        <button onClick={() => openProfileDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors"><RiEyeFill size={13} /></button>
+                        <button onClick={() => openEditDrawer(u)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors"><RiEditFill size={13} /></button>
                         <button onClick={() => setDeleteModal(u)} className="w-7 h-7 rounded-lg text-red-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors"><RiDeleteBinFill size={13} /></button>
                       </div>
                     </div>
@@ -620,15 +620,15 @@ export default function AdminConfig() {
           {/* ─── TAB: ROLES Y PERMISOS ───────────────────────────────── */}
           {activeTab === "roles" && (
             <div className="space-y-4">
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#1f2a40] flex items-center gap-2">
-                  <RiShieldUserFill size={16} className="text-[#60a5fa]" />
+              <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
+                <div className="px-5 py-4 border-b border-[#2a3550] flex items-center gap-2">
+                  <RiShieldUserFill size={16} className="text-[#C9A227]" />
                   <h3 className="text-sm font-semibold text-white">Roles del Sistema</h3>
                 </div>
                 <div className="hidden md:block">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-[#1f2a40]">
+                      <tr className="border-b border-[#2a3550]">
                         {["ROL", "USUARIOS ASIGNADOS", "PERMISOS", "ESTADO", "ACCIONES"].map((col) => (
                           <th key={col} className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-5 py-3">{col}</th>
                         ))}
@@ -636,7 +636,7 @@ export default function AdminConfig() {
                     </thead>
                     <tbody>
                       {MOCK_ROLES.map((role) => (
-                        <tr key={role.id} className="border-b border-[#1f2a40] last:border-0 hover:bg-[#141a2a] transition-colors">
+                        <tr key={role.id} className="border-b border-[#2a3550] last:border-0 hover:bg-[#1c2538] transition-colors">
                           <td className="px-5 py-4">
                             <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${role.badge}`}>{role.name}</span>
                           </td>
@@ -644,7 +644,7 @@ export default function AdminConfig() {
                             <div className="flex items-center gap-2">
                               <div className="flex -space-x-1.5">
                                 {MOCK_USERS.filter((u) => u.role === role.name).slice(0,3).map((u) => (
-                                  <div key={u.id} className="w-6 h-6 rounded-full border-2 border-[#111827] flex items-center justify-center text-[9px] font-bold text-white" style={{ backgroundColor: u.color }}>
+                                  <div key={u.id} className="w-6 h-6 rounded-full border-2 border-[#141d2e] flex items-center justify-center text-[9px] font-bold text-white" style={{ backgroundColor: u.color }}>
                                     {u.initials}
                                   </div>
                                 ))}
@@ -654,7 +654,7 @@ export default function AdminConfig() {
                           </td>
                           <td className="px-5 py-4">
                             <div className="flex items-center gap-2">
-                              <div className="h-1.5 bg-[#1f2a40] rounded-full w-20">
+                              <div className="h-1.5 bg-[#2a3550] rounded-full w-20">
                                 <div className="h-1.5 bg-[#C9A227] rounded-full" style={{ width: `${(role.permissions / 16) * 100}%` }} />
                               </div>
                               <span className="text-gray-400 text-xs">{role.permissions}</span>
@@ -668,7 +668,7 @@ export default function AdminConfig() {
                           <td className="px-5 py-4">
                             <button
                               onClick={() => openEditRoleDrawer(role)}
-                              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white bg-[#141a2a] hover:bg-[#1e3a5f] border border-[#1f2a40] px-3 py-1.5 rounded-lg transition-colors"
+                              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white bg-[#1c2538] hover:bg-[#C9A227]/15 border border-[#2a3550] px-3 py-1.5 rounded-lg transition-colors"
                             >
                               <RiEditFill size={12} /> Editar Rol
                             </button>
@@ -679,14 +679,14 @@ export default function AdminConfig() {
                   </table>
                 </div>
                 {/* Mobile roles */}
-                <div className="md:hidden divide-y divide-[#1f2a40]">
+                <div className="md:hidden divide-y divide-[#2a3550]">
                   {MOCK_ROLES.map((role) => (
                     <div key={role.id} className="p-4 flex items-center justify-between">
                       <div>
                         <span className={`text-xs font-semibold px-3 py-1 rounded-full ${role.badge}`}>{role.name}</span>
                         <div className="text-xs text-gray-500 mt-2">{role.users} usuarios · {role.permissions} permisos</div>
                       </div>
-                      <button onClick={() => openEditRoleDrawer(role)} className="text-xs text-[#60a5fa] hover:underline flex items-center gap-1">
+                      <button onClick={() => openEditRoleDrawer(role)} className="text-xs text-[#C9A227] hover:underline flex items-center gap-1">
                         <RiEditFill size={12} /> Editar
                       </button>
                     </div>
@@ -708,7 +708,7 @@ export default function AdminConfig() {
                     placeholder="Buscar usuario..."
                     value={activitySearch}
                     onChange={(e) => setActivitySearch(e.target.value)}
-                    className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#C9A227] transition-colors"
+                    className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
                   />
                 </div>
                 <div className="relative">
@@ -716,7 +716,7 @@ export default function AdminConfig() {
                   <select
                     value={activityType}
                     onChange={(e) => setActivityType(e.target.value)}
-                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer min-w-[180px]"
+                    className="bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-8 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer min-w-[180px]"
                   >
                     <option value="Todos">Todos los tipos</option>
                     <option value="login">Inicios de sesión</option>
@@ -730,7 +730,7 @@ export default function AdminConfig() {
                   <RiCalendarLine size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                   <input
                     type="date"
-                    className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors"
+                    className="bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#C9A227] transition-colors"
                   />
                 </div>
               </div>
@@ -740,12 +740,12 @@ export default function AdminConfig() {
                 {MOCK_ACTIVITY.map((group) => (
                   <div key={group.id}>
                     <div className="flex items-center gap-3 mb-3">
-                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{group.group}</span>
-                      <div className="flex-1 h-px bg-[#1f2a40]" />
+                      <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">{group.group}</span>
+                      <div className="flex-1 h-px bg-[#2a3550]" />
                     </div>
-                    <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden">
+                    <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
                       {group.items.map((item, idx) => (
-                        <div key={idx} className={`flex items-start gap-4 px-5 py-4 hover:bg-[#141a2a] transition-colors ${idx < group.items.length - 1 ? "border-b border-[#1f2a40]" : ""}`}>
+                        <div key={idx} className={`flex items-start gap-4 px-5 py-4 hover:bg-[#1c2538] transition-colors ${idx < group.items.length - 1 ? "border-b border-[#2a3550]" : ""}`}>
                           <div className="relative mt-0.5">
                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: item.color }}>
                               {item.initials}
@@ -774,18 +774,18 @@ export default function AdminConfig() {
           {activeTab === "seguridad" && (
             <div className="space-y-4 max-w-2xl">
               {/* Password policies */}
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-5 py-4 border-b border-[#1f2a40]">
-                  <RiLockPasswordFill size={16} className="text-[#60a5fa]" />
+              <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-[#2a3550]">
+                  <RiLockPasswordFill size={16} className="text-[#C9A227]" />
                   <h3 className="text-sm font-semibold text-white">Políticas de Contraseña</h3>
                 </div>
-                <div className="divide-y divide-[#1f2a40]">
+                <div className="divide-y divide-[#2a3550]">
                   {[
                     { key: "strongPassword", label: "Requerir contraseña fuerte", desc: "Mínimo 8 caracteres, mayúsculas, números y símbolos." },
                     { key: "forceChange90", label: "Forzar cambio cada 90 días", desc: "Los usuarios deberán actualizar su contraseña periódicamente." },
                     { key: "lockAfterFail", label: "Bloquear después de 5 intentos fallidos", desc: "La cuenta se bloqueará automáticamente al superar el límite." },
                   ].map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-center justify-between px-5 py-4 hover:bg-[#141a2a] transition-colors">
+                    <div key={key} className="flex items-center justify-between px-5 py-4 hover:bg-[#1c2538] transition-colors">
                       <div>
                         <div className="text-sm font-medium text-white">{label}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
@@ -797,18 +797,18 @@ export default function AdminConfig() {
               </div>
 
               {/* Authentication */}
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-5 py-4 border-b border-[#1f2a40]">
+              <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-[#2a3550]">
                   <RiSmartphoneFill size={16} className="text-[#c084fc]" />
                   <h3 className="text-sm font-semibold text-white">Autenticación</h3>
                 </div>
-                <div className="divide-y divide-[#1f2a40]">
+                <div className="divide-y divide-[#2a3550]">
                   {[
                     { key: "twoFactor", label: "Habilitar doble factor (2FA)", desc: "Requiere un segundo método de verificación al iniciar sesión." },
                     { key: "googleLogin", label: "Permitir inicio de sesión con Google", desc: "Los usuarios podrán autenticarse usando su cuenta de Google." },
                     { key: "autoLogout", label: "Cierre automático por inactividad", desc: "La sesión se cerrará automáticamente al no detectar actividad." },
                   ].map(({ key, label, desc }) => (
-                    <div key={key} className="flex items-center justify-between px-5 py-4 hover:bg-[#141a2a] transition-colors">
+                    <div key={key} className="flex items-center justify-between px-5 py-4 hover:bg-[#1c2538] transition-colors">
                       <div>
                         <div className="text-sm font-medium text-white">{label}</div>
                         <div className="text-xs text-gray-500 mt-0.5">{desc}</div>
@@ -820,8 +820,8 @@ export default function AdminConfig() {
               </div>
 
               {/* Session */}
-              <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden">
-                <div className="flex items-center gap-2 px-5 py-4 border-b border-[#1f2a40]">
+              <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-5 py-4 border-b border-[#2a3550]">
                   <RiTimerLine size={16} className="text-[#4ade80]" />
                   <h3 className="text-sm font-semibold text-white">Sesión</h3>
                 </div>
@@ -835,7 +835,7 @@ export default function AdminConfig() {
                       <select
                         value={security.sessionTime}
                         onChange={(e) => setSecurity((s) => ({ ...s, sessionTime: e.target.value }))}
-                        className="bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer"
+                        className="bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer"
                       >
                         <option value="15">15 minutos</option>
                         <option value="30">30 minutos</option>
@@ -864,19 +864,19 @@ export default function AdminConfig() {
 
       {/* ─── DRAWER ─────────────────────────────────────────────────── */}
       <div
-        className={`fixed top-0 right-0 h-full bg-[#111827] border-l border-[#1f2a40] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full bg-[#141d2e] border-l border-[#2a3550] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
           drawerMode === "editRole" ? "w-full max-w-lg" : "w-full max-w-md"
         } ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         {/* Drawer header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               {drawerMode === "create" && <><RiUserAddFill size={20} className="text-[#C9A227]" />Nuevo Usuario</>}
               {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#C9A227]" />Editar Usuario</>}
               {drawerMode === "role" && <><RiShieldStarFill size={20} className="text-[#f59e0b]" />Nuevo Rol</>}
               {drawerMode === "editRole" && <><RiEditFill size={20} className="text-[#c084fc]" />Editar Rol — {editRole?.name}</>}
-              {drawerMode === "profile" && <><RiUserFill size={20} className="text-[#60a5fa]" />Perfil de Usuario</>}
+              {drawerMode === "profile" && <><RiUserFill size={20} className="text-[#C9A227]" />Perfil de Usuario</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
               {drawerMode === "create" && "Completa la información para crear un nuevo usuario."}
@@ -886,7 +886,7 @@ export default function AdminConfig() {
               {drawerMode === "profile" && "Información completa del usuario."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
+          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
             <RiCloseLine size={18} />
           </button>
         </div>
@@ -903,10 +903,10 @@ export default function AdminConfig() {
 
               {/* Empresas asignadas (multi-checkbox) */}
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Empresas Asignadas</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">Empresas Asignadas</label>
                 <div className="space-y-2">
                   {COMPANIES.map((company) => (
-                    <label key={company} className="flex items-center gap-3 cursor-pointer group p-2 rounded-lg hover:bg-[#141a2a] transition-colors">
+                    <label key={company} className="flex items-center gap-3 cursor-pointer group p-2 rounded-lg hover:bg-[#1c2538] transition-colors">
                       <div
                         onClick={() => toggleCompanyInForm(company)}
                         className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.companies.includes(company) ? "border-[#C9A227] bg-[#C9A227]" : "border-[#2a3448]"}`}
@@ -921,9 +921,9 @@ export default function AdminConfig() {
 
               {/* Rol */}
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Rol</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Rol</label>
                 <div className="relative">
-                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer">
+                  <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer">
                     <option value="">Seleccionar rol</option>
                     <option>Administrador</option>
                     <option>Supervisor</option>
@@ -936,7 +936,7 @@ export default function AdminConfig() {
 
               {/* Estado */}
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Estado</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">Estado</label>
                 <div className="flex gap-5">
                   {["Activo", "Inactivo"].map((s) => (
                     <label key={s} className="flex items-center gap-2 cursor-pointer">
@@ -956,17 +956,17 @@ export default function AdminConfig() {
             <div className="space-y-5">
               <FormField label="Nombre del Rol" placeholder="Ej. Gerente de Ventas" value={roleForm.name} onChange={(v) => setRoleForm({ ...roleForm, name: v })} icon="🎯" />
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Descripción</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Descripción</label>
                 <textarea
                   placeholder="Ej. Acceso completo al módulo de ventas y reportes."
                   value={roleForm.description}
                   onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })}
                   rows={3}
-                  className="w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
+                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Color del Badge</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">Color del Badge</label>
                 <div className="flex gap-3 flex-wrap">
                   {[
                     { value: "azul", label: "Azul", dot: "bg-[#60a5fa]" },
@@ -975,7 +975,7 @@ export default function AdminConfig() {
                     { value: "amarillo", label: "Amarillo", dot: "bg-[#fbbf24]" },
                     { value: "rojo", label: "Rojo", dot: "bg-[#f87171]" },
                   ].map((c) => (
-                    <button key={c.value} onClick={() => setRoleForm({ ...roleForm, color: c.value })} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${roleForm.color === c.value ? "border-white/40 text-white" : "border-[#1f2a40] text-gray-500 hover:text-gray-300"}`}>
+                    <button key={c.value} onClick={() => setRoleForm({ ...roleForm, color: c.value })} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${roleForm.color === c.value ? "border-white/40 text-white" : "border-[#2a3550] text-gray-500 hover:text-gray-300"}`}>
                       <span className={`w-3 h-3 rounded-full ${c.dot}`} />{c.label}
                     </button>
                   ))}
@@ -991,8 +991,8 @@ export default function AdminConfig() {
                 const active = rolePermissions[editRole.name]?.[section.key] || [];
                 const allChecked = active.length === section.perms.length;
                 return (
-                  <div key={section.key} className="bg-[#0f1623] border border-[#1f2a40] rounded-xl overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-[#1f2a40]">
+                  <div key={section.key} className="bg-[#1c2538] border border-[#2a3550] rounded-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a3550]">
                       <div className="flex items-center gap-2 text-sm font-semibold text-white">
                         <span className="text-gray-500">{section.icon}</span>
                         {section.label}
@@ -1005,14 +1005,14 @@ export default function AdminConfig() {
                             [editRole.name]: { ...prev[editRole.name], [section.key]: allChecked ? [] : indices },
                           }));
                         }}
-                        className={`text-xs font-medium transition-colors ${allChecked ? "text-[#60a5fa] hover:text-gray-400" : "text-gray-500 hover:text-[#60a5fa]"}`}
+                        className={`text-xs font-medium transition-colors ${allChecked ? "text-[#C9A227] hover:text-gray-400" : "text-gray-500 hover:text-[#C9A227]"}`}
                       >
                         {allChecked ? "Desmarcar todos" : "Seleccionar todos"}
                       </button>
                     </div>
                     <div className="p-4 grid grid-cols-1 gap-2">
                       {section.perms.map((perm, idx) => (
-                        <label key={idx} className="flex items-center gap-3 cursor-pointer group p-1.5 rounded-lg hover:bg-[#141a2a] transition-colors">
+                        <label key={idx} className="flex items-center gap-3 cursor-pointer group p-1.5 rounded-lg hover:bg-[#1c2538] transition-colors">
                           <div
                             onClick={() => togglePermission(editRole.name, section.key, idx)}
                             className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${active.includes(idx) ? "border-[#C9A227] bg-[#C9A227]" : "border-[#2a3448]"}`}
@@ -1033,7 +1033,7 @@ export default function AdminConfig() {
           {drawerMode === "profile" && profileUser && (
             <div className="space-y-5">
               {/* Avatar */}
-              <div className="flex items-center gap-4 pb-5 border-b border-[#1f2a40]">
+              <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white" style={{ backgroundColor: profileUser.color }}>
                   {profileUser.initials}
                 </div>
@@ -1052,7 +1052,7 @@ export default function AdminConfig() {
                     { label: "Correo", value: profileUser.email },
                     { label: "Teléfono", value: profileUser.phone },
                   ].map(({ label, value }) => (
-                    <div key={label} className="flex justify-between items-center py-2 border-b border-[#1f2a40]">
+                    <div key={label} className="flex justify-between items-center py-2 border-b border-[#2a3550]">
                       <span className="text-xs text-gray-500">{label}</span>
                       <span className="text-sm text-white">{value}</span>
                     </div>
@@ -1069,7 +1069,7 @@ export default function AdminConfig() {
                     { label: "Empresa", value: profileUser.companies?.[0] || profileUser.company },
                     { label: "Departamento", value: profileUser.department },
                   ].map(({ label, value }) => (
-                    <div key={label} className="flex justify-between items-center py-2 border-b border-[#1f2a40]">
+                    <div key={label} className="flex justify-between items-center py-2 border-b border-[#2a3550]">
                       <span className="text-xs text-gray-500">{label}</span>
                       <span className="text-sm text-white">{value}</span>
                     </div>
@@ -1087,7 +1087,7 @@ export default function AdminConfig() {
                     { label: "Estado", value: profileUser.status },
                     { label: "2FA", value: profileUser.has2fa ? "Activo" : "Inactivo" },
                   ].map(({ label, value }) => (
-                    <div key={label} className="flex justify-between items-center py-2 border-b border-[#1f2a40]">
+                    <div key={label} className="flex justify-between items-center py-2 border-b border-[#2a3550]">
                       <span className="text-xs text-gray-500">{label}</span>
                       <span className={`text-sm ${label === "Estado" ? value === "Activo" ? "text-green-400" : "text-red-400" : label === "2FA" ? value === "Activo" ? "text-green-400" : "text-gray-500" : "text-white"}`}>{value}</span>
                     </div>
@@ -1101,8 +1101,8 @@ export default function AdminConfig() {
 
         {/* Drawer footer */}
         {drawerMode !== "profile" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cancelar
             </button>
             <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
@@ -1111,11 +1111,11 @@ export default function AdminConfig() {
           </div>
         )}
         {drawerMode === "profile" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(profileUser), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(profileUser), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#C9A227]/15 text-[#C9A227] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               <RiEditFill size={15} /> Editar Usuario
             </button>
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cerrar
             </button>
           </div>
@@ -1127,7 +1127,7 @@ export default function AdminConfig() {
         <>
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setDeleteModal(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="bg-[#141d2e] border border-[#2a3550] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
               <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
                 <RiDeleteBinFill size={24} className="text-red-400" />
               </div>
@@ -1136,7 +1136,7 @@ export default function AdminConfig() {
                 ¿Estás seguro de que deseas eliminar a <span className="text-white font-medium">{deleteModal.name}</span>? Esta acción no se puede deshacer.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={() => setDeleteModal(null)} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
                   Cancelar
                 </button>
                 <button onClick={() => setDeleteModal(null)} className="flex-1 bg-red-500 hover:bg-red-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
@@ -1153,7 +1153,7 @@ export default function AdminConfig() {
         <>
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" onClick={() => setDeactivateModal(null)} />
           <div className="fixed inset-0 flex items-center justify-center z-50 px-4">
-            <div className="bg-[#111827] border border-[#1f2a40] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="bg-[#141d2e] border border-[#2a3550] rounded-2xl p-6 w-full max-w-sm shadow-2xl">
               <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-4">
                 <RiUserSharedFill size={24} className="text-yellow-400" />
               </div>
@@ -1162,7 +1162,7 @@ export default function AdminConfig() {
                 ¿Desactivar a <span className="text-white font-medium">{deactivateModal.name}</span>? El usuario perderá acceso al sistema de inmediato.
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+                <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
                   Cancelar
                 </button>
                 <button onClick={() => setDeactivateModal(null)} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors">

@@ -69,7 +69,7 @@ const dailyOrdersData = [
 /* ─── HELPERS ──────────────────────────────────────────────────── */
 function PagBtn({ icon, label, active }) {
   return (
-    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#1e3a5f]"}`}>
+    <button className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:text-white hover:bg-[#C9A227]/15"}`}>
       {icon || label}
     </button>
   );
@@ -87,7 +87,7 @@ function StatusBadge({ status, config }) {
 function Field({ icon, label, value, onChange, placeholder, type = "text" }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">{label}</label>
       <div className="relative">
         {icon && <span className="absolute left-3 top-3 text-gray-500">{icon}</span>}
         <input
@@ -95,7 +95,7 @@ function Field({ icon, label, value, onChange, placeholder, type = "text" }) {
           placeholder={placeholder}
           value={value}
           onChange={onChange}
-          className={`w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors`}
+          className={`w-full bg-[#222e44] border border-[#2a3550] rounded-lg ${icon ? "pl-9" : "pl-3"} pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors`}
         />
       </div>
     </div>
@@ -206,7 +206,7 @@ export default function Orders() {
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <header className="h-14 border-b border-[#1f2a40] flex items-center justify-between px-5 flex-shrink-0 bg-[#0B1120]">
+        <header className="h-14 border-b border-[#2a3550] flex items-center justify-between px-5 flex-shrink-0 bg-[#0B1120]">
           <div className="flex items-center gap-3">
             <button onClick={toggleSidebar} className="lg:hidden text-gray-400 hover:text-white">
               <RiMenuFill size={20} />
@@ -217,15 +217,15 @@ export default function Orders() {
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <button onClick={() => setCompanyDropdown(!companyDropdown)} className="flex items-center gap-2 text-sm text-white hover:bg-[#141a2a] px-3 py-1.5 rounded-lg transition-colors">
+              <button onClick={() => setCompanyDropdown(!companyDropdown)} className="flex items-center gap-2 text-sm text-white hover:bg-[#1c2538] px-3 py-1.5 rounded-lg transition-colors">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: currentCompany.color }} />
                 <span className="hidden sm:inline">{currentCompany.name}</span>
                 <RiArrowDownSFill size={14} className="text-gray-500" />
               </button>
               {companyDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-[#111827] border border-[#1f2a40] rounded-xl shadow-xl z-50 py-1">
+                <div className="absolute right-0 mt-2 w-56 bg-[#141d2e] border border-[#2a3550] rounded-xl shadow-xl z-50 py-1">
                   {companies.slice(1).map((c) => (
-                    <button key={c} onClick={() => { setCurrentCompany({ name: c, color: "#c9a227" }); setCompanyDropdown(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#1e3a5f] transition-colors">{c}</button>
+                    <button key={c} onClick={() => { setCurrentCompany({ name: c, color: "#c9a227" }); setCompanyDropdown(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors">{c}</button>
                   ))}
                 </div>
               )}
@@ -246,7 +246,7 @@ export default function Orders() {
               <p className="text-sm text-gray-400 mt-0.5">Consulta y gestiona todos los pedidos realizados.</p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="flex items-center gap-2 bg-[#141a2a] border border-[#1f2a40] hover:bg-[#1e3a5f] text-gray-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
+              <button className="flex items-center gap-2 bg-[#1c2538] border border-[#2a3550] hover:bg-[#C9A227]/15 text-gray-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors">
                 <RiExportFill size={15} /> Exportar
               </button>
               <button onClick={openCreateDrawer} className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20">
@@ -258,7 +258,7 @@ export default function Orders() {
           {/* Metrics */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
             {metrics.map((m, i) => (
-              <div key={i} className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 hover:border-[#C9A227]/20 transition-colors">
+              <div key={i} className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/20 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div className={`w-8 h-8 rounded-lg ${m.bg} flex items-center justify-center ${m.iconColor}`}>
                     <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: m.color }} />
@@ -272,7 +272,7 @@ export default function Orders() {
           </div>
 
           {/* Chart */}
-          <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 mb-6">
+          <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Pedidos por día</h3>
               <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
@@ -288,11 +288,11 @@ export default function Orders() {
                       <stop offset="95%" stopColor="#C9A227" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1f2a40" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2a3550" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: "#111827", border: "1px solid #1f2a40", borderRadius: "8px", fontSize: "12px", color: "#fff" }}
+                    contentStyle={{ backgroundColor: "#141d2e", border: "1px solid #2a3550", borderRadius: "8px", fontSize: "12px", color: "#fff" }}
                     itemStyle={{ color: "#fff" }}
                     formatter={(v) => [`${v} pedidos`, "Pedidos"]}
                   />
@@ -303,27 +303,27 @@ export default function Orders() {
           </div>
 
           {/* Filters */}
-          <div className="bg-[#111827] border border-[#1f2a40] rounded-xl p-4 mb-6">
+          <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <div className="relative lg:col-span-2">
                 <RiSearchLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                <input type="text" placeholder="Buscar por número, cliente o producto..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#C9A227] transition-colors" />
+                <input type="text" placeholder="Buscar por número, cliente o producto..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors" />
               </div>
               <div>
                 <div className="relative">
                   <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
+                  <input type="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
                 </div>
               </div>
               <div>
                 <div className="relative">
                   <RiCalendarLine size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
+                  <input type="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors" />
                 </div>
               </div>
               <div>
                 <div className="relative">
-                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
+                  <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Todos los estados</option>
                     <option>Pendiente</option>
                     <option>En proceso</option>
@@ -336,7 +336,7 @@ export default function Orders() {
               </div>
               <div>
                 <div className="relative">
-                  <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
+                  <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Todos los pagos</option>
                     <option>Pagado</option>
                     <option>Pendiente</option>
@@ -347,14 +347,14 @@ export default function Orders() {
               </div>
               <div>
                 <div className="relative">
-                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#0f1623] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
+                  <select value={agentFilter} onChange={(e) => setAgentFilter(e.target.value)} className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     {agents.map((a) => <option key={a}>{a}</option>)}
                   </select>
                   <RiArrowDownSFill size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                 </div>
               </div>
               <div className="flex items-center gap-2 lg:col-span-2 lg:col-start-5">
-                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setPaymentFilter("Todos"); setAgentFilter("Todos"); }} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors">
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setPaymentFilter("Todos"); setAgentFilter("Todos"); }} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors">
                   Limpiar filtros
                 </button>
                 <button className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2 rounded-lg transition-colors">
@@ -365,8 +365,8 @@ export default function Orders() {
           </div>
 
           {/* Table */}
-          <div className="bg-[#111827] border border-[#1f2a40] rounded-xl overflow-hidden mb-4">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-[#1f2a40]">
+          <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-4">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#2a3550]">
               <h3 className="text-sm font-semibold text-white">Listado de Pedidos</h3>
               <button className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
                 <RiExportFill size={13} /> Exportar <RiArrowDownSFill size={12} />
@@ -374,7 +374,7 @@ export default function Orders() {
             </div>
             <table className="w-full text-left hidden md:table">
               <thead>
-                <tr className="border-b border-[#1f2a40]">
+                <tr className="border-b border-[#2a3550]">
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">#</th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
@@ -385,9 +385,9 @@ export default function Orders() {
                   <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1f2a40]">
+              <tbody className="divide-y divide-[#2a3550]">
                 {filtered.map((o) => (
-                  <tr key={o.id} className="hover:bg-[#0f1623]/50 transition-colors">
+                  <tr key={o.id} className="hover:bg-[#1c2538]/50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-300 font-mono">{o.number}</td>
                     <td className="px-4 py-3 text-sm text-white">{o.client}</td>
                     <td className="px-4 py-3 text-sm text-gray-400">{o.date}</td>
@@ -396,15 +396,15 @@ export default function Orders() {
                     <td className="px-4 py-3"><StatusBadge status={o.payment} config={PAYMENT_CONFIG} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[#1e3a5f] flex items-center justify-center text-[10px] font-bold text-[#60a5fa]">{o.avatar}</div>
+                        <div className="w-6 h-6 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[10px] font-bold text-[#C9A227]">{o.avatar}</div>
                         <span className="text-sm text-gray-300">{o.agent}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-0.5">
-                        <button onClick={() => openViewDrawer(o)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Ver"><RiEyeFill size={13} /></button>
-                        <button onClick={() => openEditDrawer(o)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Editar"><RiEditFill size={13} /></button>
-                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors" title="Descargar"><RiDownloadFill size={13} /></button>
+                        <button onClick={() => openViewDrawer(o)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Ver"><RiEyeFill size={13} /></button>
+                        <button onClick={() => openEditDrawer(o)} className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Editar"><RiEditFill size={13} /></button>
+                        <button className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors" title="Descargar"><RiDownloadFill size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -415,11 +415,11 @@ export default function Orders() {
               <div className="flex flex-col items-center justify-center py-14 gap-3">
                 <RiSearchLine size={28} className="text-gray-600" />
                 <p className="text-sm text-gray-500">No se encontraron pedidos</p>
-                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setPaymentFilter("Todos"); setAgentFilter("Todos"); }} className="text-xs text-[#60a5fa] hover:underline">Limpiar filtros</button>
+                <button onClick={() => { setSearch(""); setStatusFilter("Todos"); setPaymentFilter("Todos"); setAgentFilter("Todos"); }} className="text-xs text-[#C9A227] hover:underline">Limpiar filtros</button>
               </div>
             )}
             {/* Pagination */}
-            <div className="flex items-center justify-between px-5 py-3 border-t border-[#1f2a40]">
+            <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
               <span className="text-xs text-gray-500">Mostrando 1 a {filtered.length} de 247 pedidos</span>
               <div className="flex items-center gap-1">
                 <PagBtn icon={<RiArrowLeftSLine size={14} />} />
@@ -435,19 +435,19 @@ export default function Orders() {
 
       {/* Drawer */}
       {drawerOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={closeDrawer} />}
-      <div className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#111827] border-l border-[#1f2a40] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#1f2a40] flex-shrink-0">
+      <div className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#141d2e] border-l border-[#2a3550] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}>
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               {drawerMode === "create" && <><RiAddFill size={20} className="text-[#C9A227]" />Nuevo Pedido</>}
               {drawerMode === "edit" && <><RiEditFill size={20} className="text-[#C9A227]" />Editar Pedido</>}
-              {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#60a5fa]" />Detalle del Pedido</>}
+              {drawerMode === "view" && <><RiEyeFill size={20} className="text-[#C9A227]" />Detalle del Pedido</>}
             </h2>
             <p className="text-sm text-gray-400 mt-0.5">
               {drawerMode === "create" ? "Registra un nuevo pedido." : drawerMode === "edit" ? "Modifica los datos del pedido." : "Información completa del pedido."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1e3a5f] flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
+          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
             <RiCloseLine size={18} />
           </button>
         </div>
@@ -458,9 +458,9 @@ export default function Orders() {
               <Field icon={<RiCalendarLine size={14} />} label="Fecha" placeholder="DD/MM/YYYY HH:mm" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
               <Field icon={<RiMoneyDollarCircleFill size={14} />} label="Total" placeholder="€0.000.000" value={form.total} onChange={(e) => setForm({ ...form, total: e.target.value })} />
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Estado</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Estado</label>
                 <div className="relative">
-                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
+                  <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Pendiente</option>
                     <option>En proceso</option>
                     <option>Enviado</option>
@@ -471,9 +471,9 @@ export default function Orders() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Pago</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Pago</label>
                 <div className="relative">
-                  <select value={form.payment} onChange={(e) => setForm({ ...form, payment: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
+                  <select value={form.payment} onChange={(e) => setForm({ ...form, payment: e.target.value })} className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option>Pagado</option>
                     <option>Pendiente</option>
                     <option>Reembolsado</option>
@@ -482,9 +482,9 @@ export default function Orders() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Vendedor</label>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">Vendedor</label>
                 <div className="relative">
-                  <select value={form.agent} onChange={(e) => setForm({ ...form, agent: e.target.value })} className="appearance-none w-full bg-[#141a2a] border border-[#1f2a40] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
+                  <select value={form.agent} onChange={(e) => setForm({ ...form, agent: e.target.value })} className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer">
                     <option value="">Seleccionar vendedor</option>
                     {agents.filter((a) => a !== "Todos").map((a) => <option key={a}>{a}</option>)}
                   </select>
@@ -496,8 +496,8 @@ export default function Orders() {
 
           {drawerMode === "view" && viewOrder && (
             <div className="space-y-5">
-              <div className="flex items-center gap-4 pb-5 border-b border-[#1f2a40]">
-                <div className="w-14 h-14 rounded-xl bg-[#1e3a5f] flex items-center justify-center text-lg font-bold text-[#60a5fa]">{viewOrder.number.slice(-3)}</div>
+              <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
+                <div className="w-14 h-14 rounded-xl bg-[#C9A227]/15 flex items-center justify-center text-lg font-bold text-[#C9A227]">{viewOrder.number.slice(-3)}</div>
                 <div>
                   <h3 className="text-lg font-bold text-white">{viewOrder.number}</h3>
                   <StatusBadge status={viewOrder.status} config={STATUS_CONFIG} />
@@ -512,7 +512,7 @@ export default function Orders() {
                   { label: "Pago", value: <StatusBadge status={viewOrder.payment} config={PAYMENT_CONFIG} /> },
                   { label: "Vendedor", value: viewOrder.agent },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between py-2 border-b border-[#1f2a40]">
+                  <div key={label} className="flex items-center justify-between py-2 border-b border-[#2a3550]">
                     <span className="text-xs text-gray-500">{label}</span>
                     <span className="text-sm text-white font-medium">{value}</span>
                   </div>
@@ -524,8 +524,8 @@ export default function Orders() {
 
         {/* Drawer footer */}
         {drawerMode !== "view" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cancelar
             </button>
             <button onClick={handleSaveOrder} className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
@@ -534,11 +534,11 @@ export default function Orders() {
           </div>
         )}
         {drawerMode === "view" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#1f2a40] flex-shrink-0">
-            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewOrder), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a5f] text-[#60a5fa] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+            <button onClick={() => { closeDrawer(); setTimeout(() => openEditDrawer(viewOrder), 350); }} className="flex-1 flex items-center justify-center gap-2 bg-[#C9A227]/15 text-[#C9A227] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               <RiEditFill size={15} /> Editar Pedido
             </button>
-            <button onClick={closeDrawer} className="flex-1 bg-[#141a2a] border border-[#1f2a40] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
+            <button onClick={closeDrawer} className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors">
               Cerrar
             </button>
           </div>
