@@ -9,7 +9,6 @@ import {
   RiSearchLine,
   RiFilterLine,
   RiAddFill,
-  RiCloseLine,
   RiArrowLeftSLine,
   RiArrowRightSFill,
   RiEyeFill,
@@ -486,9 +485,6 @@ export default function Quotations() {
               {drawerMode === "create" ? "Completa los datos de la nueva cotización." : "Información completa de la cotización."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5 cursor-pointer">
-            <RiCloseLine size={18} />
-          </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {drawerMode === "view" && viewQuote && (

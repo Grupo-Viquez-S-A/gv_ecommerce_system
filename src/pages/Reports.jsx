@@ -8,7 +8,6 @@ import {
   RiArrowDownSFill,
   RiSearchLine,
   RiAddFill,
-  RiCloseLine,
   RiEyeFill,
   RiDownloadFill,
   RiMoreFill,
@@ -576,9 +575,6 @@ export default function Reports() {
           <div className="relative w-full max-w-lg bg-[#141d2e] border-l border-[#2a3550] h-full overflow-y-auto">
             <div className="sticky top-0 bg-[#141d2e] border-b border-[#2a3550] px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold">Nuevo reporte</h2>
-              <button onClick={() => setDrawerOpen(false)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer">
-                <RiCloseLine size={18} />
-              </button>
             </div>
             <div className="p-6 space-y-5">
               <div>

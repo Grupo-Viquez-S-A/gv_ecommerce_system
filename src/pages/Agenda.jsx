@@ -9,7 +9,6 @@ import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
   RiAddFill,
-  RiCloseLine,
   RiCalendarLine,
   RiTimeLine,
   RiMapPinFill,
@@ -544,9 +543,6 @@ export default function Agenda() {
               <h2 className="text-lg font-semibold">
                 {drawerMode === "create" ? "Nuevo Evento" : drawerMode === "edit" ? "Editar Evento" : "Detalles del Evento"}
               </h2>
-              <button onClick={() => setDrawerOpen(false)} className="p-2 hover:bg-[#2a3550] rounded-lg transition-colors cursor-pointer">
-                <RiCloseLine size={20} />
-              </button>
             </div>
 
             <div className="p-5 space-y-4">

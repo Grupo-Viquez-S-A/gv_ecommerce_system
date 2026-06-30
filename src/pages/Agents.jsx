@@ -10,7 +10,6 @@ import {
   RiSearchLine,
   RiFilterLine,
   RiAddFill,
-  RiCloseLine,
   RiArrowLeftSLine,
   RiArrowRightSFill,
   RiCheckboxCircleFill,
@@ -413,9 +412,6 @@ export default function Agents() {
               {drawerMode === "create" ? "Completa la información del nuevo agente." : drawerMode === "edit" ? "Modifica la información del agente." : "Información completa del agente."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
-            <RiCloseLine size={18} />
-          </button>
         </div>
 
         {/* Drawer body */}

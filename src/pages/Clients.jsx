@@ -11,7 +11,6 @@ import {
   RiSearchLine,
   RiFilterLine,
   RiAddFill,
-  RiCloseLine,
   RiArrowLeftSLine,
   RiArrowRightSFill,
   RiCheckboxCircleFill,
@@ -458,9 +457,6 @@ export default function Clients() {
               {drawerMode === "create" ? "Completa la información del nuevo cliente." : drawerMode === "edit" ? "Modifica la información del cliente." : "Información completa del cliente."}
             </p>
           </div>
-          <button onClick={closeDrawer} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors flex-shrink-0 mt-0.5">
-            <RiCloseLine size={18} />
-          </button>
         </div>
 
         {/* Drawer body */}
@@ -801,9 +797,6 @@ export default function Clients() {
                     <p className="text-sm text-gray-400">{branchModal.company}</p>
                   </div>
                 </div>
-                <button onClick={() => setBranchModal(null)} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors">
-                  <RiCloseLine size={18} />
-                </button>
               </div>
 
               {/* Stats row */}
@@ -913,9 +906,6 @@ export default function Clients() {
                     <p className="text-sm text-gray-400">{repModal.company}</p>
                   </div>
                 </div>
-                <button onClick={() => { setRepModal(null); setSelectedRepBranch(null); }} className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors">
-                  <RiCloseLine size={18} />
-                </button>
               </div>
 
               {!selectedRepBranch ? (
