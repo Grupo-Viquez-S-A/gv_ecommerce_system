@@ -86,7 +86,7 @@ function DashSideBar({
           {!sidebarCollapsed && (
             <button
               onClick={toggleCollapse}
-              className="ml-auto text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-[#1c2538]"
+              className="ml-auto text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-[#1c2538] cursor-pointer"
               title="Colapsar menú"
             >
               <RiArrowLeftSLine size={18} />
@@ -95,7 +95,7 @@ function DashSideBar({
           {sidebarCollapsed && (
             <button
               onClick={toggleCollapse}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors cursor-pointer"
               title="Expandir menú"
             >
               <RiArrowRightSLine size={18} />
@@ -124,6 +124,7 @@ function DashSideBar({
           <NavItem
             icon={<RiBarChartFill size={18} />}
             label="Reportes"
+            to="/reportes"
             collapsed={sidebarCollapsed}
           />
 

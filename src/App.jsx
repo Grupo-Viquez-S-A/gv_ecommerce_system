@@ -9,6 +9,7 @@ import Quotations from "./pages/Quotations";
 import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
 import Agenda from "./pages/Agenda";
+import Reports from "./pages/Reports";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
@@ -79,6 +80,15 @@ function App() {
           }
         />
         <Route path="/agenda-dev" element={<Agenda />} />
+        <Route
+          path="/reportes"
+          element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/reportes-dev" element={<Reports />} />
         <Route
           path="/admin/usuarios"
           element={
