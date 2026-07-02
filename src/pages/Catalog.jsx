@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import { useAuth } from "../context/AuthContext.js";
-
 import DashSideBar from "../components/dashSideBar.jsx";
-
 import CatalogHeader from "../components/catalog/CatalogHeader";
 import CatalogFilters, {
   EMPTY_CATALOG_FILTERS,
@@ -11,426 +15,23 @@ import CatalogFilters, {
 import CatalogGrid from "../components/catalog/CatalogGrid";
 import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
+import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 
 import {
   RiArrowDownSFill,
+  RiErrorWarningLine,
+  RiLoader4Line,
   RiLogoutBoxLine,
   RiMenuFill,
   RiNotification3Fill,
+  RiRefreshLine,
   RiSettings4Fill,
 } from "react-icons/ri";
 
-/*
-  ============================
-  DATOS TEMPORALES DEL CATÁLOGO
-  ============================
-
-  Más adelante se reemplazarán por datos de Supabase
-  mediante src/services/catalogService.js.
-*/
-
-const CATALOG_PRODUCTS = [
-  {
-    product_id: "textil-001",
-    sku: "TEL-001",
-    product_name: "Tela antifluido premium",
-    description:
-      "Tela resistente y cómoda, ideal para uniformes médicos, empresariales y de trabajo.",
-    price: 6500,
-    image_url:
-      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "telas",
-      category_name: "Telas",
-    },
-
-    product_type: {
-      type_id: "antifluidos",
-      product_type: "Antifluidos",
-    },
-
-    compositions: [
-      {
-        id: "composition-001-1",
-        material_name: "Poliéster",
-        percentage: 92,
-      },
-      {
-        id: "composition-001-2",
-        material_name: "Spandex",
-        percentage: 8,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-001-1",
-        color: "Azul marino",
-        hex_color: "#183D77",
-      },
-      {
-        id: "color-001-2",
-        color: "Negro",
-        hex_color: "#111111",
-      },
-      {
-        id: "color-001-3",
-        color: "Blanco",
-        hex_color: "#FFFFFF",
-      },
-    ],
-  },
-
-  {
-    product_id: "textil-002",
-    sku: "TEL-002",
-    product_name: "Tela algodón jersey",
-    description:
-      "Tela suave, fresca y flexible para prendas casuales, camisetas y ropa deportiva ligera.",
-    price: 4800,
-    image_url:
-      "https://images.unsplash.com/photo-1603252110971-7d2e47f0a05d?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "telas",
-      category_name: "Telas",
-    },
-
-    product_type: {
-      type_id: "punto",
-      product_type: "Punto",
-    },
-
-    compositions: [
-      {
-        id: "composition-002-1",
-        material_name: "Algodón",
-        percentage: 95,
-      },
-      {
-        id: "composition-002-2",
-        material_name: "Spandex",
-        percentage: 5,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-002-1",
-        color: "Blanco",
-        hex_color: "#FFFFFF",
-      },
-      {
-        id: "color-002-2",
-        color: "Gris",
-        hex_color: "#7B8490",
-      },
-      {
-        id: "color-002-3",
-        color: "Negro",
-        hex_color: "#111111",
-      },
-    ],
-  },
-
-  {
-    product_id: "textil-003",
-    sku: "TEL-003",
-    product_name: "Tela sarga industrial",
-    description:
-      "Material de alta resistencia para uniformes industriales, pantalones, gabachas y ropa de trabajo.",
-    price: 7200,
-    image_url:
-      "https://images.unsplash.com/photo-1523779917675-b6ed3a42a561?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "uniformes",
-      category_name: "Uniformes",
-    },
-
-    product_type: {
-      type_id: "sarga",
-      product_type: "Sarga",
-    },
-
-    compositions: [
-      {
-        id: "composition-003-1",
-        material_name: "Poliéster",
-        percentage: 65,
-      },
-      {
-        id: "composition-003-2",
-        material_name: "Algodón",
-        percentage: 35,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-003-1",
-        color: "Azul marino",
-        hex_color: "#183D77",
-      },
-      {
-        id: "color-003-2",
-        color: "Beige",
-        hex_color: "#D7C29B",
-      },
-      {
-        id: "color-003-3",
-        color: "Verde militar",
-        hex_color: "#4B5D3A",
-      },
-    ],
-  },
-
-  {
-    product_id: "textil-004",
-    sku: "DEP-001",
-    product_name: "Tela deportiva dry fit",
-    description:
-      "Tela ligera con secado rápido, ideal para camisetas, uniformes deportivos y actividades físicas.",
-    price: 5900,
-    image_url:
-      "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "deportivo",
-      category_name: "Deportivo",
-    },
-
-    product_type: {
-      type_id: "dry-fit",
-      product_type: "Dry fit",
-    },
-
-    compositions: [
-      {
-        id: "composition-004-1",
-        material_name: "Poliéster",
-        percentage: 100,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-004-1",
-        color: "Rojo",
-        hex_color: "#A52A36",
-      },
-      {
-        id: "color-004-2",
-        color: "Azul rey",
-        hex_color: "#1E4E9D",
-      },
-      {
-        id: "color-004-3",
-        color: "Negro",
-        hex_color: "#111111",
-      },
-    ],
-  },
-
-  {
-    product_id: "textil-005",
-    sku: "HOT-001",
-    product_name: "Tela para ropa de cama",
-    description:
-      "Tela cómoda y durable para sábanas, fundas, cobertores y otros artículos de hotelería.",
-    price: 8400,
-    image_url:
-      "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "hoteleria",
-      category_name: "Hotelería",
-    },
-
-    product_type: {
-      type_id: "plano",
-      product_type: "Plano",
-    },
-
-    compositions: [
-      {
-        id: "composition-005-1",
-        material_name: "Algodón",
-        percentage: 70,
-      },
-      {
-        id: "composition-005-2",
-        material_name: "Poliéster",
-        percentage: 30,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-005-1",
-        color: "Blanco",
-        hex_color: "#FFFFFF",
-      },
-      {
-        id: "color-005-2",
-        color: "Beige",
-        hex_color: "#D7C29B",
-      },
-      {
-        id: "color-005-3",
-        color: "Gris claro",
-        hex_color: "#B8BDC7",
-      },
-    ],
-  },
-
-  {
-    product_id: "textil-006",
-    sku: "UNI-001",
-    product_name: "Tela gabardina ejecutiva",
-    description:
-      "Tela elegante y resistente para pantalones, chalecos, uniformes corporativos y prendas formales.",
-    price: 7800,
-    image_url:
-      "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "uniformes",
-      category_name: "Uniformes",
-    },
-
-    product_type: {
-      type_id: "gabardina",
-      product_type: "Gabardina",
-    },
-
-    compositions: [
-      {
-        id: "composition-006-1",
-        material_name: "Poliéster",
-        percentage: 80,
-      },
-      {
-        id: "composition-006-2",
-        material_name: "Rayón",
-        percentage: 20,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-006-1",
-        color: "Negro",
-        hex_color: "#111111",
-      },
-      {
-        id: "color-006-2",
-        color: "Gris oscuro",
-        hex_color: "#3C4654",
-      },
-      {
-        id: "color-006-3",
-        color: "Azul marino",
-        hex_color: "#183D77",
-      },
-    ],
-  },
-
-  {
-    product_id: "textil-007",
-    sku: "MAS-001",
-    product_name: "Tela acolchada para mascotas",
-    description:
-      "Tela suave y resistente para camas, accesorios y productos textiles destinados a mascotas.",
-    price: 6900,
-    image_url:
-      "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "mascotas",
-      category_name: "Mascotas",
-    },
-
-    product_type: {
-      type_id: "acolchada",
-      product_type: "Acolchada",
-    },
-
-    compositions: [
-      {
-        id: "composition-007-1",
-        material_name: "Poliéster",
-        percentage: 100,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-007-1",
-        color: "Gris",
-        hex_color: "#7B8490",
-      },
-      {
-        id: "color-007-2",
-        color: "Café",
-        hex_color: "#70523A",
-      },
-      {
-        id: "color-007-3",
-        color: "Azul",
-        hex_color: "#2E5D9F",
-      },
-    ],
-  },
-
-  {
-    product_id: "textil-008",
-    sku: "TEL-004",
-    product_name: "Tela microfibra estampable",
-    description:
-      "Material versátil para sublimación, artículos promocionales, prendas y proyectos personalizados.",
-    price: 6100,
-    image_url:
-      "https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=80",
-
-    category: {
-      category_id: "telas",
-      category_name: "Telas",
-    },
-
-    product_type: {
-      type_id: "microfibra",
-      product_type: "Microfibra",
-    },
-
-    compositions: [
-      {
-        id: "composition-008-1",
-        material_name: "Poliéster",
-        percentage: 100,
-      },
-    ],
-
-    colors: [
-      {
-        id: "color-008-1",
-        color: "Blanco",
-        hex_color: "#FFFFFF",
-      },
-      {
-        id: "color-008-2",
-        color: "Celeste",
-        hex_color: "#5BB7D8",
-      },
-      {
-        id: "color-008-3",
-        color: "Rosado",
-        hex_color: "#E5A0B8",
-      },
-    ],
-  },
-];
+import {
+  createCatalogFilterId,
+  getCatalogProducts,
+} from "../services/catalogService.js";
 
 const PAGE_SIZE = 8;
 
@@ -491,9 +92,14 @@ function normalizeCompany(company, index = 0) {
 }
 
 export default function Catalog() {
-  const navigate = useNavigate();
+
   const { user, signOut } = useAuth();
   const mainContentRef = useRef(null);
+
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const [filters, setFilters] = useState(EMPTY_CATALOG_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
@@ -519,6 +125,32 @@ export default function Catalog() {
     );
   }, [user]);
 
+  const loadCatalog = useCallback(async () => {
+    setLoading(true);
+    setCatalogError("");
+
+    try {
+      const catalogProducts = await getCatalogProducts();
+
+      setProducts(catalogProducts);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Catalog loading error:", error);
+
+      setProducts([]);
+      setCatalogError(
+        error?.message ||
+          "No fue posible cargar el catálogo desde Supabase.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCatalog();
+  }, [loadCatalog]);
+
   useEffect(() => {
     const preferredCompany =
       user?.activeCompany || user?.companies?.[0];
@@ -531,53 +163,61 @@ export default function Catalog() {
   const categories = useMemo(() => {
     const uniqueCategories = new Map();
 
-    CATALOG_PRODUCTS.forEach((product) => {
+    products.forEach((product) => {
       const category = product.category;
 
-      if (category?.category_id && !uniqueCategories.has(category.category_id)) {
+      if (
+        category?.category_id &&
+        !uniqueCategories.has(category.category_id)
+      ) {
         uniqueCategories.set(category.category_id, category);
       }
     });
 
-    return Array.from(uniqueCategories.values());
-  }, []);
+    return Array.from(uniqueCategories.values()).sort((first, second) =>
+      first.category_name.localeCompare(second.category_name),
+    );
+  }, [products]);
 
   const productTypes = useMemo(() => {
     const uniqueTypes = new Map();
 
-    CATALOG_PRODUCTS.filter((product) => {
-      if (!filters.categoryId) {
-        return true;
-      }
+    products
+      .filter((product) => {
+        if (!filters.categoryId) {
+          return true;
+        }
 
-      return product.category?.category_id === filters.categoryId;
-    }).forEach((product) => {
-      const productType = product.product_type;
+        return product.category?.category_id === filters.categoryId;
+      })
+      .forEach((product) => {
+        const productType = product.product_type;
 
-      if (productType?.type_id && !uniqueTypes.has(productType.type_id)) {
-        uniqueTypes.set(productType.type_id, productType);
-      }
-    });
+        if (
+          productType?.type_id &&
+          !uniqueTypes.has(productType.type_id)
+        ) {
+          uniqueTypes.set(productType.type_id, productType);
+        }
+      });
 
-    return Array.from(uniqueTypes.values());
-  }, [filters.categoryId]);
+    return Array.from(uniqueTypes.values()).sort((first, second) =>
+      first.product_type.localeCompare(second.product_type),
+    );
+  }, [products, filters.categoryId]);
 
   const materials = useMemo(() => {
     const uniqueMaterials = new Map();
 
-    CATALOG_PRODUCTS.forEach((product) => {
-      product.compositions?.forEach((composition) => {
-        const materialName = composition.material_name;
+    products.forEach((product) => {
+      (product.compositions || []).forEach((composition) => {
+        const materialName = composition.material_name || "";
 
         if (!materialName) {
           return;
         }
 
-        const materialId = materialName
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, "-");
+        const materialId = createCatalogFilterId(materialName);
 
         if (!uniqueMaterials.has(materialId)) {
           uniqueMaterials.set(materialId, {
@@ -588,110 +228,99 @@ export default function Catalog() {
       });
     });
 
-    return Array.from(uniqueMaterials.values());
-  }, []);
+    return Array.from(uniqueMaterials.values()).sort((first, second) =>
+      first.material_name.localeCompare(second.material_name),
+    );
+  }, [products]);
 
   const colors = useMemo(() => {
     const uniqueColors = new Map();
 
-    CATALOG_PRODUCTS.forEach((product) => {
-      product.colors?.forEach((color) => {
-        const colorName = color.color;
+    products.forEach((product) => {
+      (product.colors || []).forEach((color) => {
+        const colorName = color.color || "";
 
         if (!colorName) {
           return;
         }
 
-        const colorValue = colorName
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/\s+/g, "-");
+        const colorId = createCatalogFilterId(colorName);
 
-        if (!uniqueColors.has(colorValue)) {
-          uniqueColors.set(colorValue, {
-            value: colorValue,
+        if (!uniqueColors.has(colorId)) {
+          uniqueColors.set(colorId, {
+            value: colorId,
             label: colorName,
           });
         }
       });
     });
 
-    return Array.from(uniqueColors.values());
-  }, []);
+    return Array.from(uniqueColors.values()).sort((first, second) =>
+      first.label.localeCompare(second.label),
+    );
+  }, [products]);
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = filters.search.trim().toLowerCase();
 
-    return CATALOG_PRODUCTS.filter((product) => {
-      const productCategoryId = product.category?.category_id || "";
-      const productTypeId = product.product_type?.type_id || "";
-
-      const productMaterials = (product.compositions || [])
-        .map((composition) => composition.material_name || "")
-        .join(" ")
-        .toLowerCase();
-
-      const productColors = (product.colors || [])
-        .map((color) => color.color || "")
-        .join(" ")
-        .toLowerCase();
-
+    return products.filter((product) => {
       const searchableContent = [
         product.product_name,
         product.sku,
         product.description,
         product.category?.category_name,
         product.product_type?.product_type,
-        productMaterials,
-        productColors,
+        ...(product.compositions || []).map(
+          (composition) => composition.material_name,
+        ),
+        ...(product.colors || []).map((color) => color.color),
+        ...(product.features || []).map((feature) => feature.feature),
+        ...(product.managements || []).map(
+          (management) => management.management,
+        ),
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
       const matchesSearch =
-        !normalizedSearch || searchableContent.includes(normalizedSearch);
+        !normalizedSearch ||
+        searchableContent.includes(normalizedSearch);
 
       const matchesCategory =
-        !filters.categoryId || productCategoryId === filters.categoryId;
+        !filters.categoryId ||
+        product.category?.category_id === filters.categoryId;
 
-      const matchesProductType =
-        !filters.typeId || productTypeId === filters.typeId;
+      const matchesType =
+        !filters.typeId ||
+        product.product_type?.type_id === filters.typeId;
 
       const matchesMaterial =
         !filters.materialId ||
         (product.compositions || []).some((composition) => {
-          const materialValue = (composition.material_name || "")
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/\s+/g, "-");
-
-          return materialValue === filters.materialId;
+          return (
+            createCatalogFilterId(composition.material_name) ===
+            filters.materialId
+          );
         });
 
       const matchesColor =
         !filters.color ||
         (product.colors || []).some((color) => {
-          const colorValue = (color.color || "")
-            .toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/\s+/g, "-");
-
-          return colorValue === filters.color;
+          return (
+            createCatalogFilterId(color.color) === filters.color
+          );
         });
 
       return (
         matchesSearch &&
         matchesCategory &&
-        matchesProductType &&
+        matchesType &&
         matchesMaterial &&
         matchesColor
       );
     });
-  }, [filters]);
+  }, [products, filters]);
 
   const totalPages = Math.max(
     1,
@@ -703,8 +332,11 @@ export default function Catalog() {
   const currentProducts = useMemo(() => {
     const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
 
-    return filteredProducts.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [safeCurrentPage, filteredProducts]);
+    return filteredProducts.slice(
+      startIndex,
+      startIndex + PAGE_SIZE,
+    );
+  }, [filteredProducts, safeCurrentPage]);
 
   const hasActiveFilters = Boolean(
     filters.search.trim() ||
@@ -729,18 +361,24 @@ export default function Catalog() {
   };
 
   const handleFiltersChange = (nextFilters) => {
-    const categoryChanged = nextFilters.categoryId !== filters.categoryId;
+    const categoryChanged =
+      nextFilters.categoryId !== filters.categoryId;
 
     let normalizedFilters = {
       ...nextFilters,
     };
 
-    if (categoryChanged) {
-      const selectedTypeStillExists = CATALOG_PRODUCTS.some(
-        (product) =>
-          product.category?.category_id === nextFilters.categoryId &&
-          product.product_type?.type_id === nextFilters.typeId,
-      );
+    if (categoryChanged && nextFilters.typeId) {
+      const selectedTypeStillExists = products.some((product) => {
+        const categoryMatches =
+          !nextFilters.categoryId ||
+          product.category?.category_id === nextFilters.categoryId;
+
+        const typeMatches =
+          product.product_type?.type_id === nextFilters.typeId;
+
+        return categoryMatches && typeMatches;
+      });
 
       if (!selectedTypeStillExists) {
         normalizedFilters.typeId = "";
@@ -765,15 +403,13 @@ export default function Catalog() {
     });
   };
 
-  const handleViewDetail = (product) => {
-    const productIdentifier = product?.product_id || product?.sku;
+ const handleViewDetail = (product) => {
+  if (!product) {
+    return;
+  }
 
-    if (!productIdentifier) {
-      return;
-    }
-
-    navigate(`/catalogo/${productIdentifier}`);
-  };
+  setSelectedProduct(product);
+};
 
   return (
     <div className="w-full h-screen bg-[#0B1120] text-white flex overflow-hidden">
@@ -841,11 +477,15 @@ export default function Catalog() {
                         style={{
                           backgroundColor:
                             company.color ||
-                            COMPANY_COLORS[index % COMPANY_COLORS.length],
+                            COMPANY_COLORS[
+                              index % COMPANY_COLORS.length
+                            ],
                         }}
                       />
 
-                      <span className="truncate">{company.name}</span>
+                      <span className="truncate">
+                        {company.name}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -886,58 +526,105 @@ export default function Catalog() {
           ref={mainContentRef}
           className="flex-1 overflow-y-auto p-4 lg:p-6"
         >
-          <CatalogHeader totalProducts={filteredProducts.length} />
-
-          <CatalogFilters
-            filters={filters}
-            categories={categories}
-            productTypes={productTypes}
-            materials={materials}
-            colors={colors}
-            onFiltersChange={handleFiltersChange}
-            onClearFilters={handleClearFilters}
+          <CatalogHeader
+            totalProducts={loading ? 0 : filteredProducts.length}
           />
 
-          {currentProducts.length > 0 ? (
-            <>
-              <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-slate-400">
-                  Mostrando{" "}
-                  <span className="font-bold text-white">
-                    {currentProducts.length}
-                  </span>{" "}
-                  de{" "}
-                  <span className="font-bold text-white">
-                    {filteredProducts.length}
-                  </span>{" "}
-                  productos
-                </p>
-
-                {hasActiveFilters && (
-                  <p className="text-xs font-medium text-[#86A4CE]">
-                    Resultados filtrados
-                  </p>
-                )}
+          {loading ? (
+            <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#35547E] bg-[#091A31]">
+                <RiLoader4Line className="h-8 w-8 animate-spin text-[#D7A91D]" />
               </div>
 
-              <CatalogGrid
-                products={currentProducts}
-                onViewDetail={handleViewDetail}
+              <h2 className="mt-5 text-xl font-extrabold text-white">
+                Cargando catálogo
+              </h2>
+
+              <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+                Estamos consultando los productos registrados en Supabase.
+              </p>
+            </section>
+          ) : catalogError ? (
+            <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-red-400/40 bg-red-500/5 px-6 py-12 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-red-400/30 bg-red-500/10">
+                <RiErrorWarningLine className="h-8 w-8 text-red-400" />
+              </div>
+
+              <h2 className="mt-5 text-xl font-extrabold text-white">
+                No fue posible cargar el catálogo
+              </h2>
+
+              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
+                {catalogError}
+              </p>
+
+              <button
+                type="button"
+                onClick={loadCatalog}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl border border-[#45648D] bg-[#132F58] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
+              >
+                <RiRefreshLine size={16} />
+                Reintentar
+              </button>
+            </section>
+          ) : (
+            <>
+              <CatalogFilters
+                filters={filters}
+                categories={categories}
+                productTypes={productTypes}
+                materials={materials}
+                colors={colors}
+                onFiltersChange={handleFiltersChange}
+                onClearFilters={handleClearFilters}
               />
 
-              <Pagination
-                currentPage={safeCurrentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
+              {currentProducts.length > 0 ? (
+                <>
+                  <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-slate-400">
+                      Mostrando{" "}
+                      <span className="font-bold text-white">
+                        {currentProducts.length}
+                      </span>{" "}
+                      de{" "}
+                      <span className="font-bold text-white">
+                        {filteredProducts.length}
+                      </span>{" "}
+                      productos
+                    </p>
+
+                    {hasActiveFilters && (
+                      <p className="text-xs font-medium text-[#86A4CE]">
+                        Resultados filtrados
+                      </p>
+                    )}
+                  </div>
+
+                  <CatalogGrid
+                    products={currentProducts}
+                    onViewDetail={handleViewDetail}
+                  />
+
+                  <Pagination
+                    currentPage={safeCurrentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </>
+              ) : (
+                <EmptyState
+                  hasActiveFilters={hasActiveFilters}
+                  onClearFilters={handleClearFilters}
+                />
+              )}
             </>
-          ) : (
-            <EmptyState
-              hasActiveFilters={hasActiveFilters}
-              onClearFilters={handleClearFilters}
-            />
           )}
         </main>
+         <CatalogTechnicalSheetModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
       </div>
     </div>
   );

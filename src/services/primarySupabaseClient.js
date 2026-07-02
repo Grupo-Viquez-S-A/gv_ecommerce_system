@@ -5,8 +5,8 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    'Faltan las variables VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY en Replit Secrets.'
-  )
+    "Faltan las variables VITE_SUPABASE_API_URL o VITE_SUPABASE_ANON_KEY en Replit Secrets."
+  );
 }
 
 export const supabase = createClient(

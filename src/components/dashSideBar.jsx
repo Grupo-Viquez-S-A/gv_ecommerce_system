@@ -5,19 +5,37 @@ import {
   RiClipboardFill,
   RiCalendarFill,
   RiSettings4Fill,
-  RiArrowDownSFill,
   RiLogoutBoxLine,
   RiArrowLeftSLine,
   RiArrowRightSLine,
-  RiExchangeFill,
   RiStoreFill,
   RiFileListFill,
   RiBarChartFill,
   RiShoppingBagFill,
 } from "react-icons/ri";
-import { useAuth } from "../context/AuthContext.js";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.js";
+
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
+
+const DEFAULT_COMPANY = {
+  name: "Grupo Víquez S.A",
+  color: "#C9A227",
+};
+
+function getUserInitials(fullName) {
+  if (!fullName) {
+    return "U";
+  }
+
+  return fullName
+    .split(" ")
+    .filter(Boolean)
+    .map((name) => name[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 function DashSideBar({
   sidebarCollapsed,
@@ -29,98 +47,166 @@ function DashSideBar({
 }) {
   const { user, signOut } = useAuth();
   const location = useLocation();
-  const NavItem = ({ icon, label, to, active = false, collapsed }) => {
-    const isActive = active || (to && location.pathname === to);
-    const content = (
+
+  const activeCompany = currentCompany || DEFAULT_COMPANY;
+
+  const handleCloseMobileSidebar = () => {
+    setSidebarOpen?.(false);
+  };
+
+  const isRouteActive = (route) => {
+    if (!route) {
+      return false;
+    }
+
+    return (
+      location.pathname === route ||
+      location.pathname.startsWith(`${route}/`)
+    );
+  };
+
+  const NavItem = ({
+    icon,
+    label,
+    to,
+    active = false,
+    collapsed = false,
+  }) => {
+    const isActive = active || isRouteActive(to);
+
+    const itemContent = (
       <div
         title={collapsed ? label : undefined}
         className={`flex items-center gap-3 py-2.5 text-sm transition-colors ${
-          collapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4"
+          collapsed
+            ? "justify-center mx-2 rounded-lg px-0"
+            : "px-4"
         } ${
           isActive
-            ? "text-white bg-[#C9A227]/15 border-r-2 border-[#C9A227]"
-            : "text-gray-300 hover:text-white hover:bg-[#1c2538] " +
-              (collapsed ? "rounded-lg" : "")
+            ? "border-r-2 border-[#C9A227] bg-[#C9A227]/15 text-white"
+            : `text-gray-300 hover:bg-[#1c2538] hover:text-white ${
+                collapsed ? "rounded-lg" : ""
+              }`
         }`}
       >
-        <span className={isActive ? "text-[#C9A227]" : ""}>{icon}</span>
-        {!collapsed && <span className="whitespace-nowrap">{label}</span>}
+        <span className={isActive ? "text-[#C9A227]" : ""}>
+          {icon}
+        </span>
+
+        {!collapsed && (
+          <span className="whitespace-nowrap">{label}</span>
+        )}
       </div>
     );
+
     if (to) {
       return (
-        <Link to={to} onClick={() => setSidebarOpen(false)} className="block">
-          {content}
+        <Link
+          to={to}
+          onClick={handleCloseMobileSidebar}
+          className="block"
+        >
+          {itemContent}
         </Link>
       );
     }
+
     return (
-      <button className="block w-full text-left" onClick={() => {}}>
-        {content}
+      <button
+        type="button"
+        className="block w-full text-left"
+        onClick={() => {}}
+      >
+        {itemContent}
       </button>
     );
   };
 
+  const UserAvatar = ({ compact = false }) => (
+    <div
+      className={`rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold text-[#0B1120] ${
+        compact ? "h-8 w-8" : "h-8 w-8"
+      }`}
+    >
+      {getUserInitials(user?.fullName)}
+    </div>
+  );
+
   return (
     <>
-      {/* Desktop Sidebar */}
+      {/* Sidebar de escritorio */}
       <aside
-        className={`hidden lg:flex flex-col bg-[#141d2e] border-r border-[#2a3550] min-h-screen flex-shrink-0 transition-all duration-300 overflow-hidden ${
+        className={`hidden h-screen flex-shrink-0 flex-col overflow-hidden border-r border-[#2a3550] bg-[#141d2e] transition-all duration-300 lg:flex ${
           sidebarCollapsed ? "w-[64px]" : "w-64"
         }`}
       >
-        {/* Logo + collapse toggle */}
         <div
-          className={`flex items-center border-b border-[#2a3550] h-14 flex-shrink-0 ${
-            sidebarCollapsed ? "justify-center px-0" : "px-4 gap-3"
+          className={`flex h-14 flex-shrink-0 items-center border-b border-[#2a3550] ${
+            sidebarCollapsed
+              ? "justify-center px-0"
+              : "gap-3 px-4"
           }`}
         >
-          <div className="w-8 h-8 rounded bg-[#C9A227] flex items-center justify-center flex-shrink-0">
-            <img className="w-6 h-6" src={GVLogo} alt="GV" />
+          <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-[#C9A227]">
+            <img
+              className="h-6 w-6 object-contain"
+              src={GVLogo}
+              alt="Grupo Víquez"
+            />
           </div>
+
           {!sidebarCollapsed && (
-            <span className="font-bold text-sm tracking-wider flex-1 whitespace-nowrap">
+            <span className="flex-1 whitespace-nowrap text-sm font-bold tracking-wider text-white">
               Grupo Víquez
             </span>
           )}
-          {!sidebarCollapsed && (
-            <button
-              onClick={toggleCollapse}
-              className="ml-auto text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-[#1c2538] cursor-pointer"
-              title="Colapsar menú"
-            >
-              <RiArrowLeftSLine size={18} />
-            </button>
-          )}
-          {sidebarCollapsed && (
-            <button
-              onClick={toggleCollapse}
-              className="text-gray-400 hover:text-white transition-colors cursor-pointer"
-              title="Expandir menú"
-            >
+
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            className={`text-gray-400 transition-colors hover:text-white ${
+              sidebarCollapsed
+                ? "p-1"
+                : "ml-auto rounded p-1 hover:bg-[#1c2538]"
+            }`}
+            title={
+              sidebarCollapsed
+                ? "Expandir menú"
+                : "Colapsar menú"
+            }
+            aria-label={
+              sidebarCollapsed
+                ? "Expandir menú"
+                : "Colapsar menú"
+            }
+          >
+            {sidebarCollapsed ? (
               <RiArrowRightSLine size={18} />
-            </button>
-          )}
+            ) : (
+              <RiArrowLeftSLine size={18} />
+            )}
+          </button>
         </div>
-        {/* Nav sections */}
+
         <nav className="flex-1 overflow-y-auto py-3">
           {/* COMERCIAL */}
-          {!sidebarCollapsed && (
+          {!sidebarCollapsed ? (
             <div className="px-4 pb-1 pt-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Comercial
               </span>
             </div>
+          ) : (
+            <div className="mx-3 my-1 border-t border-[#2a3550]" />
           )}
-          {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#2a3550]" />
-          )}
+
           <NavItem
             icon={<RiDashboardFill size={18} />}
             label="Dashboard"
             to="/dashboard"
             collapsed={sidebarCollapsed}
           />
+
           <NavItem
             icon={<RiBarChartFill size={18} />}
             label="Reportes"
@@ -129,46 +215,51 @@ function DashSideBar({
           />
 
           {/* VENTAS */}
-          {!sidebarCollapsed && (
+          {!sidebarCollapsed ? (
             <div className="px-4 pb-1 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Ventas
               </span>
             </div>
+          ) : (
+            <div className="mx-3 my-1 border-t border-[#2a3550]" />
           )}
-          {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#2a3550]" />
-          )}
+
           <NavItem
             icon={<RiShoppingBagFill size={18} />}
             label="Catálogo"
             to="/catalogo"
             collapsed={sidebarCollapsed}
           />
+
           <NavItem
             icon={<RiGroupFill size={18} />}
             label="Clientes"
             to="/clientes"
             collapsed={sidebarCollapsed}
           />
+
           <NavItem
             icon={<RiUserFill size={18} />}
             label="Agentes"
             to="/agentes"
             collapsed={sidebarCollapsed}
           />
+
           <NavItem
             icon={<RiClipboardFill size={18} />}
             label="Cotizaciones"
             to="/cotizaciones"
             collapsed={sidebarCollapsed}
           />
+
           <NavItem
             icon={<RiStoreFill size={18} />}
             label="Ventas"
             to="/ventas"
             collapsed={sidebarCollapsed}
           />
+
           <NavItem
             icon={<RiFileListFill size={18} />}
             label="Pedidos"
@@ -177,16 +268,16 @@ function DashSideBar({
           />
 
           {/* OPERACIONES */}
-          {!sidebarCollapsed && (
+          {!sidebarCollapsed ? (
             <div className="px-4 pb-1 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Operaciones
               </span>
             </div>
+          ) : (
+            <div className="mx-3 my-1 border-t border-[#2a3550]" />
           )}
-          {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#2a3550]" />
-          )}
+
           <NavItem
             icon={<RiCalendarFill size={18} />}
             label="Agenda"
@@ -195,16 +286,16 @@ function DashSideBar({
           />
 
           {/* SISTEMA */}
-          {!sidebarCollapsed && (
+          {!sidebarCollapsed ? (
             <div className="px-4 pb-1 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Sistema
               </span>
             </div>
+          ) : (
+            <div className="mx-3 my-1 border-t border-[#2a3550]" />
           )}
-          {sidebarCollapsed && (
-            <div className="my-1 mx-3 border-t border-[#2a3550]" />
-          )}
+
           <NavItem
             icon={<RiSettings4Fill size={18} />}
             label="Administración de Usuarios"
@@ -213,58 +304,50 @@ function DashSideBar({
           />
         </nav>
 
-        {/* User profile */}
         <div
-          className={`border-t border-[#2a3550] flex-shrink-0 ${
-            sidebarCollapsed ? "py-3 flex flex-col items-center gap-2" : "p-4"
+          className={`flex-shrink-0 border-t border-[#2a3550] ${
+            sidebarCollapsed
+              ? "flex flex-col items-center gap-2 py-3"
+              : "p-4"
           }`}
         >
           {sidebarCollapsed ? (
             <>
-              <div className="w-8 h-8 rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold">
-                {user?.fullName
-                  ? user.fullName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()
-                  : "U"}
-              </div>
+              <UserAvatar compact />
+
               <button
+                type="button"
                 onClick={signOut}
-                className="text-gray-400 hover:text-red-400 transition-colors cursor-pointer"
+                className="text-gray-400 transition-colors hover:text-red-400"
                 title="Cerrar sesión"
+                aria-label="Cerrar sesión"
               >
                 <RiLogoutBoxLine size={16} />
               </button>
             </>
           ) : (
             <>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  {user?.fullName
-                    ? user.fullName
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase()
-                    : "U"}
-                </div>
+              <div className="mb-3 flex items-center gap-3">
+                <UserAvatar />
+
                 <div className="min-w-0">
-                  <div className="text-sm font-medium truncate">
+                  <div className="truncate text-sm font-medium text-white">
                     {user?.fullName || "Usuario"}
                   </div>
-                  <div className="text-xs text-gray-400 truncate">
+
+                  <div className="truncate text-xs text-gray-400">
                     {user?.role?.name || "Usuario"}
-                    {user?.department?.name ? ` - ${user.department.name}` : ""}
+                    {user?.department?.name
+                      ? ` - ${user.department.name}`
+                      : ""}
                   </div>
                 </div>
               </div>
+
               <button
+                type="button"
                 onClick={signOut}
-                className="flex items-center gap-2 text-sm text-gray-300 hover:text-red-400 transition-colors cursor-pointer"
+                className="flex items-center gap-2 text-sm text-gray-300 transition-colors hover:text-red-400"
               >
                 <RiLogoutBoxLine size={16} />
                 Cerrar sesión
@@ -274,136 +357,174 @@ function DashSideBar({
         </div>
       </aside>
 
-      {/* Mobile Sidebar (overlay) */}
+      {/* Sidebar para tablet y móvil */}
       {sidebarOpen && (
-        <aside className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-[#141d2e] border-r border-[#2a3550]">
-          <div className="flex items-center gap-3 px-4 h-14 border-b border-[#2a3550]">
-            <div className="w-8 h-8 rounded bg-[#c9a227] flex items-center justify-center flex-shrink-0">
-              <span className="font-bold text-[#0B1120] text-sm">GV</span>
+        <aside className="fixed inset-y-0 left-0 z-50 flex w-64 max-w-[85vw] flex-col border-r border-[#2a3550] bg-[#141d2e] shadow-2xl lg:hidden">
+          <div className="flex h-14 items-center gap-3 border-b border-[#2a3550] px-4">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded bg-[#C9A227]">
+              <img
+                className="h-6 w-6 object-contain"
+                src={GVLogo}
+                alt="Grupo Víquez"
+              />
             </div>
-            <span className="font-bold text-sm tracking-wider">
+
+            <span className="text-sm font-bold tracking-wider text-white">
               Grupo Víquez
             </span>
+
             <button
+              type="button"
               onClick={toggleSidebar}
-              className="ml-auto text-gray-400 hover:text-white"
+              className="ml-auto text-gray-400 transition-colors hover:text-white"
+              aria-label="Cerrar menú lateral"
             >
               <RiArrowLeftSLine size={20} />
             </button>
           </div>
-          <div className="px-4 py-3 border-b border-[#2a3550]">
-            <div className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+
+          <div className="border-b border-[#2a3550] px-4 py-3">
+            <div className="mb-1 text-[10px] uppercase tracking-wider text-gray-400">
               Vista activa
             </div>
+
             <div className="flex items-center gap-2 text-sm text-gray-200">
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: currentCompany.color }}
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{
+                  backgroundColor:
+                    activeCompany.color || DEFAULT_COMPANY.color,
+                }}
               />
-              <span>{currentCompany.name}</span>
+
+              <span className="truncate">
+                {activeCompany.name || DEFAULT_COMPANY.name}
+              </span>
             </div>
           </div>
+
           <nav className="flex-1 overflow-y-auto py-3">
+            {/* COMERCIAL */}
             <div className="px-4 pb-1 pt-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Comercial
               </span>
             </div>
+
             <NavItem
               icon={<RiDashboardFill size={18} />}
               label="Dashboard"
               to="/dashboard"
               collapsed={false}
             />
+
             <NavItem
               icon={<RiBarChartFill size={18} />}
               label="Reportes"
+              to="/reportes"
               collapsed={false}
             />
+
+            {/* VENTAS */}
             <div className="px-4 pb-1 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Ventas
               </span>
             </div>
+
+            <NavItem
+              icon={<RiShoppingBagFill size={18} />}
+              label="Catálogo"
+              to="/catalogo"
+              collapsed={false}
+            />
+
             <NavItem
               icon={<RiGroupFill size={18} />}
               label="Clientes"
               to="/clientes"
               collapsed={false}
             />
+
             <NavItem
               icon={<RiUserFill size={18} />}
               label="Agentes"
               to="/agentes"
               collapsed={false}
             />
+
             <NavItem
               icon={<RiClipboardFill size={18} />}
               label="Cotizaciones"
               to="/cotizaciones"
               collapsed={false}
             />
+
             <NavItem
               icon={<RiStoreFill size={18} />}
               label="Ventas"
               to="/ventas"
               collapsed={false}
             />
+
             <NavItem
               icon={<RiFileListFill size={18} />}
               label="Pedidos"
               to="/pedidos"
               collapsed={false}
             />
+
+            {/* OPERACIONES */}
             <div className="px-4 pb-1 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Operaciones
               </span>
             </div>
+
             <NavItem
               icon={<RiCalendarFill size={18} />}
               label="Agenda"
               to="/agenda"
               collapsed={false}
             />
-           
+
+            {/* SISTEMA */}
             <div className="px-4 pb-1 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Sistema
               </span>
             </div>
+
             <NavItem
               icon={<RiSettings4Fill size={18} />}
-              label="Configuración"
+              label="Administración de Usuarios"
               to="/admin/usuarios"
               collapsed={false}
             />
           </nav>
-          <div className="p-4 border-t border-[#2a3550]">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-8 h-8 rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold">
-                {user?.fullName
-                  ? user.fullName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()
-                  : "U"}
-              </div>
-              <div>
-                <div className="text-sm font-medium">
+
+          <div className="border-t border-[#2a3550] p-4">
+            <div className="mb-3 flex items-center gap-3">
+              <UserAvatar />
+
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-white">
                   {user?.fullName || "Usuario"}
                 </div>
-                <div className="text-xs text-gray-400">
+
+                <div className="truncate text-xs text-gray-400">
                   {user?.role?.name || "Usuario"}
-                  {user?.department?.name ? ` - ${user.department.name}` : ""}
+                  {user?.department?.name
+                    ? ` - ${user.department.name}`
+                    : ""}
                 </div>
               </div>
             </div>
+
             <button
+              type="button"
               onClick={signOut}
-              className="flex items-center gap-2 text-sm text-gray-300 hover:text-red-400 transition-colors cursor-pointer"
+              className="flex items-center gap-2 text-sm text-gray-300 transition-colors hover:text-red-400"
             >
               <RiLogoutBoxLine size={16} />
               Cerrar sesión
@@ -412,11 +533,13 @@ function DashSideBar({
         </aside>
       )}
 
-      {/* Overlay for mobile */}
+      {/* Fondo al abrir menú en tablet o móvil */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={handleCloseMobileSidebar}
+          aria-label="Cerrar menú lateral"
         />
       )}
     </>

@@ -3,29 +3,87 @@ import ColorDots from './ColorDots';
 import CompositionBadges from './CompositionBadges';
 import formatCurrency from '../../utils/formatCurrency';
 
+function normalizeText(value) {
+  const rawValue = String(value || "");
+
+  try {
+    return decodeURIComponent(rawValue).toLowerCase();
+  } catch {
+    return rawValue.toLowerCase();
+  }
+}
+
+function getFileUrl(file) {
+  return (
+    file?.public_url ||
+    file?.url ||
+    file?.file_url ||
+    null
+  );
+}
+
+function isTechnicalSheetFile(file) {
+  const fileText = normalizeText(
+    [
+      file?.file_type,
+      file?.type,
+      file?.file_name,
+      file?.file_path,
+      getFileUrl(file),
+      file?.mime_type,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  return (
+    fileText.includes("ficha") ||
+    fileText.includes("technical") ||
+    fileText.includes("datasheet") ||
+    fileText.includes("especificacion") ||
+    fileText.includes("specification")
+  );
+}
+
+function isImageFile(file) {
+  const mimeType = normalizeText(file?.mime_type);
+  const fileName = normalizeText(file?.file_name);
+  const filePath = normalizeText(file?.file_path);
+  const fileUrl = normalizeText(getFileUrl(file));
+
+  return (
+    mimeType.startsWith("image/") ||
+    /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/.test(fileName) ||
+    /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/.test(filePath) ||
+    /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/.test(fileUrl)
+  );
+}
+
 function getProductImage(product) {
   const files = Array.isArray(product?.files) ? product.files : [];
 
-  const imageFile = files.find((file) => {
-    const fileType = String(file?.file_type || file?.type || '').toLowerCase();
-    const mimeType = String(file?.mime_type || '').toLowerCase();
-
-    return (
-      fileType === 'image' ||
-      fileType === 'imagen' ||
-      mimeType.startsWith('image/')
-    );
-  });
-
-  return (
+  const directImage =
     product?.main_image_url ||
     product?.cover_image_url ||
     product?.image_url ||
-    imageFile?.public_url ||
-    imageFile?.url ||
-    imageFile?.file_url ||
-    null
-  );
+    null;
+
+  /*
+    Las fichas técnicas nunca se usan como portada.
+  */
+  if (
+    directImage &&
+    !normalizeText(directImage).includes("ficha") &&
+    !normalizeText(directImage).includes("technical")
+  ) {
+    return directImage;
+  }
+
+  const catalogImage = files.find((file) => {
+    return isImageFile(file) && !isTechnicalSheetFile(file);
+  });
+
+  return getFileUrl(catalogImage);
 }
 
 function getCategoryName(product) {
