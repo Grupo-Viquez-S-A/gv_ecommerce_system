@@ -34,6 +34,13 @@ import {
   RiTeamFill,
 } from "react-icons/ri";
 
+import { 
+  FaRegIdCard,
+  FaIdCard,
+  FaIdBadge,
+} from "react-icons/fa";
+
+
 /* ─── MOCK DATA: CLIENTES ─────────────────────────────────────────── */
 const MOCK_CLIENTS = [
   { id: 1, initials: "HL", color: "#C9A227", name: "Hotel Los Laureles", company: "Textiles de Occidente", sales: "18.5 M", lastPurchase: "Hace 3 días", status: "Activo", email: "contacto@loslaureles.com", phone: "+506 2222 1111", address: "Puntarenas, Costa Rica", totalOrders: 47, totalQuotes: 23, notes: "", branches: [
@@ -464,6 +471,7 @@ export default function Clients() {
           {(drawerMode === "create" || drawerMode === "edit") && (
             <div className="space-y-5">
               <FormField label="Nombre del Cliente" placeholder="Ej. Hotel Los Laureles" value={form.name} onChange={(v) => setForm({ ...form, name: v })} icon={<RiBuilding2Fill size={14} />} />
+              <FormField label="Cédula Jurídica" placeholder="3-101-123456" value={form.legalId} onChange={(v) => setForm({ ...form, legalId: v.replace(/[^0-9-]/g, "") })} icon={<FaRegIdCard size={14} />} />
               <FormField label="Correo Electrónico" placeholder="Ej. contacto@empresa.com" value={form.email} onChange={(v) => setForm({ ...form, email: v })} type="email" icon={<RiMailFill size={14} />} />
               <FormField label="Teléfono" placeholder="Ej. +506 8888 8888" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} type="tel" icon={<RiPhoneFill size={14} />} />
               <div>

@@ -142,6 +142,7 @@ function DashSideBar({
           <NavItem
             icon={<RiShoppingBagFill size={18} />}
             label="Catálogo"
+            to="/catalogo"
             collapsed={sidebarCollapsed}
           />
           <NavItem
@@ -365,11 +366,7 @@ function DashSideBar({
               to="/agenda"
               collapsed={false}
             />
-            <NavItem
-              icon={<RiExchangeFill size={18} />}
-              label="Transferencias"
-              collapsed={false}
-            />
+           
             <div className="px-4 pb-1 pt-4">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
                 Sistema

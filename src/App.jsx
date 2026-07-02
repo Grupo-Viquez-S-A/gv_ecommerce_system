@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
+import Catalog from "./pages/Catalog";
 import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
@@ -26,6 +27,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+<Route
+          path="/catalogo"
+          element={
+            <ProtectedRoute>
+              <Catalog />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/catalogo-dev" element={<Catalog />} />
+
         <Route
           path="/clientes"
           element={
