@@ -1,28 +1,87 @@
-import { RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import {
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 
 export const EMPTY_CATALOG_FILTERS = {
-  search: '',
-  categoryId: '',
-  typeId: '',
-  materialId: '',
-  color: '',
+  search: "",
+  categoryId: "",
+  typeId: "",
+  materialId: "",
+  color: "",
+  collectionId: "",
+  sizeId: "",
 };
 
+function SelectField({
+  id,
+  label,
+  value,
+  onChange,
+  defaultLabel,
+  options = [],
+  getOptionValue,
+  getOptionLabel,
+}) {
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#86A4CE]"
+      >
+        {label}
+      </label>
+
+      <select
+        id={id}
+        value={value || ""}
+        onChange={(event) => onChange(event.target.value)}
+        className="
+          h-11 w-full cursor-pointer rounded-xl border border-[#29466F]
+          bg-[#091A31] px-4 text-sm text-white outline-none transition
+          focus:border-[#D7A91D] focus:ring-2 focus:ring-[#D7A91D]/20
+        "
+      >
+        <option value="">{defaultLabel}</option>
+
+        {options.map((option, index) => (
+          <option
+            key={getOptionValue(option) || index}
+            value={getOptionValue(option)}
+          >
+            {getOptionLabel(option)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export default function CatalogFilters({
+  catalogType = "fabrics",
+  showCategoryFilter = true,
   filters = EMPTY_CATALOG_FILTERS,
   categories = [],
   productTypes = [],
   materials = [],
   colors = [],
+  collections = [],
+  sizes = [],
   onFiltersChange,
   onClearFilters,
 }) {
+  const isTextileProductsCatalog =
+    catalogType === "textile_products";
+
   const hasActiveFilters = Boolean(
     filters.search?.trim() ||
       filters.categoryId ||
       filters.typeId ||
       filters.materialId ||
-      filters.color
+      filters.color ||
+      filters.collectionId ||
+      filters.sizeId,
   );
 
   const handleChange = (field, value) => {
@@ -40,6 +99,15 @@ export default function CatalogFilters({
 
     onFiltersChange?.(EMPTY_CATALOG_FILTERS);
   };
+
+  const searchPlaceholder = isTextileProductsCatalog
+    ? "Nombre, SKU, tipo, colección o talla..."
+    : "Nombre, SKU, tipo, material o color...";
+
+  const gridColumnsClass =
+    isTextileProductsCatalog && !showCategoryFilter
+      ? "xl:grid-cols-5"
+      : "xl:grid-cols-6";
 
   return (
     <section
@@ -74,8 +142,9 @@ export default function CatalogFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        {/* Buscador */}
+      <div
+        className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${gridColumnsClass}`}
+      >
         <div className="xl:col-span-2">
           <label
             htmlFor="catalog-search"
@@ -90,11 +159,11 @@ export default function CatalogFilters({
             <input
               id="catalog-search"
               type="search"
-              value={filters.search || ''}
+              value={filters.search || ""}
               onChange={(event) =>
-                handleChange('search', event.target.value)
+                handleChange("search", event.target.value)
               }
-              placeholder="Nombre, SKU, tipo, material o color..."
+              placeholder={searchPlaceholder}
               className="
                 h-11 w-full rounded-xl border border-[#29466F]
                 bg-[#091A31] py-2 pl-11 pr-4 text-sm text-white
@@ -105,138 +174,97 @@ export default function CatalogFilters({
           </div>
         </div>
 
-        {/* Categoría */}
-        <div>
-          <label
-            htmlFor="catalog-category"
-            className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#86A4CE]"
-          >
-            Categoría
-          </label>
-
-          <select
+        {showCategoryFilter && (
+          <SelectField
             id="catalog-category"
-            value={filters.categoryId || ''}
-            onChange={(event) =>
-              handleChange('categoryId', event.target.value)
+            label="Categoría"
+            value={filters.categoryId}
+            defaultLabel="Todas"
+            options={categories}
+            getOptionValue={(category) => category.category_id}
+            getOptionLabel={(category) => category.category_name}
+            onChange={(value) =>
+              handleChange("categoryId", value)
             }
-            className="
-              h-11 w-full cursor-pointer rounded-xl border border-[#29466F]
-              bg-[#091A31] px-4 text-sm text-white outline-none transition
-              focus:border-[#D7A91D] focus:ring-2 focus:ring-[#D7A91D]/20
-            "
-          >
-            <option value="">Todas</option>
+          />
+        )}
 
-            {categories.map((category) => (
-              <option
-                key={category.category_id}
-                value={category.category_id}
-              >
-                {category.category_name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <SelectField
+          id="catalog-product-type"
+          label="Tipo de producto"
+          value={filters.typeId}
+          defaultLabel="Todos"
+          options={productTypes}
+          getOptionValue={(type) => type.type_id}
+          getOptionLabel={(type) => type.product_type}
+          onChange={(value) => handleChange("typeId", value)}
+        />
 
-        {/* Tipo de producto */}
-        <div>
-          <label
-            htmlFor="catalog-product-type"
-            className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#86A4CE]"
-          >
-            Tipo de producto
-          </label>
+        {isTextileProductsCatalog ? (
+          <>
+            <SelectField
+              id="catalog-collection"
+              label="Colección"
+              value={filters.collectionId}
+              defaultLabel="Todas"
+              options={collections}
+              getOptionValue={(collection) =>
+                collection.collection_id
+              }
+              getOptionLabel={(collection) =>
+                collection.collection_name
+              }
+              onChange={(value) =>
+                handleChange("collectionId", value)
+              }
+            />
 
-          <select
-            id="catalog-product-type"
-            value={filters.typeId || ''}
-            onChange={(event) =>
-              handleChange('typeId', event.target.value)
-            }
-            className="
-              h-11 w-full cursor-pointer rounded-xl border border-[#29466F]
-              bg-[#091A31] px-4 text-sm text-white outline-none transition
-              focus:border-[#D7A91D] focus:ring-2 focus:ring-[#D7A91D]/20
-            "
-          >
-            <option value="">Todos</option>
+            <SelectField
+              id="catalog-size"
+              label="Talla o medida"
+              value={filters.sizeId}
+              defaultLabel="Todas"
+              options={sizes}
+              getOptionValue={(size) => size.size_id}
+              getOptionLabel={(size) => size.size_name}
+              onChange={(value) =>
+                handleChange("sizeId", value)
+              }
+            />
+          </>
+        ) : (
+          <>
+            <SelectField
+              id="catalog-material"
+              label="Material"
+              value={filters.materialId}
+              defaultLabel="Todos"
+              options={materials}
+              getOptionValue={(material) =>
+                material.material_id
+              }
+              getOptionLabel={(material) =>
+                material.material_name
+              }
+              onChange={(value) =>
+                handleChange("materialId", value)
+              }
+            />
 
-            {productTypes.map((productType) => (
-              <option
-                key={productType.type_id}
-                value={productType.type_id}
-              >
-                {productType.product_type}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Material */}
-        <div>
-          <label
-            htmlFor="catalog-material"
-            className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#86A4CE]"
-          >
-            Material
-          </label>
-
-          <select
-            id="catalog-material"
-            value={filters.materialId || ''}
-            onChange={(event) =>
-              handleChange('materialId', event.target.value)
-            }
-            className="
-              h-11 w-full cursor-pointer rounded-xl border border-[#29466F]
-              bg-[#091A31] px-4 text-sm text-white outline-none transition
-              focus:border-[#D7A91D] focus:ring-2 focus:ring-[#D7A91D]/20
-            "
-          >
-            <option value="">Todos</option>
-
-            {materials.map((material) => (
-              <option
-                key={material.material_id}
-                value={material.material_id}
-              >
-                {material.material_name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Color */}
-        <div>
-          <label
-            htmlFor="catalog-color"
-            className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#86A4CE]"
-          >
-            Color
-          </label>
-
-          <select
-            id="catalog-color"
-            value={filters.color || ''}
-            onChange={(event) =>
-              handleChange('color', event.target.value)
-            }
-            className="
-              h-11 w-full cursor-pointer rounded-xl border border-[#29466F]
-              bg-[#091A31] px-4 text-sm text-white outline-none transition
-              focus:border-[#D7A91D] focus:ring-2 focus:ring-[#D7A91D]/20
-            "
-          >
-            <option value="">Todos</option>
-
-            {colors.map((color) => (
-              <option key={color.value} value={color.value}>
-                {color.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            <SelectField
+              id="catalog-color"
+              label="Color"
+              value={filters.color}
+              defaultLabel="Todos"
+              options={colors}
+              getOptionValue={(color) => color.value}
+              getOptionLabel={(color) => color.label}
+              onChange={(value) =>
+                handleChange("color", value)
+              }
+            />
+          </>
+        )}
       </div>
     </section>
   );

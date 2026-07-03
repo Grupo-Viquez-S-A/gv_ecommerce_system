@@ -7,8 +7,11 @@ import {
 } from "react";
 
 import { useAuth } from "../context/AuthContext.js";
+
 import DashSideBar from "../components/dashSideBar.jsx";
+
 import CatalogHeader from "../components/catalog/CatalogHeader";
+import CatalogSwitcher from "../components/catalog/CatalogSwitcher";
 import CatalogFilters, {
   EMPTY_CATALOG_FILTERS,
 } from "../components/catalog/CatalogFilters";
@@ -17,6 +20,8 @@ import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
+import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
+
 
 import {
   RiArrowDownSFill,
@@ -30,6 +35,7 @@ import {
 } from "react-icons/ri";
 
 import {
+  CATALOG_TYPES,
   createCatalogFilterId,
   getCatalogProducts,
 } from "../services/catalogService.js";
@@ -93,33 +99,59 @@ function normalizeCompany(company, index = 0) {
 }
 
 export default function Catalog() {
-
   const { user, signOut } = useAuth();
+
   const mainContentRef = useRef(null);
+  const catalogRequestRef = useRef(0);
+
+  const [activeCatalog, setActiveCatalog] = useState(
+    CATALOG_TYPES.FABRICS,
+  );
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
-  const [selectedProductDetails, setSelectedProductDetails] = useState(null);
-const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
-  useState(null);
 
-  const [filters, setFilters] = useState(EMPTY_CATALOG_FILTERS);
+  const [selectedProductDetails, setSelectedProductDetails] =
+    useState(null);
+
+  const [
+    selectedTechnicalSheetProduct,
+    setSelectedTechnicalSheetProduct,
+  ] = useState(null);
+
+  const [filters, setFilters] = useState(
+    EMPTY_CATALOG_FILTERS,
+  );
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [companyDropdown, setCompanyDropdown] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] =
+    useState(false);
+
+  const [companyDropdown, setCompanyDropdown] =
+    useState(false);
 
   const [currentCompany, setCurrentCompany] = useState(() =>
     normalizeCompany(
-      user?.activeCompany || user?.companies?.[0] || DEFAULT_COMPANY,
+      user?.activeCompany ||
+        user?.companies?.[0] ||
+        DEFAULT_COMPANY,
     ),
   );
 
+  const isTextileProductsCatalog =
+    activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
+
+  const activeCatalogLabel = isTextileProductsCatalog
+    ? "productos"
+    : "telas";
+
   const availableCompanies = useMemo(() => {
     const companiesFromUser =
-      Array.isArray(user?.companies) && user.companies.length > 0
+      Array.isArray(user?.companies) &&
+      user.companies.length > 0
         ? user.companies
         : FALLBACK_COMPANIES;
 
@@ -129,26 +161,43 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
   }, [user]);
 
   const loadCatalog = useCallback(async () => {
+    const requestId = catalogRequestRef.current + 1;
+
+    catalogRequestRef.current = requestId;
+
     setLoading(true);
     setCatalogError("");
 
     try {
-      const catalogProducts = await getCatalogProducts();
+      const catalogProducts = await getCatalogProducts(
+        activeCatalog,
+      );
+
+      if (requestId !== catalogRequestRef.current) {
+        return;
+      }
 
       setProducts(catalogProducts);
       setCurrentPage(1);
     } catch (error) {
+      if (requestId !== catalogRequestRef.current) {
+        return;
+      }
+
       console.error("Catalog loading error:", error);
 
       setProducts([]);
+
       setCatalogError(
         error?.message ||
           "No fue posible cargar el catálogo desde Supabase.",
       );
     } finally {
-      setLoading(false);
+      if (requestId === catalogRequestRef.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [activeCatalog]);
 
   useEffect(() => {
     loadCatalog();
@@ -177,10 +226,43 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
       }
     });
 
-    return Array.from(uniqueCategories.values()).sort((first, second) =>
-      first.category_name.localeCompare(second.category_name),
+    return Array.from(uniqueCategories.values()).sort(
+      (first, second) =>
+        first.category_name.localeCompare(
+          second.category_name,
+        ),
     );
   }, [products]);
+
+  const productCategories = useMemo(() => {
+  if (!isTextileProductsCatalog) {
+    return [];
+  }
+
+  const productCounts = new Map();
+
+  products.forEach((product) => {
+    const categoryId = product.category?.category_id;
+
+    if (!categoryId) {
+      return;
+    }
+
+    const currentCount = productCounts.get(categoryId) || 0;
+
+    productCounts.set(categoryId, currentCount + 1);
+  });
+
+  return categories.map((category) => ({
+    ...category,
+    product_count:
+      productCounts.get(category.category_id) || 0,
+  }));
+}, [
+  categories,
+  products,
+  isTextileProductsCatalog,
+]);
 
   const productTypes = useMemo(() => {
     const uniqueTypes = new Map();
@@ -191,7 +273,10 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
           return true;
         }
 
-        return product.category?.category_id === filters.categoryId;
+        return (
+          product.category?.category_id ===
+          filters.categoryId
+        );
       })
       .forEach((product) => {
         const productType = product.product_type;
@@ -204,23 +289,32 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
         }
       });
 
-    return Array.from(uniqueTypes.values()).sort((first, second) =>
-      first.product_type.localeCompare(second.product_type),
+    return Array.from(uniqueTypes.values()).sort(
+      (first, second) =>
+        first.product_type.localeCompare(
+          second.product_type,
+        ),
     );
   }, [products, filters.categoryId]);
 
   const materials = useMemo(() => {
+    if (isTextileProductsCatalog) {
+      return [];
+    }
+
     const uniqueMaterials = new Map();
 
     products.forEach((product) => {
       (product.compositions || []).forEach((composition) => {
-        const materialName = composition.material_name || "";
+        const materialName =
+          composition.material_name || "";
 
         if (!materialName) {
           return;
         }
 
-        const materialId = createCatalogFilterId(materialName);
+        const materialId =
+          createCatalogFilterId(materialName);
 
         if (!uniqueMaterials.has(materialId)) {
           uniqueMaterials.set(materialId, {
@@ -231,12 +325,19 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
       });
     });
 
-    return Array.from(uniqueMaterials.values()).sort((first, second) =>
-      first.material_name.localeCompare(second.material_name),
+    return Array.from(uniqueMaterials.values()).sort(
+      (first, second) =>
+        first.material_name.localeCompare(
+          second.material_name,
+        ),
     );
-  }, [products]);
+  }, [products, isTextileProductsCatalog]);
 
   const colors = useMemo(() => {
+    if (isTextileProductsCatalog) {
+      return [];
+    }
+
     const uniqueColors = new Map();
 
     products.forEach((product) => {
@@ -258,13 +359,69 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
       });
     });
 
-    return Array.from(uniqueColors.values()).sort((first, second) =>
-      first.label.localeCompare(second.label),
+    return Array.from(uniqueColors.values()).sort(
+      (first, second) =>
+        first.label.localeCompare(second.label),
     );
-  }, [products]);
+  }, [products, isTextileProductsCatalog]);
+
+  const collections = useMemo(() => {
+    if (!isTextileProductsCatalog) {
+      return [];
+    }
+
+    const uniqueCollections = new Map();
+
+    products.forEach((product) => {
+      const collection = product.collection;
+
+      if (
+        collection?.collection_id &&
+        !uniqueCollections.has(collection.collection_id)
+      ) {
+        uniqueCollections.set(
+          collection.collection_id,
+          collection,
+        );
+      }
+    });
+
+    return Array.from(uniqueCollections.values()).sort(
+      (first, second) =>
+        first.collection_name.localeCompare(
+          second.collection_name,
+        ),
+    );
+  }, [products, isTextileProductsCatalog]);
+
+  const sizes = useMemo(() => {
+    if (!isTextileProductsCatalog) {
+      return [];
+    }
+
+    const uniqueSizes = new Map();
+
+    products.forEach((product) => {
+      (product.available_sizes || []).forEach((size) => {
+        if (
+          size?.size_id &&
+          !uniqueSizes.has(size.size_id)
+        ) {
+          uniqueSizes.set(size.size_id, size);
+        }
+      });
+    });
+
+    return Array.from(uniqueSizes.values()).sort(
+      (first, second) =>
+        first.size_name.localeCompare(second.size_name),
+    );
+  }, [products, isTextileProductsCatalog]);
 
   const filteredProducts = useMemo(() => {
-    const normalizedSearch = filters.search.trim().toLowerCase();
+    const normalizedSearch = filters.search
+      .trim()
+      .toLowerCase();
 
     return products.filter((product) => {
       const searchableContent = [
@@ -273,13 +430,29 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
         product.description,
         product.category?.category_name,
         product.product_type?.product_type,
+        product.collection?.collection_name,
+        product.size,
+        product.length,
+        product.width,
+        product.height,
         ...(product.compositions || []).map(
           (composition) => composition.material_name,
         ),
-        ...(product.colors || []).map((color) => color.color),
-        ...(product.features || []).map((feature) => feature.feature),
+        ...(product.colors || []).map(
+          (color) => color.color,
+        ),
+        ...(product.features || []).map(
+          (feature) => feature.feature,
+        ),
         ...(product.managements || []).map(
           (management) => management.management,
+        ),
+        ...(product.available_sizes || []).map(
+          (size) => size.size_name,
+        ),
+        ...(product.measurements || []).map(
+          (measurement) =>
+            `${measurement.size_name} ${measurement.dimension_name}`,
         ),
       ]
         .filter(Boolean)
@@ -292,48 +465,74 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
 
       const matchesCategory =
         !filters.categoryId ||
-        product.category?.category_id === filters.categoryId;
+        product.category?.category_id ===
+          filters.categoryId;
 
       const matchesType =
         !filters.typeId ||
         product.product_type?.type_id === filters.typeId;
 
       const matchesMaterial =
+        isTextileProductsCatalog ||
         !filters.materialId ||
-        (product.compositions || []).some((composition) => {
-          return (
-            createCatalogFilterId(composition.material_name) ===
-            filters.materialId
-          );
-        });
+        (product.compositions || []).some(
+          (composition) =>
+            createCatalogFilterId(
+              composition.material_name,
+            ) === filters.materialId,
+        );
 
       const matchesColor =
+        isTextileProductsCatalog ||
         !filters.color ||
-        (product.colors || []).some((color) => {
-          return (
-            createCatalogFilterId(color.color) === filters.color
-          );
-        });
+        (product.colors || []).some(
+          (color) =>
+            createCatalogFilterId(color.color) ===
+            filters.color,
+        );
+
+      const matchesCollection =
+        !isTextileProductsCatalog ||
+        !filters.collectionId ||
+        product.collection?.collection_id ===
+          filters.collectionId;
+
+      const matchesSize =
+        !isTextileProductsCatalog ||
+        !filters.sizeId ||
+        (product.available_sizes || []).some(
+          (size) => size.size_id === filters.sizeId,
+        );
 
       return (
         matchesSearch &&
         matchesCategory &&
         matchesType &&
         matchesMaterial &&
-        matchesColor
+        matchesColor &&
+        matchesCollection &&
+        matchesSize
       );
     });
-  }, [products, filters]);
+  }, [
+    products,
+    filters,
+    isTextileProductsCatalog,
+  ]);
 
   const totalPages = Math.max(
     1,
     Math.ceil(filteredProducts.length / PAGE_SIZE),
   );
 
-  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const safeCurrentPage = Math.min(
+    currentPage,
+    totalPages,
+  );
 
   const currentProducts = useMemo(() => {
-    const startIndex = (safeCurrentPage - 1) * PAGE_SIZE;
+    const startIndex =
+      (safeCurrentPage - 1) * PAGE_SIZE;
 
     return filteredProducts.slice(
       startIndex,
@@ -346,7 +545,9 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
       filters.categoryId ||
       filters.typeId ||
       filters.materialId ||
-      filters.color,
+      filters.color ||
+      filters.collectionId ||
+      filters.sizeId,
   );
 
   useEffect(() => {
@@ -363,6 +564,52 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
     setSidebarCollapsed((previousValue) => !previousValue);
   };
 
+  const handleCatalogChange = (nextCatalog) => {
+    if (
+      !nextCatalog ||
+      nextCatalog === activeCatalog
+    ) {
+      return;
+    }
+
+    setActiveCatalog(nextCatalog);
+    setFilters(EMPTY_CATALOG_FILTERS);
+    setCurrentPage(1);
+    setSelectedProductDetails(null);
+    setSelectedTechnicalSheetProduct(null);
+
+    mainContentRef.current?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+const handleProductCategoryChange = (categoryId) => {
+  const nextCategoryId = categoryId || "";
+
+  if (
+    !isTextileProductsCatalog ||
+    nextCategoryId === filters.categoryId
+  ) {
+    return;
+  }
+
+  setFilters({
+    ...EMPTY_CATALOG_FILTERS,
+    categoryId: nextCategoryId,
+  });
+
+  setCurrentPage(1);
+  setSelectedProductDetails(null);
+  setSelectedTechnicalSheetProduct(null);
+
+  mainContentRef.current?.scrollTo({
+    top: 0,
+    behavior: "smooth",
+  });
+};
+
+
   const handleFiltersChange = (nextFilters) => {
     const categoryChanged =
       nextFilters.categoryId !== filters.categoryId;
@@ -372,16 +619,20 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
     };
 
     if (categoryChanged && nextFilters.typeId) {
-      const selectedTypeStillExists = products.some((product) => {
-        const categoryMatches =
-          !nextFilters.categoryId ||
-          product.category?.category_id === nextFilters.categoryId;
+      const selectedTypeStillExists = products.some(
+        (product) => {
+          const categoryMatches =
+            !nextFilters.categoryId ||
+            product.category?.category_id ===
+              nextFilters.categoryId;
 
-        const typeMatches =
-          product.product_type?.type_id === nextFilters.typeId;
+          const typeMatches =
+            product.product_type?.type_id ===
+            nextFilters.typeId;
 
-        return categoryMatches && typeMatches;
-      });
+          return categoryMatches && typeMatches;
+        },
+      );
 
       if (!selectedTypeStillExists) {
         normalizedFilters.typeId = "";
@@ -406,25 +657,25 @@ const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
     });
   };
 
-const handleOpenProductDetails = (product) => {
-  if (!product) {
-    return;
-  }
+  const handleOpenProductDetails = (product) => {
+    if (!product) {
+      return;
+    }
 
-  setSelectedProductDetails(product);
-};
+    setSelectedProductDetails(product);
+  };
 
-const handleOpenTechnicalSheet = (product) => {
-  if (!product) {
-    return;
-  }
+  const handleOpenTechnicalSheet = (product) => {
+    if (!product) {
+      return;
+    }
 
-  setSelectedProductDetails(null);
-  setSelectedTechnicalSheetProduct(product);
-};
+    setSelectedProductDetails(null);
+    setSelectedTechnicalSheetProduct(product);
+  };
 
   return (
-    <div className="w-full h-screen bg-[#0B1120] text-white flex overflow-hidden">
+    <div className="flex h-screen w-full overflow-hidden bg-[#0B1120] text-white">
       <DashSideBar
         sidebarCollapsed={sidebarCollapsed}
         sidebarOpen={sidebarOpen}
@@ -434,13 +685,13 @@ const handleOpenTechnicalSheet = (product) => {
         setSidebarOpen={setSidebarOpen}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 bg-[#1c2538] border-b border-[#2a3550] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-[#2a3550] bg-[#1c2538] px-4 lg:px-6">
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={toggleSidebar}
-              className="lg:hidden text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 transition-colors hover:text-white lg:hidden"
               aria-label="Abrir menú lateral"
             >
               <RiMenuFill size={22} />
@@ -450,42 +701,49 @@ const handleOpenTechnicalSheet = (product) => {
               <button
                 type="button"
                 onClick={() =>
-                  setCompanyDropdown((previousValue) => !previousValue)
+                  setCompanyDropdown(
+                    (previousValue) => !previousValue,
+                  )
                 }
-                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#222e44] px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#222e44]"
               >
                 <span
-                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  className="h-2 w-2 flex-shrink-0 rounded-full"
                   style={{
                     backgroundColor:
-                      currentCompany?.color || DEFAULT_COMPANY.color,
+                      currentCompany?.color ||
+                      DEFAULT_COMPANY.color,
                   }}
                 />
 
                 <span className="max-w-[180px] truncate">
-                  {currentCompany?.name || DEFAULT_COMPANY.name}
+                  {currentCompany?.name ||
+                    DEFAULT_COMPANY.name}
                 </span>
 
                 <RiArrowDownSFill
                   size={16}
-                  className="text-gray-400 flex-shrink-0"
+                  className="flex-shrink-0 text-gray-400"
                 />
               </button>
 
               {companyDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-[#1c2538] border border-[#2a3550] rounded-lg shadow-xl z-50 py-1">
+                <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-[#2a3550] bg-[#1c2538] py-1 shadow-xl">
                   {availableCompanies.map((company, index) => (
                     <button
-                      key={company.id || `${company.name}-${index}`}
+                      key={
+                        company.id ||
+                        `${company.name}-${index}`
+                      }
                       type="button"
                       onClick={() => {
                         setCurrentCompany(company);
                         setCompanyDropdown(false);
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
+                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
                     >
                       <span
-                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        className="h-2 w-2 flex-shrink-0 rounded-full"
                         style={{
                           backgroundColor:
                             company.color ||
@@ -508,16 +766,16 @@ const handleOpenTechnicalSheet = (product) => {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#2a3550] bg-[#1c2538] text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
               aria-label="Notificaciones"
             >
               <RiNotification3Fill size={16} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
             </button>
 
             <button
               type="button"
-              className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2a3550] bg-[#1c2538] text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
               aria-label="Configuración"
             >
               <RiSettings4Fill size={16} />
@@ -526,7 +784,7 @@ const handleOpenTechnicalSheet = (product) => {
             <button
               type="button"
               onClick={signOut}
-              className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2a3550] bg-[#1c2538] text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
               aria-label="Cerrar sesión"
             >
               <RiLogoutBoxLine size={16} />
@@ -539,7 +797,14 @@ const handleOpenTechnicalSheet = (product) => {
           className="flex-1 overflow-y-auto p-4 lg:p-6"
         >
           <CatalogHeader
-            totalProducts={loading ? 0 : filteredProducts.length}
+            totalProducts={
+              loading ? 0 : filteredProducts.length
+            }
+          />
+
+          <CatalogSwitcher
+            activeCatalog={activeCatalog}
+            onChange={handleCatalogChange}
           />
 
           {loading ? (
@@ -549,11 +814,11 @@ const handleOpenTechnicalSheet = (product) => {
               </div>
 
               <h2 className="mt-5 text-xl font-extrabold text-white">
-                Cargando catálogo
+                Cargando catálogo de {activeCatalogLabel}
               </h2>
 
               <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-                Estamos consultando los productos registrados en Supabase.
+                Estamos consultando los registros disponibles en Supabase.
               </p>
             </section>
           ) : catalogError ? (
@@ -581,15 +846,28 @@ const handleOpenTechnicalSheet = (product) => {
             </section>
           ) : (
             <>
-              <CatalogFilters
-                filters={filters}
-                categories={categories}
-                productTypes={productTypes}
-                materials={materials}
-                colors={colors}
-                onFiltersChange={handleFiltersChange}
-                onClearFilters={handleClearFilters}
-              />
+               {isTextileProductsCatalog && (
+      <ProductCategorySwitcher
+        categories={productCategories}
+        totalProducts={products.length}
+        activeCategoryId={filters.categoryId}
+        onChange={handleProductCategoryChange}
+      />
+    )}
+
+    <CatalogFilters
+      catalogType={activeCatalog}
+      showCategoryFilter={!isTextileProductsCatalog}
+      filters={filters}
+      categories={categories}
+      productTypes={productTypes}
+      materials={materials}
+      colors={colors}
+      collections={collections}
+      sizes={sizes}
+      onFiltersChange={handleFiltersChange}
+      onClearFilters={handleClearFilters}
+    />
 
               {currentProducts.length > 0 ? (
                 <>
@@ -603,7 +881,9 @@ const handleOpenTechnicalSheet = (product) => {
                       <span className="font-bold text-white">
                         {filteredProducts.length}
                       </span>{" "}
-                      productos
+                      {isTextileProductsCatalog
+                        ? "productos"
+                        : "telas"}
                     </p>
 
                     {hasActiveFilters && (
@@ -614,10 +894,14 @@ const handleOpenTechnicalSheet = (product) => {
                   </div>
 
                   <CatalogGrid
-  products={currentProducts}
-  onOpenProductDetails={handleOpenProductDetails}
-  onViewTechnicalSheet={handleOpenTechnicalSheet}
-/>
+                    products={currentProducts}
+                    onOpenProductDetails={
+                      handleOpenProductDetails
+                    }
+                    onViewTechnicalSheet={
+                      handleOpenTechnicalSheet
+                    }
+                  />
 
                   <Pagination
                     currentPage={safeCurrentPage}
@@ -634,16 +918,21 @@ const handleOpenTechnicalSheet = (product) => {
             </>
           )}
         </main>
-         <CatalogProductDetailsModal
-  product={selectedProductDetails}
-  onClose={() => setSelectedProductDetails(null)}
-  onViewTechnicalSheet={handleOpenTechnicalSheet}
-/>
 
-<CatalogTechnicalSheetModal
-  product={selectedTechnicalSheetProduct}
-  onClose={() => setSelectedTechnicalSheetProduct(null)}
-/>
+        <CatalogProductDetailsModal
+          product={selectedProductDetails}
+          onClose={() => setSelectedProductDetails(null)}
+          onViewTechnicalSheet={
+            handleOpenTechnicalSheet
+          }
+        />
+
+        <CatalogTechnicalSheetModal
+          product={selectedTechnicalSheetProduct}
+          onClose={() =>
+            setSelectedTechnicalSheetProduct(null)
+          }
+        />
       </div>
     </div>
   );

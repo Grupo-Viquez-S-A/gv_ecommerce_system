@@ -40,7 +40,11 @@ function getProductImage(product) {
 }
 
 function DetailItem({ label, value }) {
-  if (!value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
     return null;
   }
 
@@ -63,6 +67,26 @@ function EmptyDetailMessage({ children }) {
       {children}
     </p>
   );
+}
+
+function SectionTitle({ icon: Icon, children }) {
+  return (
+    <div className="mb-2 flex items-center gap-2">
+      <Icon className="h-4 w-4 text-[#D7A91D]" />
+
+      <h3 className="text-sm font-extrabold text-white">
+        {children}
+      </h3>
+    </div>
+  );
+}
+
+function formatDimension(value, unit) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  return `${value}${unit ? ` ${unit}` : ""}`;
 }
 
 export default function CatalogProductDetailsModal({
@@ -96,12 +120,17 @@ export default function CatalogProductDetailsModal({
     return null;
   }
 
+  const isTextileProduct =
+    product.catalog_type === "textile_products";
+
+  const entityName = isTextileProduct ? "producto" : "tela";
+
   const productImage = getProductImage(product);
 
   const productName =
     product.product_name ||
     product.fabric_name ||
-    "Tela sin nombre";
+    "Sin nombre";
 
   const productSku =
     product.sku ||
@@ -120,7 +149,7 @@ export default function CatalogProductDetailsModal({
 
   const productDescription =
     product.description ||
-    "Esta tela no tiene una descripción registrada.";
+    `Esta ${entityName} no tiene una descripción registrada.`;
 
   const price =
     product.price ??
@@ -144,7 +173,35 @@ export default function CatalogProductDetailsModal({
     ? product.managements
     : [];
 
-  const hasTechnicalSheet = Boolean(product.technical_sheet_url);
+  const measurements = Array.isArray(product.measurements)
+    ? product.measurements
+    : [];
+
+  const availableSizes = Array.isArray(product.available_sizes)
+    ? product.available_sizes
+    : [];
+
+  const hasTechnicalSheet = Boolean(
+    product.technical_sheet_url,
+  );
+
+  const collectionName =
+    product.collection?.collection_name ||
+    "Sin colección";
+
+  const dimensionsText = [
+    product.length
+      ? `Largo: ${formatDimension(product.length, product.unit)}`
+      : null,
+    product.width
+      ? `Ancho: ${formatDimension(product.width, product.unit)}`
+      : null,
+    product.height
+      ? `Alto: ${formatDimension(product.height, product.unit)}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div
@@ -187,7 +244,7 @@ export default function CatalogProductDetailsModal({
             type="button"
             onClick={onClose}
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#45648D] bg-[#132F58] text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
-            aria-label="Cerrar detalle de la tela"
+            aria-label={`Cerrar detalle de ${entityName}`}
           >
             <X className="h-5 w-5" />
           </button>
@@ -228,186 +285,298 @@ export default function CatalogProductDetailsModal({
                 </p>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <DetailItem label="Ancho" value={product.width} />
-                <DetailItem label="Peso" value={product.weight} />
-                <DetailItem label="Proveedor" value={product.provider} />
-                <DetailItem label="Código" value={productSku} />
-              </div>
+              {isTextileProduct ? (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <DetailItem
+                    label="Colección"
+                    value={collectionName}
+                  />
+
+                  <DetailItem
+                    label="Unidad"
+                    value={product.unit}
+                  />
+
+                  <DetailItem
+                    label="IVA"
+                    value={
+                      product.iva_amount !== null &&
+                      product.iva_amount !== undefined
+                        ? formatCurrency(product.iva_amount)
+                        : ""
+                    }
+                  />
+
+                  <DetailItem
+                    label="Dimensiones"
+                    value={dimensionsText}
+                  />
+                </div>
+              ) : (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <DetailItem label="Ancho" value={product.width} />
+                  <DetailItem label="Peso" value={product.weight} />
+                  <DetailItem
+                    label="Proveedor"
+                    value={product.provider}
+                  />
+                  <DetailItem label="Código" value={productSku} />
+                </div>
+              )}
             </section>
 
             <section className="space-y-6">
               <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <Package className="h-4 w-4 text-[#D7A91D]" />
-
-                  <h3 className="text-sm font-extrabold text-white">
-                    Descripción
-                  </h3>
-                </div>
+                <SectionTitle icon={Package}>
+                  Descripción
+                </SectionTitle>
 
                 <p className="rounded-2xl border border-[#29466F] bg-[#091A31] p-4 text-sm leading-6 text-slate-300">
                   {productDescription}
                 </p>
               </div>
 
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <Ruler className="h-4 w-4 text-[#D7A91D]" />
+              {isTextileProduct ? (
+                <>
+                  <div>
+                    <SectionTitle icon={Ruler}>
+                      Tallas disponibles
+                    </SectionTitle>
 
-                  <h3 className="text-sm font-extrabold text-white">
-                    Composición
-                  </h3>
-                </div>
-
-                {compositions.length > 0 ? (
-                  <div className="rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
-                    <CompositionBadges
-                      compositions={compositions}
-                      maxVisible={999}
-                      showTitle={false}
-                    />
-                  </div>
-                ) : (
-                  <EmptyDetailMessage>
-                    No hay materiales registrados para esta tela.
-                  </EmptyDetailMessage>
-                )}
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-[#D7A91D]" />
-
-                  <h3 className="text-sm font-extrabold text-white">
-                    Colores disponibles
-                  </h3>
-                </div>
-
-                {colors.length > 0 ? (
-                  <div className="rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
-                    <ColorDots
-                      colors={colors}
-                      maxVisible={999}
-                      showLabels
-                    />
-
-                    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {colors.map((color, index) => {
-                        const colorName =
-                          color.color ||
-                          color.color_name ||
-                          color.name ||
-                          "Color disponible";
-
-                        const quantity =
-                          color.quantity !== null &&
-                          color.quantity !== undefined &&
-                          color.quantity !== ""
-                            ? color.quantity
-                            : "Sin cantidad";
-
-                        return (
-                          <div
-                            key={color.id || `${colorName}-${index}`}
-                            className="flex items-center justify-between gap-3 rounded-xl border border-[#35547E] bg-[#102441] px-3 py-2"
+                    {availableSizes.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
+                        {availableSizes.map((size, index) => (
+                          <span
+                            key={size.size_id || index}
+                            className="rounded-lg border border-[#35547E] bg-[#102441] px-3 py-1.5 text-sm font-semibold text-[#C9D8EC]"
                           >
-                            <div className="flex min-w-0 items-center gap-2">
-                              <span
-                                className="h-3.5 w-3.5 flex-shrink-0 rounded-full border border-white/35"
-                                style={{
-                                  backgroundColor: normalizeHexColor(
-                                    color.hex_color ||
-                                      color.hex ||
-                                      color.hexCode,
-                                  ),
-                                }}
-                              />
-
-                              <span className="truncate text-sm font-medium text-white">
-                                {colorName}
-                              </span>
-                            </div>
-
-                            <span className="whitespace-nowrap text-xs font-semibold text-[#D7A91D]">
-                              {quantity === "Sin cantidad"
-                                ? quantity
-                                : `${quantity} disponibles`}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                            {size.size_name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyDetailMessage>
+                        No hay tallas registradas para este producto.
+                      </EmptyDetailMessage>
+                    )}
                   </div>
-                ) : (
-                  <EmptyDetailMessage>
-                    No hay colores registrados para esta tela.
-                  </EmptyDetailMessage>
-                )}
-              </div>
 
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                <div>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Settings className="h-4 w-4 text-[#D7A91D]" />
+                  <div>
+                    <SectionTitle icon={Ruler}>
+                      Tabla de medidas
+                    </SectionTitle>
 
-                    <h3 className="text-sm font-extrabold text-white">
+                    {measurements.length > 0 ? (
+                      <div className="overflow-x-auto rounded-2xl border border-[#29466F] bg-[#091A31]">
+                        <table className="min-w-full text-left text-sm">
+                          <thead className="border-b border-[#29466F] bg-[#132F58] text-xs uppercase tracking-[0.12em] text-[#86A4CE]">
+                            <tr>
+                              <th className="px-4 py-3">Talla</th>
+                              <th className="px-4 py-3">Medida</th>
+                              <th className="px-4 py-3">Valor</th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {measurements.map((measurement, index) => (
+                              <tr
+                                key={measurement.id || index}
+                                className="border-b border-[#29466F] last:border-0"
+                              >
+                                <td className="px-4 py-3 font-semibold text-white">
+                                  {measurement.size_name}
+                                </td>
+
+                                <td className="px-4 py-3 text-slate-300">
+                                  {measurement.dimension_name}
+                                </td>
+
+                                <td className="px-4 py-3 font-semibold text-[#D7A91D]">
+                                  {measurement.measurement_value}
+                                  {measurement.unit
+                                    ? ` ${measurement.unit}`
+                                    : ""}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <EmptyDetailMessage>
+                        No hay medidas específicas registradas para este producto.
+                      </EmptyDetailMessage>
+                    )}
+                  </div>
+
+                  <div>
+                    <SectionTitle icon={Settings}>
                       Características
-                    </h3>
+                    </SectionTitle>
+
+                    {features.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
+                        {features.map((feature, index) => (
+                          <span
+                            key={feature.id || index}
+                            className="rounded-lg border border-[#35547E] bg-[#102441] px-2.5 py-1.5 text-xs font-semibold text-[#C9D8EC]"
+                          >
+                            {feature.feature}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <EmptyDetailMessage>
+                        No hay características registradas.
+                      </EmptyDetailMessage>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <SectionTitle icon={Ruler}>
+                      Composición
+                    </SectionTitle>
+
+                    {compositions.length > 0 ? (
+                      <div className="rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
+                        <CompositionBadges
+                          compositions={compositions}
+                          maxVisible={999}
+                          showTitle={false}
+                        />
+                      </div>
+                    ) : (
+                      <EmptyDetailMessage>
+                        No hay materiales registrados para esta tela.
+                      </EmptyDetailMessage>
+                    )}
                   </div>
 
-                  {features.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
-                      {features.map((feature, index) => (
-                        <span
-                          key={feature.id || `feature-${index}`}
-                          className="rounded-lg border border-[#35547E] bg-[#102441] px-2.5 py-1.5 text-xs font-semibold text-[#C9D8EC]"
-                        >
-                          {feature.feature || "Característica"}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <EmptyDetailMessage>
-                      No hay características registradas.
-                    </EmptyDetailMessage>
-                  )}
-                </div>
+                  <div>
+                    <SectionTitle icon={Palette}>
+                      Colores disponibles
+                    </SectionTitle>
 
-                <div>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Settings className="h-4 w-4 text-[#D7A91D]" />
+                    {colors.length > 0 ? (
+                      <div className="rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
+                        <ColorDots
+                          colors={colors}
+                          maxVisible={999}
+                          showLabels
+                        />
 
-                    <h3 className="text-sm font-extrabold text-white">
-                      Tratamientos
-                    </h3>
+                        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {colors.map((color, index) => {
+                            const colorName =
+                              color.color ||
+                              color.color_name ||
+                              color.name ||
+                              "Color disponible";
+
+                            const quantity =
+                              color.quantity !== null &&
+                              color.quantity !== undefined &&
+                              color.quantity !== ""
+                                ? color.quantity
+                                : null;
+
+                            return (
+                              <div
+                                key={color.id || index}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-[#35547E] bg-[#102441] px-3 py-2"
+                              >
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span
+                                    className="h-3.5 w-3.5 flex-shrink-0 rounded-full border border-white/35"
+                                    style={{
+                                      backgroundColor: normalizeHexColor(
+                                        color.hex_color ||
+                                          color.hex ||
+                                          color.hexCode,
+                                      ),
+                                    }}
+                                  />
+
+                                  <span className="truncate text-sm font-medium text-white">
+                                    {colorName}
+                                  </span>
+                                </div>
+
+                                {quantity !== null && (
+                                  <span className="whitespace-nowrap text-xs font-semibold text-[#D7A91D]">
+                                    {quantity} disponibles
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <EmptyDetailMessage>
+                        No hay colores registrados para esta tela.
+                      </EmptyDetailMessage>
+                    )}
                   </div>
 
-                  {managements.length > 0 ? (
-                    <div className="flex flex-wrap gap-2 rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
-                      {managements.map((management, index) => (
-                        <span
-                          key={management.id || `management-${index}`}
-                          className="rounded-lg border border-[#35547E] bg-[#102441] px-2.5 py-1.5 text-xs font-semibold text-[#C9D8EC]"
-                        >
-                          {management.management || "Tratamiento"}
-                        </span>
-                      ))}
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <div>
+                      <SectionTitle icon={Settings}>
+                        Características
+                      </SectionTitle>
+
+                      {features.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
+                          {features.map((feature, index) => (
+                            <span
+                              key={feature.id || index}
+                              className="rounded-lg border border-[#35547E] bg-[#102441] px-2.5 py-1.5 text-xs font-semibold text-[#C9D8EC]"
+                            >
+                              {feature.feature}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <EmptyDetailMessage>
+                          No hay características registradas.
+                        </EmptyDetailMessage>
+                      )}
                     </div>
-                  ) : (
-                    <EmptyDetailMessage>
-                      No hay tratamientos registrados.
-                    </EmptyDetailMessage>
-                  )}
-                </div>
-              </div>
+
+                    <div>
+                      <SectionTitle icon={Settings}>
+                        Tratamientos
+                      </SectionTitle>
+
+                      {managements.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
+                          {managements.map((management, index) => (
+                            <span
+                              key={management.id || index}
+                              className="rounded-lg border border-[#35547E] bg-[#102441] px-2.5 py-1.5 text-xs font-semibold text-[#C9D8EC]"
+                            >
+                              {management.management}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <EmptyDetailMessage>
+                          No hay tratamientos registrados.
+                        </EmptyDetailMessage>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </section>
           </div>
         </div>
 
         <div className="flex flex-col-reverse gap-3 border-t border-[#29466F] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p className="text-xs text-slate-500">
-            Información obtenida desde el catálogo de telas.
+            Información obtenida desde el catálogo comercial.
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">

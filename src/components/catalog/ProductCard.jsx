@@ -1,4 +1,10 @@
-import { ArrowUpRight, ImageOff, Tag } from "lucide-react";
+import {
+  ArrowUpRight,
+  ImageOff,
+  Package,
+  Ruler,
+  Tag,
+} from "lucide-react";
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
@@ -61,7 +67,9 @@ function isImageFile(file) {
 }
 
 function getProductImage(product) {
-  const files = Array.isArray(product?.files) ? product.files : [];
+  const files = Array.isArray(product?.files)
+    ? product.files
+    : [];
 
   const directImage =
     product?.main_image_url ||
@@ -103,12 +111,23 @@ function getProductTypeName(product) {
   );
 }
 
+function getCollectionName(product) {
+  return (
+    product?.collection?.collection_name ||
+    product?.collection_name ||
+    "Sin colección"
+  );
+}
+
 export default function ProductCard({
   product,
   onOpenProductDetails,
   onViewTechnicalSheet,
 }) {
   const productImage = getProductImage(product);
+
+  const isTextileProduct =
+    product?.catalog_type === "textile_products";
 
   const productName =
     product?.product_name ||
@@ -146,6 +165,14 @@ export default function ProductCard({
     product?.materials ||
     product?.product_materials ||
     [];
+
+  const availableSizes = Array.isArray(product?.available_sizes)
+    ? product.available_sizes
+    : [];
+
+  const features = Array.isArray(product?.features)
+    ? product.features
+    : [];
 
   const handleOpenProductDetails = () => {
     onOpenProductDetails?.(product);
@@ -238,25 +265,83 @@ export default function ProductCard({
           </p>
         </div>
 
-        <div className="space-y-4 border-t border-[#29466F] pt-4">
-          <CompositionBadges
-            compositions={compositions}
-            maxVisible={2}
-            showTitle={false}
-          />
+        {isTextileProduct ? (
+          <div className="space-y-4 border-t border-[#29466F] pt-4">
+            <div>
+              <p className="mb-1 text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+                Colección
+              </p>
 
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-              Colores disponibles
-            </p>
+              <p className="flex items-center gap-2 text-sm font-semibold text-[#C9D8EC]">
+                <Package className="h-4 w-4 text-[#D7A91D]" />
+                {getCollectionName(product)}
+              </p>
+            </div>
 
-            <ColorDots
-              colors={colors}
-              maxVisible={4}
-              showLabels={false}
-            />
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+                Tallas disponibles
+              </p>
+
+              {availableSizes.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {availableSizes.slice(0, 4).map((size, index) => (
+                    <span
+                      key={size.size_id || index}
+                      className="rounded-lg border border-[#35547E] bg-[#091A31] px-2.5 py-1 text-xs font-semibold text-[#C9D8EC]"
+                    >
+                      {size.size_name}
+                    </span>
+                  ))}
+
+                  {availableSizes.length > 4 && (
+                    <span className="rounded-lg border border-[#35547E] bg-[#132F58] px-2.5 py-1 text-xs font-bold text-[#D7A91D]">
+                      +{availableSizes.length - 4}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Sin tallas registradas
+                </p>
+              )}
+            </div>
+
+            {features.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {features.slice(0, 2).map((feature, index) => (
+                  <span
+                    key={feature.id || index}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#35547E] bg-[#091A31] px-2.5 py-1 text-xs font-semibold text-[#C9D8EC]"
+                  >
+                    <Ruler className="h-3 w-3 text-[#D7A91D]" />
+                    {feature.feature}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="space-y-4 border-t border-[#29466F] pt-4">
+            <CompositionBadges
+              compositions={compositions}
+              maxVisible={2}
+              showTitle={false}
+            />
+
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+                Colores disponibles
+              </p>
+
+              <ColorDots
+                colors={colors}
+                maxVisible={4}
+                showLabels={false}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="mt-5 flex items-end justify-between gap-3 border-t border-[#29466F] pt-4">
           <div>
@@ -280,7 +365,7 @@ export default function ProductCard({
               hover:text-[#E9BC2D] active:scale-[0.98]
             "
           >
-            Ver detalle
+            Ficha técnica
             <ArrowUpRight className="h-4 w-4" />
           </button>
         </div>

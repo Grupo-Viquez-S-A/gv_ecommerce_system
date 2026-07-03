@@ -1,5 +1,13 @@
 import { supabase } from "../services/primarySupabaseClient.js";
 
+export const CATALOG_TYPES = {
+  FABRICS: "fabrics",
+  TEXTILE_PRODUCTS: "textile_products",
+};
+
+const TEXTILE_PRODUCT_MEASUREMENTS_TABLE =
+  "textile_product_measurements";
+
 export function createCatalogFilterId(value) {
   return String(value || "")
     .trim()
@@ -9,22 +17,38 @@ export function createCatalogFilterId(value) {
     .replace(/\s+/g, "-");
 }
 
-function groupRowsByFabric(rows = []) {
+function groupRowsByKey(rows = [], keyName) {
   return rows.reduce((groupedRows, row) => {
-    const fabricId = row?.fabric_id;
+    const key = row?.[keyName];
 
-    if (!fabricId) {
+    if (!key) {
       return groupedRows;
     }
 
-    if (!groupedRows[fabricId]) {
-      groupedRows[fabricId] = [];
+    if (!groupedRows[key]) {
+      groupedRows[key] = [];
     }
 
-    groupedRows[fabricId].push(row);
+    groupedRows[key].push(row);
 
     return groupedRows;
   }, {});
+}
+
+function indexRowsByKey(rows = [], keyName) {
+  return rows.reduce((indexedRows, row) => {
+    const key = row?.[keyName];
+
+    if (key) {
+      indexedRows[key] = row;
+    }
+
+    return indexedRows;
+  }, {});
+}
+
+function uniqueValues(values = []) {
+  return [...new Set(values.filter(Boolean))];
 }
 
 function getFileUrl(file) {
@@ -104,6 +128,7 @@ function isTechnicalSheetUrl(url) {
 
 function getCatalogImagePriority(file) {
   const fileText = getFileSearchText(file);
+
   let priority = 0;
 
   if (fileText.includes("catalogos")) {
@@ -130,21 +155,27 @@ function getCatalogImagePriority(file) {
     priority += 30;
   }
 
-  if (fileText.includes("image") || fileText.includes("imagen")) {
+  if (
+    fileText.includes("image") ||
+    fileText.includes("imagen")
+  ) {
     priority += 20;
   }
 
   return priority;
 }
 
-function getCoverImageUrl(fabric, files = []) {
-  const directImageUrl = fabric?.image_url || null;
+function getCoverImageUrl(item, files = []) {
+  const directImageUrl =
+    item?.image_url ||
+    item?.main_image_url ||
+    item?.cover_image_url ||
+    null;
 
-  /*
-    Si fabrics.image_url apunta a una ficha técnica,
-    no se utiliza como portada.
-  */
-  if (directImageUrl && !isTechnicalSheetUrl(directImageUrl)) {
+  if (
+    directImageUrl &&
+    !isTechnicalSheetUrl(directImageUrl)
+  ) {
     return directImageUrl;
   }
 
@@ -171,14 +202,7 @@ function getTechnicalSheetFile(files = []) {
     return technicalSheetImages[0];
   }
 
-  /*
-    En caso de que la ficha técnica sea PDF u otro documento,
-    se conserva para abrirla en otra pestaña desde el modal.
-  */
-  return (
-    files.find((file) => isTechnicalSheetFile(file)) ||
-    null
-  );
+  return files.find((file) => isTechnicalSheetFile(file)) || null;
 }
 
 function normalizePrice(value) {
@@ -191,7 +215,14 @@ function normalizePrice(value) {
   return Number.isNaN(numericValue) ? null : numericValue;
 }
 
-function mapFabricToCatalogProduct({
+function normalizeFiles(files = []) {
+  return files.map((file) => ({
+    ...file,
+    public_url: getFileUrl(file),
+  }));
+}
+
+function createFabricCatalogProduct({
   fabric,
   colorsByFabric,
   materialsByFabric,
@@ -212,9 +243,10 @@ function mapFabricToCatalogProduct({
 
   const mainImageUrl = getCoverImageUrl(fabric, fabricFiles);
   const technicalSheetFile = getTechnicalSheetFile(fabricFiles);
-  const technicalSheetUrl = getFileUrl(technicalSheetFile);
 
   return {
+    catalog_type: CATALOG_TYPES.FABRICS,
+
     product_id: fabric.id,
     id: fabric.id,
 
@@ -232,7 +264,7 @@ function mapFabricToCatalogProduct({
     main_image_url: mainImageUrl,
     cover_image_url: mainImageUrl,
 
-    technical_sheet_url: technicalSheetUrl,
+    technical_sheet_url: getFileUrl(technicalSheetFile),
     technical_sheet_file: technicalSheetFile,
 
     category: categoryName
@@ -248,6 +280,10 @@ function mapFabricToCatalogProduct({
           product_type: productTypeName,
         }
       : null,
+
+    collection: null,
+    available_sizes: [],
+    measurements: [],
 
     colors: fabricColors.map((color) => ({
       id: color.id,
@@ -276,16 +312,183 @@ function mapFabricToCatalogProduct({
       management: management.management || "",
     })),
 
-    files: fabricFiles.map((file) => ({
-      ...file,
-      public_url: getFileUrl(file),
-    })),
-
+    files: normalizeFiles(fabricFiles),
     raw_fabric: fabric,
   };
 }
 
-export async function getCatalogProducts() {
+function getAvailableSizes(product, measurements = []) {
+  const uniqueSizes = new Map();
+
+  if (product?.size) {
+    String(product.size)
+      .split(/[;,/|]/)
+      .map((sizeName) => sizeName.trim())
+      .filter(Boolean)
+      .forEach((sizeName) => {
+        const sizeId = `manual-${createCatalogFilterId(sizeName)}`;
+
+        uniqueSizes.set(sizeId, {
+          size_id: sizeId,
+          size_name: sizeName,
+        });
+      });
+  }
+
+  measurements.forEach((measurement) => {
+    if (!measurement?.size_name) {
+      return;
+    }
+
+    const sizeId =
+      measurement.size_id ||
+      `manual-${createCatalogFilterId(measurement.size_name)}`;
+
+    if (!uniqueSizes.has(sizeId)) {
+      uniqueSizes.set(sizeId, {
+        size_id: sizeId,
+        size_name: measurement.size_name,
+      });
+    }
+  });
+
+  return Array.from(uniqueSizes.values());
+}
+
+function createTextileProductCatalogItem({
+  product,
+  categoriesById,
+  typesById,
+  collectionsById,
+  filesByProduct,
+  measurementsByProduct,
+  sizesById,
+  dimensionsById,
+}) {
+  const productFiles = filesByProduct[product.product_id] || [];
+
+  const productMeasurements = (
+    measurementsByProduct[product.product_id] || []
+  ).map((measurement) => {
+    const size = sizesById[measurement.size_id];
+    const dimension = dimensionsById[measurement.dimension_id];
+
+    return {
+      id: measurement.measurement_id,
+      product_id: measurement.product_id,
+      size_id: measurement.size_id,
+      size_name: size?.size_name || "Talla no definida",
+      dimension_id: measurement.dimension_id,
+      dimension_name:
+        dimension?.dimension_name ||
+        dimension?.dimension_code ||
+        "Medida",
+      measurement_value: measurement.measurement_value ?? null,
+      unit: measurement.unit || product.unit || "",
+    };
+  });
+
+  const category = categoriesById[product.category_id];
+  const productType = typesById[product.type_id];
+  const collection = collectionsById[product.collection_id];
+
+  const mainImageUrl = getCoverImageUrl(product, productFiles);
+  const technicalSheetFile = getTechnicalSheetFile(productFiles);
+
+  const features = [
+    product.embroidery
+      ? {
+          id: `${product.product_id}-embroidery`,
+          feature: "Apto para bordado",
+        }
+      : null,
+    product.sublimation
+      ? {
+          id: `${product.product_id}-sublimation`,
+          feature: "Apto para sublimación",
+        }
+      : null,
+  ].filter(Boolean);
+
+  return {
+    catalog_type: CATALOG_TYPES.TEXTILE_PRODUCTS,
+
+    product_id: product.product_id,
+    id: product.product_id,
+
+    sku: product.sku || "Sin código",
+    product_name: product.product_name || "Producto sin nombre",
+    description: product.description || "",
+    price: normalizePrice(product.price),
+
+    size: product.size || "",
+    length: product.length || "",
+    width: product.width || "",
+    height: product.height || "",
+    unit: product.unit || "",
+    iva_amount: normalizePrice(product.iva_amount),
+    embroidery: Boolean(product.embroidery),
+    sublimation: Boolean(product.sublimation),
+    is_active: Boolean(product.is_active),
+    created_at: product.created_at || null,
+
+    image_url: mainImageUrl,
+    main_image_url: mainImageUrl,
+    cover_image_url: mainImageUrl,
+
+    technical_sheet_url: getFileUrl(technicalSheetFile),
+    technical_sheet_file: technicalSheetFile,
+
+    category: category
+      ? {
+          category_id: category.category_id,
+          category_name: category.category_name,
+        }
+      : null,
+
+    product_type: productType
+      ? {
+          type_id: productType.type_id,
+          product_type: productType.product_type,
+        }
+      : null,
+
+    collection: collection
+      ? {
+          collection_id: collection.collection_id,
+          collection_name: collection.collection_name,
+        }
+      : null,
+
+    available_sizes: getAvailableSizes(
+      product,
+      productMeasurements,
+    ),
+
+    measurements: productMeasurements,
+    colors: [],
+    compositions: [],
+    features,
+    managements: [],
+    files: normalizeFiles(productFiles),
+
+    raw_product: product,
+  };
+}
+
+function ensureNoErrors(responses = [], message) {
+  const errorResponse = responses.find(
+    (response) => response?.error,
+  );
+
+  if (errorResponse?.error) {
+    throw new Error(
+      `${message}: ${errorResponse.error.message}`,
+    );
+  }
+}
+
+export async function getFabricCatalogProducts() {
   const { data: fabrics, error: fabricsError } = await supabase
     .from("fabrics")
     .select("*")
@@ -337,30 +540,44 @@ export async function getCatalogProducts() {
       .order("created_at", { ascending: true }),
   ]);
 
-  const relatedErrors = [
-    colorsResponse.error,
-    materialsResponse.error,
-    featuresResponse.error,
-    managementsResponse.error,
-    filesResponse.error,
-  ].filter(Boolean);
-
-  if (relatedErrors.length > 0) {
-    throw new Error(
-      `No fue posible cargar los archivos y datos relacionados: ${relatedErrors[0].message}`,
-    );
-  }
-
-  const colorsByFabric = groupRowsByFabric(colorsResponse.data || []);
-  const materialsByFabric = groupRowsByFabric(materialsResponse.data || []);
-  const featuresByFabric = groupRowsByFabric(featuresResponse.data || []);
-  const managementsByFabric = groupRowsByFabric(
-    managementsResponse.data || [],
+  ensureNoErrors(
+    [
+      colorsResponse,
+      materialsResponse,
+      featuresResponse,
+      managementsResponse,
+      filesResponse,
+    ],
+    "No fue posible cargar los datos relacionados de las telas",
   );
-  const filesByFabric = groupRowsByFabric(filesResponse.data || []);
+
+  const colorsByFabric = groupRowsByKey(
+    colorsResponse.data || [],
+    "fabric_id",
+  );
+
+  const materialsByFabric = groupRowsByKey(
+    materialsResponse.data || [],
+    "fabric_id",
+  );
+
+  const featuresByFabric = groupRowsByKey(
+    featuresResponse.data || [],
+    "fabric_id",
+  );
+
+  const managementsByFabric = groupRowsByKey(
+    managementsResponse.data || [],
+    "fabric_id",
+  );
+
+  const filesByFabric = groupRowsByKey(
+    filesResponse.data || [],
+    "fabric_id",
+  );
 
   return fabrics.map((fabric) =>
-    mapFabricToCatalogProduct({
+    createFabricCatalogProduct({
       fabric,
       colorsByFabric,
       materialsByFabric,
@@ -369,4 +586,183 @@ export async function getCatalogProducts() {
       filesByFabric,
     }),
   );
+}
+
+export async function getTextileProductCatalogProducts() {
+  const {
+    data: textileProducts,
+    error: textileProductsError,
+  } = await supabase
+    .from("textile_products")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (textileProductsError) {
+    throw new Error(
+      `No fue posible cargar los productos textiles: ${textileProductsError.message}`,
+    );
+  }
+
+  if (!textileProducts || textileProducts.length === 0) {
+    return [];
+  }
+
+  const productIds = textileProducts.map(
+    (product) => product.product_id,
+  );
+
+  const categoryIds = uniqueValues(
+    textileProducts.map((product) => product.category_id),
+  );
+
+  const typeIds = uniqueValues(
+    textileProducts.map((product) => product.type_id),
+  );
+
+  const collectionIds = uniqueValues(
+    textileProducts.map((product) => product.collection_id),
+  );
+
+  const [
+    filesResponse,
+    measurementsResponse,
+    categoriesResponse,
+    typesResponse,
+    collectionsResponse,
+  ] = await Promise.all([
+    supabase
+      .from("textile_product_files")
+      .select("*")
+      .in("product_id", productIds)
+      .order("created_at", { ascending: true }),
+
+    supabase
+      .from(TEXTILE_PRODUCT_MEASUREMENTS_TABLE)
+      .select("*")
+      .in("product_id", productIds),
+
+    categoryIds.length > 0
+      ? supabase
+          .from("categories")
+          .select("*")
+          .in("category_id", categoryIds)
+      : Promise.resolve({ data: [], error: null }),
+
+    typeIds.length > 0
+      ? supabase
+          .from("product_types")
+          .select("*")
+          .in("type_id", typeIds)
+      : Promise.resolve({ data: [], error: null }),
+
+    collectionIds.length > 0
+      ? supabase
+          .from("product_collections")
+          .select("*")
+          .in("collection_id", collectionIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  ensureNoErrors(
+    [
+      filesResponse,
+      measurementsResponse,
+      categoriesResponse,
+      typesResponse,
+      collectionsResponse,
+    ],
+    "No fue posible cargar los datos relacionados de los productos",
+  );
+
+  const measurementRows = measurementsResponse.data || [];
+
+  const sizeIds = uniqueValues(
+    measurementRows.map((measurement) => measurement.size_id),
+  );
+
+  const dimensionIds = uniqueValues(
+    measurementRows.map((measurement) => measurement.dimension_id),
+  );
+
+  const [sizesResponse, dimensionsResponse] = await Promise.all([
+    sizeIds.length > 0
+      ? supabase
+          .from("sizes")
+          .select("*")
+          .in("size_id", sizeIds)
+          .order("display_order", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+
+    dimensionIds.length > 0
+      ? supabase
+          .from("dimensions")
+          .select("*")
+          .in("dimension_id", dimensionIds)
+          .order("display_order", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  ensureNoErrors(
+    [sizesResponse, dimensionsResponse],
+    "No fue posible cargar las tallas y medidas de los productos",
+  );
+
+  const filesByProduct = groupRowsByKey(
+    filesResponse.data || [],
+    "product_id",
+  );
+
+  const measurementsByProduct = groupRowsByKey(
+    measurementRows,
+    "product_id",
+  );
+
+  const categoriesById = indexRowsByKey(
+    categoriesResponse.data || [],
+    "category_id",
+  );
+
+  const typesById = indexRowsByKey(
+    typesResponse.data || [],
+    "type_id",
+  );
+
+  const collectionsById = indexRowsByKey(
+    collectionsResponse.data || [],
+    "collection_id",
+  );
+
+  const sizesById = indexRowsByKey(
+    sizesResponse.data || [],
+    "size_id",
+  );
+
+  const dimensionsById = indexRowsByKey(
+    dimensionsResponse.data || [],
+    "dimension_id",
+  );
+
+  return textileProducts.map((product) =>
+    createTextileProductCatalogItem({
+      product,
+      categoriesById,
+      typesById,
+      collectionsById,
+      filesByProduct,
+      measurementsByProduct,
+      sizesById,
+      dimensionsById,
+    }),
+  );
+}
+
+export async function getCatalogProducts(
+  catalogType = CATALOG_TYPES.FABRICS,
+) {
+  if (catalogType === CATALOG_TYPES.TEXTILE_PRODUCTS) {
+    return getTextileProductCatalogProducts();
+  }
+
+  return getFabricCatalogProducts();
 }
