@@ -1,7 +1,8 @@
-import { ArrowUpRight, ImageOff, Tag } from 'lucide-react';
-import ColorDots from './ColorDots';
-import CompositionBadges from './CompositionBadges';
-import formatCurrency from '../../utils/formatCurrency';
+import { ArrowUpRight, ImageOff, Tag } from "lucide-react";
+
+import ColorDots from "./ColorDots";
+import CompositionBadges from "./CompositionBadges";
+import formatCurrency from "../../utils/formatCurrency";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -68,9 +69,6 @@ function getProductImage(product) {
     product?.image_url ||
     null;
 
-  /*
-    Las fichas técnicas nunca se usan como portada.
-  */
   if (
     directImage &&
     !normalizeText(directImage).includes("ficha") &&
@@ -91,7 +89,7 @@ function getCategoryName(product) {
     product?.category?.category_name ||
     product?.categories?.category_name ||
     product?.category_name ||
-    'Sin categoría'
+    "Sin categoría"
   );
 }
 
@@ -101,13 +99,14 @@ function getProductTypeName(product) {
     product?.product_types?.product_type ||
     product?.type?.product_type ||
     product?.type_name ||
-    ''
+    ""
   );
 }
 
 export default function ProductCard({
   product,
-  onViewDetail,
+  onOpenProductDetails,
+  onViewTechnicalSheet,
 }) {
   const productImage = getProductImage(product);
 
@@ -115,13 +114,13 @@ export default function ProductCard({
     product?.product_name ||
     product?.name ||
     product?.title ||
-    'Producto sin nombre';
+    "Producto sin nombre";
 
   const productSku =
     product?.sku ||
     product?.SKU ||
     product?.product_sku ||
-    'SKU no disponible';
+    "SKU no disponible";
 
   const categoryName = getCategoryName(product);
   const productTypeName = getProductTypeName(product);
@@ -129,7 +128,7 @@ export default function ProductCard({
   const productDescription =
     product?.description ||
     product?.short_description ||
-    'Este producto no cuenta con una descripción registrada.';
+    "Este producto no cuenta con una descripción registrada.";
 
   const price =
     product?.price ??
@@ -148,14 +147,18 @@ export default function ProductCard({
     product?.product_materials ||
     [];
 
-  const handleViewDetail = () => {
-    onViewDetail?.(product);
+  const handleOpenProductDetails = () => {
+    onOpenProductDetails?.(product);
+  };
+
+  const handleViewTechnicalSheet = () => {
+    onViewTechnicalSheet?.(product);
   };
 
   return (
     <article
       className="
-        group flex h-full flex-col overflow-hidden rounded-2xl border
+        group relative flex h-full flex-col overflow-hidden rounded-2xl border
         border-[#29466F] bg-[#102441]
         shadow-[0_12px_30px_rgba(0,0,0,0.14)]
         transition duration-200
@@ -163,7 +166,14 @@ export default function ProductCard({
         hover:shadow-[0_16px_36px_rgba(0,0,0,0.24)]
       "
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-[#091A31]">
+      <button
+        type="button"
+        onClick={handleOpenProductDetails}
+        className="absolute inset-0 z-0 cursor-pointer"
+        aria-label={`Ver información completa de ${productName}`}
+      />
+
+      <div className="relative z-10 pointer-events-none aspect-[4/3] overflow-hidden bg-[#091A31]">
         {productImage ? (
           <img
             src={productImage}
@@ -212,7 +222,7 @@ export default function ProductCard({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="relative z-10 pointer-events-none flex flex-1 flex-col p-5">
         <div className="mb-3">
           <div className="mb-2 flex items-center gap-1.5 text-xs text-[#86A4CE]">
             <Tag className="h-3.5 w-3.5 text-[#D7A91D]" />
@@ -261,14 +271,13 @@ export default function ProductCard({
 
           <button
             type="button"
-            onClick={handleViewDetail}
+            onClick={handleViewTechnicalSheet}
             className="
-              inline-flex items-center gap-2 rounded-xl border
-              border-[#45648D] bg-[#132F58] px-3.5 py-2.5
-              text-sm font-bold text-white transition
+              pointer-events-auto relative z-20 inline-flex items-center gap-2
+              rounded-xl border border-[#45648D] bg-[#132F58]
+              px-3.5 py-2.5 text-sm font-bold text-white transition
               hover:border-[#D7A91D] hover:bg-[#1B3E6B]
-              hover:text-[#E9BC2D]
-              active:scale-[0.98]
+              hover:text-[#E9BC2D] active:scale-[0.98]
             "
           >
             Ver detalle

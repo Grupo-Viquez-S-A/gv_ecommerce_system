@@ -1,8 +1,9 @@
-import ProductCard from './ProductCard';
+import ProductCard from "./ProductCard";
 
 export default function CatalogGrid({
   products = [],
-  onViewDetail,
+  onOpenProductDetails,
+  onViewTechnicalSheet,
 }) {
   const validProducts = Array.isArray(products) ? products : [];
 
@@ -25,7 +26,8 @@ export default function CatalogGrid({
             `catalog-product-${index}`
           }
           product={product}
-          onViewDetail={onViewDetail}
+          onOpenProductDetails={onOpenProductDetails}
+          onViewTechnicalSheet={onViewTechnicalSheet}
         />
       ))}
     </section>

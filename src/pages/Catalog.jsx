@@ -16,6 +16,7 @@ import CatalogGrid from "../components/catalog/CatalogGrid";
 import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
+import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 
 import {
   RiArrowDownSFill,
@@ -99,7 +100,9 @@ export default function Catalog() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [catalogError, setCatalogError] = useState("");
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProductDetails, setSelectedProductDetails] = useState(null);
+const [selectedTechnicalSheetProduct, setSelectedTechnicalSheetProduct] =
+  useState(null);
 
   const [filters, setFilters] = useState(EMPTY_CATALOG_FILTERS);
   const [currentPage, setCurrentPage] = useState(1);
@@ -403,12 +406,21 @@ export default function Catalog() {
     });
   };
 
- const handleViewDetail = (product) => {
+const handleOpenProductDetails = (product) => {
   if (!product) {
     return;
   }
 
-  setSelectedProduct(product);
+  setSelectedProductDetails(product);
+};
+
+const handleOpenTechnicalSheet = (product) => {
+  if (!product) {
+    return;
+  }
+
+  setSelectedProductDetails(null);
+  setSelectedTechnicalSheetProduct(product);
 };
 
   return (
@@ -602,9 +614,10 @@ export default function Catalog() {
                   </div>
 
                   <CatalogGrid
-                    products={currentProducts}
-                    onViewDetail={handleViewDetail}
-                  />
+  products={currentProducts}
+  onOpenProductDetails={handleOpenProductDetails}
+  onViewTechnicalSheet={handleOpenTechnicalSheet}
+/>
 
                   <Pagination
                     currentPage={safeCurrentPage}
@@ -621,10 +634,16 @@ export default function Catalog() {
             </>
           )}
         </main>
-         <CatalogTechnicalSheetModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
+         <CatalogProductDetailsModal
+  product={selectedProductDetails}
+  onClose={() => setSelectedProductDetails(null)}
+  onViewTechnicalSheet={handleOpenTechnicalSheet}
+/>
+
+<CatalogTechnicalSheetModal
+  product={selectedTechnicalSheetProduct}
+  onClose={() => setSelectedTechnicalSheetProduct(null)}
+/>
       </div>
     </div>
   );
