@@ -109,8 +109,11 @@ export default function Catalog() {
   );
 
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [catalogError, setCatalogError] = useState("");
+const [loading, setLoading] = useState(true);
+const [isRefreshing, setIsRefreshing] = useState(false);
+const [catalogError, setCatalogError] = useState("");
+const [refreshError, setRefreshError] = useState("");
+const [lastUpdated, setLastUpdated] = useState(null);
 
   const [selectedProductDetails, setSelectedProductDetails] =
     useState(null);
@@ -160,13 +163,19 @@ export default function Catalog() {
     );
   }, [user]);
 
-  const loadCatalog = useCallback(async () => {
+ const loadCatalog = useCallback(
+  async ({ showFullLoader = false } = {}) => {
     const requestId = catalogRequestRef.current + 1;
 
     catalogRequestRef.current = requestId;
 
-    setLoading(true);
-    setCatalogError("");
+    if (showFullLoader) {
+      setLoading(true);
+      setCatalogError("");
+    } else {
+      setIsRefreshing(true);
+      setRefreshError("");
+    }
 
     try {
       const catalogProducts = await getCatalogProducts(
@@ -178,7 +187,7 @@ export default function Catalog() {
       }
 
       setProducts(catalogProducts);
-      setCurrentPage(1);
+      setLastUpdated(new Date());
     } catch (error) {
       if (requestId !== catalogRequestRef.current) {
         return;
@@ -186,22 +195,32 @@ export default function Catalog() {
 
       console.error("Catalog loading error:", error);
 
-      setProducts([]);
-
-      setCatalogError(
+      const errorMessage =
         error?.message ||
-          "No fue posible cargar el catálogo desde Supabase.",
-      );
+        "No fue posible actualizar el catálogo desde Supabase.";
+
+      if (showFullLoader) {
+        setProducts([]);
+        setCatalogError(errorMessage);
+      } else {
+        setRefreshError(errorMessage);
+      }
     } finally {
       if (requestId === catalogRequestRef.current) {
-        setLoading(false);
+        if (showFullLoader) {
+          setLoading(false);
+        } else {
+          setIsRefreshing(false);
+        }
       }
     }
-  }, [activeCatalog]);
+  },
+  [activeCatalog],
+);
 
   useEffect(() => {
-    loadCatalog();
-  }, [loadCatalog]);
+  loadCatalog({ showFullLoader: true });
+}, [loadCatalog]);
 
   useEffect(() => {
     const preferredCompany =
@@ -670,8 +689,12 @@ const handleProductCategoryChange = (categoryId) => {
       return;
     }
 
-    setSelectedProductDetails(null);
+        setSelectedProductDetails(null);
     setSelectedTechnicalSheetProduct(product);
+  };
+
+  const handleRefreshCatalog = () => {
+    loadCatalog();
   };
 
   return (
@@ -837,7 +860,7 @@ const handleProductCategoryChange = (categoryId) => {
 
               <button
                 type="button"
-                onClick={loadCatalog}
+                onClick={() => loadCatalog({ showFullLoader: true })}
                 className="mt-6 inline-flex items-center gap-2 rounded-xl border border-[#45648D] bg-[#132F58] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
               >
                 <RiRefreshLine size={16} />
@@ -846,14 +869,16 @@ const handleProductCategoryChange = (categoryId) => {
             </section>
           ) : (
             <>
-               {isTextileProductsCatalog && (
-      <ProductCategorySwitcher
-        categories={productCategories}
-        totalProducts={products.length}
-        activeCategoryId={filters.categoryId}
-        onChange={handleProductCategoryChange}
-      />
-    )}
+   
+
+{isTextileProductsCatalog && (
+  <ProductCategorySwitcher
+    categories={productCategories}
+    totalProducts={products.length}
+    activeCategoryId={filters.categoryId}
+    onChange={handleProductCategoryChange}
+  />
+)}
 
     <CatalogFilters
       catalogType={activeCatalog}
@@ -869,6 +894,74 @@ const handleProductCategoryChange = (categoryId) => {
       onClearFilters={handleClearFilters}
     />
 
+    <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#29466F] bg-[#102441]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <p className="text-sm font-semibold text-white">
+      Catálogo actualizado desde Supabase
+    </p>
+
+    <p className="mt-1 text-xs text-slate-400">
+      {lastUpdated
+        ? `Última actualización: ${lastUpdated.toLocaleTimeString(
+            "es-CR",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            },
+          )}`
+        : "Aún no se ha actualizado manualmente."}
+    </p>
+  </div>
+
+  <button
+    type="button"
+    onClick={handleRefreshCatalog}
+    disabled={isRefreshing}
+    className="
+      inline-flex items-center justify-center gap-2 rounded-xl
+      border border-[#45648D] bg-[#132F58]
+      px-4 py-2.5 text-sm font-bold text-white transition
+      hover:border-[#D7A91D] hover:bg-[#1B3E6B]
+      hover:text-[#E9BC2D]
+      disabled:cursor-not-allowed disabled:opacity-60
+    "
+  >
+    <RiRefreshLine
+      size={17}
+      className={isRefreshing ? "animate-spin" : ""}
+    />
+
+    {isRefreshing
+      ? "Actualizando catálogo..."
+      : "Actualizar catálogo"}
+  </button>
+</div>
+
+{refreshError && (
+  <div
+    role="alert"
+    className="mb-4 flex flex-col gap-3 rounded-xl border border-red-400/30 bg-red-500/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+  >
+    <p className="text-sm text-red-200">
+      No se pudieron actualizar los datos. Se conserva la información
+      que ya estaba visible.
+    </p>
+
+    <button
+      type="button"
+      onClick={handleRefreshCatalog}
+      disabled={isRefreshing}
+      className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-300/30 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <RiRefreshLine
+        size={14}
+        className={isRefreshing ? "animate-spin" : ""}
+      />
+      Reintentar
+    </button>
+  </div>
+)}
               {currentProducts.length > 0 ? (
                 <>
                   <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
