@@ -6,10 +6,6 @@ import {
   useState,
 } from "react";
 
-import { useAuth } from "../context/AuthContext.js";
-
-import DashSideBar from "../components/dashSideBar.jsx";
-
 import CatalogHeader from "../components/catalog/CatalogHeader";
 import CatalogSwitcher from "../components/catalog/CatalogSwitcher";
 import CatalogFilters, {
@@ -22,16 +18,10 @@ import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSh
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
 
-
 import {
-  RiArrowDownSFill,
   RiErrorWarningLine,
   RiLoader4Line,
-  RiLogoutBoxLine,
-  RiMenuFill,
-  RiNotification3Fill,
   RiRefreshLine,
-  RiSettings4Fill,
 } from "react-icons/ri";
 
 import {
@@ -42,65 +32,7 @@ import {
 
 const PAGE_SIZE = 8;
 
-const DEFAULT_COMPANY = {
-  id: "grupo-viquez",
-  name: "Grupo Víquez S.A",
-  color: "#C9A227",
-};
-
-const COMPANY_COLORS = [
-  "#C9A227",
-  "#6366f1",
-  "#22c55e",
-  "#f59e0b",
-  "#ec4899",
-  "#14b8a6",
-];
-
-const FALLBACK_COMPANIES = [
-  DEFAULT_COMPANY,
-  {
-    id: "textiles",
-    name: "Textiles de Occidente",
-    color: "#6366f1",
-  },
-  {
-    id: "constructora",
-    name: "Constructora Víquez",
-    color: "#C9A227",
-  },
-  {
-    id: "occidente-lab",
-    name: "Occidente Lab",
-    color: "#22c55e",
-  },
-  {
-    id: "agro",
-    name: "Agro Occidente Group",
-    color: "#f59e0b",
-  },
-  {
-    id: "pacific-pet-food",
-    name: "Pacific Pet Food",
-    color: "#ec4899",
-  },
-];
-
-function normalizeCompany(company, index = 0) {
-  return {
-    ...DEFAULT_COMPANY,
-    ...(company || {}),
-    name: company?.name || DEFAULT_COMPANY.name,
-    color:
-      company?.color ||
-      COMPANY_COLORS[index % COMPANY_COLORS.length] ||
-      DEFAULT_COMPANY.color,
-  };
-}
-
 export default function Catalog() {
-  const { user, signOut } = useAuth();
-
   const mainContentRef = useRef(null);
   const catalogRequestRef = useRef(0);
 
@@ -109,11 +41,11 @@ export default function Catalog() {
   );
 
   const [products, setProducts] = useState([]);
-const [loading, setLoading] = useState(true);
-const [isRefreshing, setIsRefreshing] = useState(false);
-const [catalogError, setCatalogError] = useState("");
-const [refreshError, setRefreshError] = useState("");
-const [lastUpdated, setLastUpdated] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
+  const [refreshError, setRefreshError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const [selectedProductDetails, setSelectedProductDetails] =
     useState(null);
@@ -129,21 +61,6 @@ const [lastUpdated, setLastUpdated] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] =
-    useState(false);
-
-  const [companyDropdown, setCompanyDropdown] =
-    useState(false);
-
-  const [currentCompany, setCurrentCompany] = useState(() =>
-    normalizeCompany(
-      user?.activeCompany ||
-        user?.companies?.[0] ||
-        DEFAULT_COMPANY,
-    ),
-  );
-
   const isTextileProductsCatalog =
     activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
 
@@ -151,85 +68,74 @@ const [lastUpdated, setLastUpdated] = useState(null);
     ? "productos"
     : "telas";
 
-  const availableCompanies = useMemo(() => {
-    const companiesFromUser =
-      Array.isArray(user?.companies) &&
-      user.companies.length > 0
-        ? user.companies
-        : FALLBACK_COMPANIES;
+  const scrollCatalogToTop = () => {
+    const layoutScrollContainer =
+      mainContentRef.current?.parentElement;
 
-    return companiesFromUser.map((company, index) =>
-      normalizeCompany(company, index),
-    );
-  }, [user]);
+    layoutScrollContainer?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
- const loadCatalog = useCallback(
-  async ({ showFullLoader = false } = {}) => {
-    const requestId = catalogRequestRef.current + 1;
+  const loadCatalog = useCallback(
+    async ({ showFullLoader = false } = {}) => {
+      const requestId = catalogRequestRef.current + 1;
 
-    catalogRequestRef.current = requestId;
-
-    if (showFullLoader) {
-      setLoading(true);
-      setCatalogError("");
-    } else {
-      setIsRefreshing(true);
-      setRefreshError("");
-    }
-
-    try {
-      const catalogProducts = await getCatalogProducts(
-        activeCatalog,
-      );
-
-      if (requestId !== catalogRequestRef.current) {
-        return;
-      }
-
-      setProducts(catalogProducts);
-      setLastUpdated(new Date());
-    } catch (error) {
-      if (requestId !== catalogRequestRef.current) {
-        return;
-      }
-
-      console.error("Catalog loading error:", error);
-
-      const errorMessage =
-        error?.message ||
-        "No fue posible actualizar el catálogo desde Supabase.";
+      catalogRequestRef.current = requestId;
 
       if (showFullLoader) {
-        setProducts([]);
-        setCatalogError(errorMessage);
+        setLoading(true);
+        setCatalogError("");
       } else {
-        setRefreshError(errorMessage);
+        setIsRefreshing(true);
+        setRefreshError("");
       }
-    } finally {
-      if (requestId === catalogRequestRef.current) {
+
+      try {
+        const catalogProducts = await getCatalogProducts(
+          activeCatalog,
+        );
+
+        if (requestId !== catalogRequestRef.current) {
+          return;
+        }
+
+        setProducts(catalogProducts);
+        setLastUpdated(new Date());
+      } catch (error) {
+        if (requestId !== catalogRequestRef.current) {
+          return;
+        }
+
+        console.error("Catalog loading error:", error);
+
+        const errorMessage =
+          error?.message ||
+          "No fue posible actualizar el catálogo desde Supabase.";
+
         if (showFullLoader) {
-          setLoading(false);
+          setProducts([]);
+          setCatalogError(errorMessage);
         } else {
-          setIsRefreshing(false);
+          setRefreshError(errorMessage);
+        }
+      } finally {
+        if (requestId === catalogRequestRef.current) {
+          if (showFullLoader) {
+            setLoading(false);
+          } else {
+            setIsRefreshing(false);
+          }
         }
       }
-    }
-  },
-  [activeCatalog],
-);
+    },
+    [activeCatalog],
+  );
 
   useEffect(() => {
-  loadCatalog({ showFullLoader: true });
-}, [loadCatalog]);
-
-  useEffect(() => {
-    const preferredCompany =
-      user?.activeCompany || user?.companies?.[0];
-
-    if (preferredCompany) {
-      setCurrentCompany(normalizeCompany(preferredCompany));
-    }
-  }, [user]);
+    loadCatalog({ showFullLoader: true });
+  }, [loadCatalog]);
 
   const categories = useMemo(() => {
     const uniqueCategories = new Map();
@@ -254,34 +160,34 @@ const [lastUpdated, setLastUpdated] = useState(null);
   }, [products]);
 
   const productCategories = useMemo(() => {
-  if (!isTextileProductsCatalog) {
-    return [];
-  }
-
-  const productCounts = new Map();
-
-  products.forEach((product) => {
-    const categoryId = product.category?.category_id;
-
-    if (!categoryId) {
-      return;
+    if (!isTextileProductsCatalog) {
+      return [];
     }
 
-    const currentCount = productCounts.get(categoryId) || 0;
+    const productCounts = new Map();
 
-    productCounts.set(categoryId, currentCount + 1);
-  });
+    products.forEach((product) => {
+      const categoryId = product.category?.category_id;
 
-  return categories.map((category) => ({
-    ...category,
-    product_count:
-      productCounts.get(category.category_id) || 0,
-  }));
-}, [
-  categories,
-  products,
-  isTextileProductsCatalog,
-]);
+      if (!categoryId) {
+        return;
+      }
+
+      const currentCount = productCounts.get(categoryId) || 0;
+
+      productCounts.set(categoryId, currentCount + 1);
+    });
+
+    return categories.map((category) => ({
+      ...category,
+      product_count:
+        productCounts.get(category.category_id) || 0,
+    }));
+  }, [
+    categories,
+    products,
+    isTextileProductsCatalog,
+  ]);
 
   const productTypes = useMemo(() => {
     const uniqueTypes = new Map();
@@ -575,14 +481,6 @@ const [lastUpdated, setLastUpdated] = useState(null);
     }
   }, [currentPage, totalPages]);
 
-  const toggleSidebar = () => {
-    setSidebarOpen((previousValue) => !previousValue);
-  };
-
-  const toggleCollapse = () => {
-    setSidebarCollapsed((previousValue) => !previousValue);
-  };
-
   const handleCatalogChange = (nextCatalog) => {
     if (
       !nextCatalog ||
@@ -597,37 +495,30 @@ const [lastUpdated, setLastUpdated] = useState(null);
     setSelectedProductDetails(null);
     setSelectedTechnicalSheetProduct(null);
 
-    mainContentRef.current?.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    scrollCatalogToTop();
   };
 
-const handleProductCategoryChange = (categoryId) => {
-  const nextCategoryId = categoryId || "";
+  const handleProductCategoryChange = (categoryId) => {
+    const nextCategoryId = categoryId || "";
 
-  if (
-    !isTextileProductsCatalog ||
-    nextCategoryId === filters.categoryId
-  ) {
-    return;
-  }
+    if (
+      !isTextileProductsCatalog ||
+      nextCategoryId === filters.categoryId
+    ) {
+      return;
+    }
 
-  setFilters({
-    ...EMPTY_CATALOG_FILTERS,
-    categoryId: nextCategoryId,
-  });
+    setFilters({
+      ...EMPTY_CATALOG_FILTERS,
+      categoryId: nextCategoryId,
+    });
 
-  setCurrentPage(1);
-  setSelectedProductDetails(null);
-  setSelectedTechnicalSheetProduct(null);
+    setCurrentPage(1);
+    setSelectedProductDetails(null);
+    setSelectedTechnicalSheetProduct(null);
 
-  mainContentRef.current?.scrollTo({
-    top: 0,
-    behavior: "smooth",
-  });
-};
-
+    scrollCatalogToTop();
+  };
 
   const handleFiltersChange = (nextFilters) => {
     const categoryChanged =
@@ -669,11 +560,7 @@ const handleProductCategoryChange = (categoryId) => {
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-
-    mainContentRef.current?.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    scrollCatalogToTop();
   };
 
   const handleOpenProductDetails = (product) => {
@@ -689,7 +576,7 @@ const handleProductCategoryChange = (categoryId) => {
       return;
     }
 
-        setSelectedProductDetails(null);
+    setSelectedProductDetails(null);
     setSelectedTechnicalSheetProduct(product);
   };
 
@@ -698,335 +585,215 @@ const handleProductCategoryChange = (categoryId) => {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-[#0B1120] text-white">
-      <DashSideBar
-        sidebarCollapsed={sidebarCollapsed}
-        sidebarOpen={sidebarOpen}
-        currentCompany={currentCompany}
-        toggleCollapse={toggleCollapse}
-        toggleSidebar={toggleSidebar}
-        setSidebarOpen={setSidebarOpen}
-      />
+    <>
+      <div
+        ref={mainContentRef}
+        className="p-4 lg:p-6"
+      >
+        <CatalogHeader
+          totalProducts={
+            loading ? 0 : filteredProducts.length
+          }
+        />
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-[#2a3550] bg-[#1c2538] px-4 lg:px-6">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              className="text-gray-400 transition-colors hover:text-white lg:hidden"
-              aria-label="Abrir menú lateral"
-            >
-              <RiMenuFill size={22} />
-            </button>
+        <CatalogSwitcher
+          activeCatalog={activeCatalog}
+          onChange={handleCatalogChange}
+        />
 
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  setCompanyDropdown(
-                    (previousValue) => !previousValue,
-                  )
-                }
-                className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#222e44]"
-              >
-                <span
-                  className="h-2 w-2 flex-shrink-0 rounded-full"
-                  style={{
-                    backgroundColor:
-                      currentCompany?.color ||
-                      DEFAULT_COMPANY.color,
-                  }}
-                />
-
-                <span className="max-w-[180px] truncate">
-                  {currentCompany?.name ||
-                    DEFAULT_COMPANY.name}
-                </span>
-
-                <RiArrowDownSFill
-                  size={16}
-                  className="flex-shrink-0 text-gray-400"
-                />
-              </button>
-
-              {companyDropdown && (
-                <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border border-[#2a3550] bg-[#1c2538] py-1 shadow-xl">
-                  {availableCompanies.map((company, index) => (
-                    <button
-                      key={
-                        company.id ||
-                        `${company.name}-${index}`
-                      }
-                      type="button"
-                      onClick={() => {
-                        setCurrentCompany(company);
-                        setCompanyDropdown(false);
-                      }}
-                      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
-                    >
-                      <span
-                        className="h-2 w-2 flex-shrink-0 rounded-full"
-                        style={{
-                          backgroundColor:
-                            company.color ||
-                            COMPANY_COLORS[
-                              index % COMPANY_COLORS.length
-                            ],
-                        }}
-                      />
-
-                      <span className="truncate">
-                        {company.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+        {loading ? (
+          <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#35547E] bg-[#091A31]">
+              <RiLoader4Line className="h-8 w-8 animate-spin text-[#D7A91D]" />
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
+            <h2 className="mt-5 text-xl font-extrabold text-white">
+              Cargando catálogo de {activeCatalogLabel}
+            </h2>
+
+            <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+              Estamos consultando los registros disponibles en
+              Supabase.
+            </p>
+          </section>
+        ) : catalogError ? (
+          <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-red-400/40 bg-red-500/5 px-6 py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-red-400/30 bg-red-500/10">
+              <RiErrorWarningLine className="h-8 w-8 text-red-400" />
+            </div>
+
+            <h2 className="mt-5 text-xl font-extrabold text-white">
+              No fue posible cargar el catálogo
+            </h2>
+
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
+              {catalogError}
+            </p>
+
             <button
               type="button"
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#2a3550] bg-[#1c2538] text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
-              aria-label="Notificaciones"
+              onClick={() =>
+                loadCatalog({ showFullLoader: true })
+              }
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-[#45648D] bg-[#132F58] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
             >
-              <RiNotification3Fill size={16} />
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+              <RiRefreshLine size={16} />
+              Reintentar
             </button>
+          </section>
+        ) : (
+          <>
+            {isTextileProductsCatalog && (
+              <ProductCategorySwitcher
+                categories={productCategories}
+                totalProducts={products.length}
+                activeCategoryId={filters.categoryId}
+                onChange={handleProductCategoryChange}
+              />
+            )}
 
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2a3550] bg-[#1c2538] text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
-              aria-label="Configuración"
-            >
-              <RiSettings4Fill size={16} />
-            </button>
+            <CatalogFilters
+              catalogType={activeCatalog}
+              showCategoryFilter={!isTextileProductsCatalog}
+              filters={filters}
+              categories={categories}
+              productTypes={productTypes}
+              materials={materials}
+              colors={colors}
+              collections={collections}
+              sizes={sizes}
+              onFiltersChange={handleFiltersChange}
+              onClearFilters={handleClearFilters}
+            />
 
-            <button
-              type="button"
-              onClick={signOut}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2a3550] bg-[#1c2538] text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white"
-              aria-label="Cerrar sesión"
-            >
-              <RiLogoutBoxLine size={16} />
-            </button>
-          </div>
-        </header>
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#29466F] bg-[#102441]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white">
+                  Catálogo actualizado desde Supabase
+                </p>
 
-        <main
-          ref={mainContentRef}
-          className="flex-1 overflow-y-auto p-4 lg:p-6"
-        >
-          <CatalogHeader
-            totalProducts={
-              loading ? 0 : filteredProducts.length
-            }
-          />
-
-          <CatalogSwitcher
-            activeCatalog={activeCatalog}
-            onChange={handleCatalogChange}
-          />
-
-          {loading ? (
-            <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#35547E] bg-[#091A31]">
-                <RiLoader4Line className="h-8 w-8 animate-spin text-[#D7A91D]" />
+                <p className="mt-1 text-xs text-slate-400">
+                  {lastUpdated
+                    ? `Última actualización: ${lastUpdated.toLocaleTimeString(
+                        "es-CR",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        },
+                      )}`
+                    : "Aún no se ha actualizado manualmente."}
+                </p>
               </div>
-
-              <h2 className="mt-5 text-xl font-extrabold text-white">
-                Cargando catálogo de {activeCatalogLabel}
-              </h2>
-
-              <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-                Estamos consultando los registros disponibles en Supabase.
-              </p>
-            </section>
-          ) : catalogError ? (
-            <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-red-400/40 bg-red-500/5 px-6 py-12 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-red-400/30 bg-red-500/10">
-                <RiErrorWarningLine className="h-8 w-8 text-red-400" />
-              </div>
-
-              <h2 className="mt-5 text-xl font-extrabold text-white">
-                No fue posible cargar el catálogo
-              </h2>
-
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
-                {catalogError}
-              </p>
 
               <button
                 type="button"
-                onClick={() => loadCatalog({ showFullLoader: true })}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl border border-[#45648D] bg-[#132F58] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
+                onClick={handleRefreshCatalog}
+                disabled={isRefreshing}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#45648D] bg-[#132F58] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <RiRefreshLine size={16} />
-                Reintentar
-              </button>
-            </section>
-          ) : (
-            <>
-   
-
-{isTextileProductsCatalog && (
-  <ProductCategorySwitcher
-    categories={productCategories}
-    totalProducts={products.length}
-    activeCategoryId={filters.categoryId}
-    onChange={handleProductCategoryChange}
-  />
-)}
-
-    <CatalogFilters
-      catalogType={activeCatalog}
-      showCategoryFilter={!isTextileProductsCatalog}
-      filters={filters}
-      categories={categories}
-      productTypes={productTypes}
-      materials={materials}
-      colors={colors}
-      collections={collections}
-      sizes={sizes}
-      onFiltersChange={handleFiltersChange}
-      onClearFilters={handleClearFilters}
-    />
-
-    <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#29466F] bg-[#102441]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
-  <div>
-    <p className="text-sm font-semibold text-white">
-      Catálogo actualizado desde Supabase
-    </p>
-
-    <p className="mt-1 text-xs text-slate-400">
-      {lastUpdated
-        ? `Última actualización: ${lastUpdated.toLocaleTimeString(
-            "es-CR",
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            },
-          )}`
-        : "Aún no se ha actualizado manualmente."}
-    </p>
-  </div>
-
-  <button
-    type="button"
-    onClick={handleRefreshCatalog}
-    disabled={isRefreshing}
-    className="
-      inline-flex items-center justify-center gap-2 rounded-xl
-      border border-[#45648D] bg-[#132F58]
-      px-4 py-2.5 text-sm font-bold text-white transition
-      hover:border-[#D7A91D] hover:bg-[#1B3E6B]
-      hover:text-[#E9BC2D]
-      disabled:cursor-not-allowed disabled:opacity-60
-    "
-  >
-    <RiRefreshLine
-      size={17}
-      className={isRefreshing ? "animate-spin" : ""}
-    />
-
-    {isRefreshing
-      ? "Actualizando catálogo..."
-      : "Actualizar catálogo"}
-  </button>
-</div>
-
-{refreshError && (
-  <div
-    role="alert"
-    className="mb-4 flex flex-col gap-3 rounded-xl border border-red-400/30 bg-red-500/10 p-4 sm:flex-row sm:items-center sm:justify-between"
-  >
-    <p className="text-sm text-red-200">
-      No se pudieron actualizar los datos. Se conserva la información
-      que ya estaba visible.
-    </p>
-
-    <button
-      type="button"
-      onClick={handleRefreshCatalog}
-      disabled={isRefreshing}
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-300/30 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <RiRefreshLine
-        size={14}
-        className={isRefreshing ? "animate-spin" : ""}
-      />
-      Reintentar
-    </button>
-  </div>
-)}
-              {currentProducts.length > 0 ? (
-                <>
-                  <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-sm text-slate-400">
-                      Mostrando{" "}
-                      <span className="font-bold text-white">
-                        {currentProducts.length}
-                      </span>{" "}
-                      de{" "}
-                      <span className="font-bold text-white">
-                        {filteredProducts.length}
-                      </span>{" "}
-                      {isTextileProductsCatalog
-                        ? "productos"
-                        : "telas"}
-                    </p>
-
-                    {hasActiveFilters && (
-                      <p className="text-xs font-medium text-[#86A4CE]">
-                        Resultados filtrados
-                      </p>
-                    )}
-                  </div>
-
-                  <CatalogGrid
-                    products={currentProducts}
-                    onOpenProductDetails={
-                      handleOpenProductDetails
-                    }
-                    onViewTechnicalSheet={
-                      handleOpenTechnicalSheet
-                    }
-                  />
-
-                  <Pagination
-                    currentPage={safeCurrentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                  />
-                </>
-              ) : (
-                <EmptyState
-                  hasActiveFilters={hasActiveFilters}
-                  onClearFilters={handleClearFilters}
+                <RiRefreshLine
+                  size={17}
+                  className={
+                    isRefreshing ? "animate-spin" : ""
+                  }
                 />
-              )}
-            </>
-          )}
-        </main>
 
-        <CatalogProductDetailsModal
-          product={selectedProductDetails}
-          onClose={() => setSelectedProductDetails(null)}
-          onViewTechnicalSheet={
-            handleOpenTechnicalSheet
-          }
-        />
+                {isRefreshing
+                  ? "Actualizando catálogo..."
+                  : "Actualizar catálogo"}
+              </button>
+            </div>
 
-        <CatalogTechnicalSheetModal
-          product={selectedTechnicalSheetProduct}
-          onClose={() =>
-            setSelectedTechnicalSheetProduct(null)
-          }
-        />
+            {refreshError && (
+              <div
+                role="alert"
+                className="mb-4 flex flex-col gap-3 rounded-xl border border-red-400/30 bg-red-500/10 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <p className="text-sm text-red-200">
+                  No se pudieron actualizar los datos. Se conserva
+                  la información que ya estaba visible.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleRefreshCatalog}
+                  disabled={isRefreshing}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-300/30 px-3 py-2 text-xs font-bold text-red-100 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <RiRefreshLine
+                    size={14}
+                    className={
+                      isRefreshing ? "animate-spin" : ""
+                    }
+                  />
+                  Reintentar
+                </button>
+              </div>
+            )}
+
+            {currentProducts.length > 0 ? (
+              <>
+                <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-slate-400">
+                    Mostrando{" "}
+                    <span className="font-bold text-white">
+                      {currentProducts.length}
+                    </span>{" "}
+                    de{" "}
+                    <span className="font-bold text-white">
+                      {filteredProducts.length}
+                    </span>{" "}
+                    {isTextileProductsCatalog
+                      ? "productos"
+                      : "telas"}
+                  </p>
+
+                  {hasActiveFilters && (
+                    <p className="text-xs font-medium text-[#86A4CE]">
+                      Resultados filtrados
+                    </p>
+                  )}
+                </div>
+
+                <CatalogGrid
+                  products={currentProducts}
+                  onOpenProductDetails={
+                    handleOpenProductDetails
+                  }
+                  onViewTechnicalSheet={
+                    handleOpenTechnicalSheet
+                  }
+                />
+
+                <Pagination
+                  currentPage={safeCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </>
+            ) : (
+              <EmptyState
+                hasActiveFilters={hasActiveFilters}
+                onClearFilters={handleClearFilters}
+              />
+            )}
+          </>
+        )}
       </div>
-    </div>
+
+      <CatalogProductDetailsModal
+        product={selectedProductDetails}
+        onClose={() => setSelectedProductDetails(null)}
+        onViewTechnicalSheet={handleOpenTechnicalSheet}
+      />
+
+      <CatalogTechnicalSheetModal
+        product={selectedTechnicalSheetProduct}
+        onClose={() =>
+          setSelectedTechnicalSheetProduct(null)
+        }
+      />
+    </>
   );
 }

@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../context/AuthContext.js";
-import DashSideBar from "../components/dashSideBar.jsx";
 
 import {
   RiCheckboxCircleFill,
   RiCloseCircleFill,
-  RiLogoutBoxLine,
-  RiMenuFill,
   RiMoneyDollarCircleFill,
-  RiNotification3Fill,
-  RiSettings4Fill,
-  RiArrowDownSFill,
   RiUserFill,
 } from "react-icons/ri";
 
@@ -31,11 +24,6 @@ import RepresentativesModal from "../components/clients/RepresentativesModal.jsx
 import DeactivateClientModal from "../components/clients/DeactivateClientModal.jsx";
 
 const ITEMS_PER_PAGE = 6;
-
-const DEFAULT_COMPANY = {
-  name: "Grupo Víquez S.A",
-  color: "#C9A227",
-};
 
 const createEmptyBranch = () => ({
   name: "",
@@ -89,40 +77,9 @@ const parseSalesMillions = (sales) => {
   return Number.parseFloat(normalizedValue) || 0;
 };
 
-const normalizeCompany = (company, index = 0) => {
-  if (typeof company === "string") {
-    return {
-      name: company,
-      color: AVATAR_COLORS[index % AVATAR_COLORS.length],
-    };
-  }
-
-  return {
-    ...DEFAULT_COMPANY,
-    ...(company || {}),
-    name: company?.name || DEFAULT_COMPANY.name,
-    color:
-      company?.color ||
-      AVATAR_COLORS[index % AVATAR_COLORS.length] ||
-      DEFAULT_COMPANY.color,
-  };
-};
-
 export default function Clients() {
-  const { user, signOut } = useAuth();
-
   const [clients, setClients] = useState(() =>
     MOCK_CLIENTS.map((client) => cloneClient(client)),
-  );
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [companyDropdown, setCompanyDropdown] = useState(false);
-
-  const [currentCompany, setCurrentCompany] = useState(() =>
-    normalizeCompany(
-      user?.activeCompany || user?.companies?.[0] || DEFAULT_COMPANY,
-    ),
   );
 
   const [search, setSearch] = useState("");
@@ -141,17 +98,6 @@ export default function Clients() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-
-  const companyOptions = useMemo(() => {
-    const userCompanies =
-      Array.isArray(user?.companies) && user.companies.length > 0
-        ? user.companies
-        : [user?.activeCompany || DEFAULT_COMPANY];
-
-    return userCompanies.map((company, index) =>
-      normalizeCompany(company, index),
-    );
-  }, [user]);
 
   const filteredClients = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -255,14 +201,6 @@ export default function Clients() {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
-
-  const toggleSidebar = () => {
-    setSidebarOpen((previousState) => !previousState);
-  };
-
-  const toggleCollapse = () => {
-    setSidebarCollapsed((previousState) => !previousState);
-  };
 
   const clearFilters = () => {
     setSearch("");
@@ -466,161 +404,58 @@ export default function Clients() {
   };
 
   return (
-    <div className="w-full h-screen bg-[#0B1120] text-white flex overflow-hidden">
-      <DashSideBar
-        sidebarCollapsed={sidebarCollapsed}
-        sidebarOpen={sidebarOpen}
-        currentCompany={currentCompany}
-        toggleCollapse={toggleCollapse}
-        toggleSidebar={toggleSidebar}
-        setSidebarOpen={setSidebarOpen}
-      />
+    <>
+      <div className="p-4 lg:p-6">
+        <ClientsPageHeader onCreateClient={openCreateDrawer} />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 bg-[#1c2538] border-b border-[#2a3550] flex items-center justify-between px-4 lg:px-6 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              className="lg:hidden text-gray-400 hover:text-white"
-              aria-label="Abrir menú lateral"
-            >
-              <RiMenuFill size={22} />
-            </button>
+        <ClientMetrics metrics={metrics} />
 
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() =>
-                  setCompanyDropdown((previousState) => !previousState)
-                }
-                className="flex items-center gap-2 text-sm font-medium text-white hover:bg-[#222e44] px-3 py-1.5 rounded-lg transition-colors"
-              >
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{
-                    backgroundColor:
-                      currentCompany?.color || DEFAULT_COMPANY.color,
-                  }}
-                />
+        <ClientsToolbar
+          search={search}
+          statusFilter={statusFilter}
+          onSearchChange={setSearch}
+          onStatusFilterChange={setStatusFilter}
+          onOpenAdvancedFilters={() => {}}
+        />
 
-                <span>{currentCompany?.name || DEFAULT_COMPANY.name}</span>
+        <ClientsTable
+          clients={paginatedClients}
+          totalClients={filteredClients.length}
+          currentPage={safeCurrentPage}
+          totalPages={totalPages}
+          startItem={startItem}
+          endItem={endItem}
+          onPageChange={setCurrentPage}
+          onClearFilters={clearFilters}
+          onOpenBranches={setBranchModal}
+          onOpenRepresentatives={setRepModal}
+          onView={openViewDrawer}
+          onEdit={openEditDrawer}
+          onDeactivate={setDeactivateModal}
+        />
 
-                <RiArrowDownSFill size={16} className="text-gray-400" />
-              </button>
+        <ClientMobileList
+          clients={paginatedClients}
+          onClearFilters={clearFilters}
+          onOpenBranches={setBranchModal}
+          onOpenRepresentatives={setRepModal}
+          onView={openViewDrawer}
+          onEdit={openEditDrawer}
+          onDeactivate={setDeactivateModal}
+        />
 
-              {companyDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-[#1c2538] border border-[#2a3550] rounded-lg shadow-xl z-50 py-1">
-                  {companyOptions.map((company, index) => (
-                    <button
-                      key={company.id || `${company.name}-${index}`}
-                      type="button"
-                      onClick={() => {
-                        setCurrentCompany(company);
-                        setCompanyDropdown(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
-                    >
-                      <div
-                        className="w-2 h-2 rounded-full"
-                        style={{
-                          backgroundColor:
-                            company.color ||
-                            AVATAR_COLORS[
-                              index % AVATAR_COLORS.length
-                            ],
-                        }}
-                      />
-
-                      <span className="truncate">{company.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+        {filteredClients.length > 0 && (
+          <div className="md:hidden mb-6 bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
+            <ClientsPagination
+              currentPage={safeCurrentPage}
+              totalPages={totalPages}
+              totalItems={filteredClients.length}
+              startItem={startItem}
+              endItem={endItem}
+              onPageChange={setCurrentPage}
+            />
           </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
-              aria-label="Notificaciones"
-            >
-              <RiNotification3Fill size={16} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
-
-            <button
-              type="button"
-              className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
-              aria-label="Configuración"
-            >
-              <RiSettings4Fill size={16} />
-            </button>
-
-            <button
-              type="button"
-              onClick={signOut}
-              className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors"
-              aria-label="Cerrar sesión"
-            >
-              <RiLogoutBoxLine size={16} />
-            </button>
-          </div>
-        </header>
-
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <ClientsPageHeader onCreateClient={openCreateDrawer} />
-
-          <ClientMetrics metrics={metrics} />
-
-          <ClientsToolbar
-            search={search}
-            statusFilter={statusFilter}
-            onSearchChange={setSearch}
-            onStatusFilterChange={setStatusFilter}
-            onOpenAdvancedFilters={() => {}}
-          />
-
-          <ClientsTable
-            clients={paginatedClients}
-            totalClients={filteredClients.length}
-            currentPage={safeCurrentPage}
-            totalPages={totalPages}
-            startItem={startItem}
-            endItem={endItem}
-            onPageChange={setCurrentPage}
-            onClearFilters={clearFilters}
-            onOpenBranches={setBranchModal}
-            onOpenRepresentatives={setRepModal}
-            onView={openViewDrawer}
-            onEdit={openEditDrawer}
-            onDeactivate={setDeactivateModal}
-          />
-
-          <ClientMobileList
-            clients={paginatedClients}
-            onClearFilters={clearFilters}
-            onOpenBranches={setBranchModal}
-            onOpenRepresentatives={setRepModal}
-            onView={openViewDrawer}
-            onEdit={openEditDrawer}
-            onDeactivate={setDeactivateModal}
-          />
-
-          {filteredClients.length > 0 && (
-            <div className="md:hidden mb-6 bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
-              <ClientsPagination
-                currentPage={safeCurrentPage}
-                totalPages={totalPages}
-                totalItems={filteredClients.length}
-                startItem={startItem}
-                endItem={endItem}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          )}
-        </main>
+        )}
       </div>
 
       <ClientDrawer
@@ -650,6 +485,6 @@ export default function Clients() {
         onConfirm={handleToggleClientStatus}
         isProcessing={isUpdatingStatus}
       />
-    </div>
+    </>
   );
 }

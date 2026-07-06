@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Catalog from "./pages/Catalog";
@@ -11,104 +13,121 @@ import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
 import Agenda from "./pages/Agenda";
 import Reports from "./pages/Reports";
+
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import MainLayout from "./components/layouts/MainLayout.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Pantallas públicas */}
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-<Route
-          path="/catalogo"
-          element={
-            <ProtectedRoute>
-              <Catalog />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/catalogo-dev" element={<Catalog />} />
 
-        <Route
-          path="/clientes"
-          element={
-            <ProtectedRoute>
-              <Clients />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/clientes-dev" element={<Clients />} />
-        <Route
-          path="/agentes"
-          element={
-            <ProtectedRoute>
-              <Agents />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/agentes-dev" element={<Agents />} />
-        <Route
-          path="/cotizaciones"
-          element={
-            <ProtectedRoute>
-              <Quotations />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/cotizaciones-dev" element={<Quotations />} />
-        <Route
-          path="/ventas"
-          element={
-            <ProtectedRoute>
-              <Sales />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/ventas-dev" element={<Sales />} />
-        <Route
-          path="/pedidos"
-          element={
-            <ProtectedRoute>
-              <Orders />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/pedidos-dev" element={<Orders />} />
-        <Route
-          path="/agenda"
-          element={
-            <ProtectedRoute>
-              <Agenda />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/agenda-dev" element={<Agenda />} />
-        <Route
-          path="/reportes"
-          element={
-            <ProtectedRoute>
-              <Reports />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/reportes-dev" element={<Reports />} />
-        <Route
-          path="/admin/usuarios"
-          element={
-            <ProtectedRoute>
-              <AdminConfig />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/admin/usuarios-dev" element={<AdminConfig />} />
+        {/* Todas las vistas internas usan el mismo sidebar y AppTopBar */}
+        <Route element={<MainLayout />}>
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/catalogo"
+            element={
+              <ProtectedRoute>
+                <Catalog />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/clientes"
+            element={
+              <ProtectedRoute>
+                <Clients />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/agentes"
+            element={
+              <ProtectedRoute>
+                <Agents />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/cotizaciones"
+            element={
+              <ProtectedRoute>
+                <Quotations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ventas"
+            element={
+              <ProtectedRoute>
+                <Sales />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/pedidos"
+            element={
+              <ProtectedRoute>
+                <Orders />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/agenda"
+            element={
+              <ProtectedRoute>
+                <Agenda />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reportes"
+            element={
+              <ProtectedRoute>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/usuarios"
+            element={
+              <ProtectedRoute>
+                <AdminConfig />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Rutas de pruebas sin ProtectedRoute */}
+          <Route path="/catalogo-dev" element={<Catalog />} />
+          <Route path="/clientes-dev" element={<Clients />} />
+          <Route path="/agentes-dev" element={<Agents />} />
+          <Route path="/cotizaciones-dev" element={<Quotations />} />
+          <Route path="/ventas-dev" element={<Sales />} />
+          <Route path="/pedidos-dev" element={<Orders />} />
+          <Route path="/agenda-dev" element={<Agenda />} />
+          <Route path="/reportes-dev" element={<Reports />} />
+          <Route path="/admin/usuarios-dev" element={<AdminConfig />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
