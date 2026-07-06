@@ -139,8 +139,7 @@ export default function CatalogTechnicalSheetModal({
               </h3>
 
               <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
-                Esta tela todavía no tiene una ficha técnica registrada en
-                Supabase.
+                Este elemento no tiene una ficha técnica.
               </p>
             </div>
           )}
