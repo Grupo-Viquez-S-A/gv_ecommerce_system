@@ -17,6 +17,8 @@ export default function ClientsTable({
   onView,
   onEdit,
   onDeactivate,
+  emptyTitle,
+  emptyDescription,
 }) {
   const columns = [
     "CLIENTE",
@@ -109,7 +111,11 @@ export default function ClientsTable({
           />
         </>
       ) : (
-        <ClientsEmptyState onClearFilters={onClearFilters} />
+        <ClientsEmptyState
+          onClearFilters={onClearFilters}
+          title={emptyTitle}
+          description={emptyDescription}
+        />
       )}
     </div>
   );

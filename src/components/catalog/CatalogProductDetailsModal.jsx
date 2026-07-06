@@ -12,7 +12,6 @@ import {
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
-import formatCurrency from "../../utils/formatCurrency";
 
 function normalizeHexColor(value) {
   if (!value || typeof value !== "string") {
@@ -151,12 +150,6 @@ export default function CatalogProductDetailsModal({
     product.description ||
     `Esta ${entityName} no tiene una descripción registrada.`;
 
-  const price =
-    product.price ??
-    product.sale_price ??
-    product.unit_price ??
-    null;
-
   const compositions = Array.isArray(product.compositions)
     ? product.compositions
     : [];
@@ -275,16 +268,6 @@ export default function CatalogProductDetailsModal({
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-[#29466F] bg-[#091A31] p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-                  Precio desde
-                </p>
-
-                <p className="mt-1 text-3xl font-extrabold text-[#D7A91D]">
-                  {formatCurrency(price)}
-                </p>
-              </div>
-
               {isTextileProduct ? (
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <DetailItem
@@ -295,16 +278,6 @@ export default function CatalogProductDetailsModal({
                   <DetailItem
                     label="Unidad"
                     value={product.unit}
-                  />
-
-                  <DetailItem
-                    label="IVA"
-                    value={
-                      product.iva_amount !== null &&
-                      product.iva_amount !== undefined
-                        ? formatCurrency(product.iva_amount)
-                        : ""
-                    }
                   />
 
                   <DetailItem

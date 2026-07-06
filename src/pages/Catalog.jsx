@@ -23,6 +23,12 @@ import {
   RiLoader4Line,
   RiRefreshLine,
 } from "react-icons/ri";
+import {
+  Minus,
+  Plus,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
 
 import {
   CATALOG_TYPES,
@@ -31,6 +37,38 @@ import {
 } from "../services/catalogService.js";
 
 const PAGE_SIZE = 8;
+
+function getCartProductId(product) {
+  return (
+    product?.product_id ||
+    product?.id ||
+    product?.sku ||
+    product?.product_name
+  );
+}
+
+function getCartProductName(product) {
+  return (
+    product?.product_name ||
+    product?.fabric_name ||
+    product?.name ||
+    "Producto sin nombre"
+  );
+}
+
+function getCartProductSku(product) {
+  return (
+    product?.sku ||
+    product?.fabric_code ||
+    "SKU no disponible"
+  );
+}
+
+function getCartProductType(product) {
+  return product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS
+    ? "Producto"
+    : "Tela";
+}
 
 export default function Catalog() {
   const mainContentRef = useRef(null);
@@ -60,6 +98,7 @@ export default function Catalog() {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [cartItems, setCartItems] = useState([]);
 
   const isTextileProductsCatalog =
     activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
@@ -475,6 +514,11 @@ export default function Catalog() {
       filters.sizeId,
   );
 
+  const cartItemsCount = cartItems.reduce(
+    (total, item) => total + item.quantity,
+    0,
+  );
+
   useEffect(() => {
     if (currentPage > totalPages) {
       setCurrentPage(totalPages);
@@ -569,6 +613,69 @@ export default function Catalog() {
     }
 
     setSelectedProductDetails(product);
+  };
+
+  const handleAddToCart = (product, quantity = 1) => {
+    const productId = getCartProductId(product);
+
+    if (!productId) {
+      return;
+    }
+
+    const safeQuantity = Math.max(1, Number(quantity) || 1);
+
+    setCartItems((currentItems) => {
+      const itemExists = currentItems.some(
+        (item) => item.id === productId,
+      );
+
+      if (itemExists) {
+        return currentItems.map((item) =>
+          item.id === productId
+            ? {
+                ...item,
+                quantity: item.quantity + safeQuantity,
+              }
+            : item,
+        );
+      }
+
+      return [
+        ...currentItems,
+        {
+          id: productId,
+          name: getCartProductName(product),
+          sku: getCartProductSku(product),
+          catalogType: getCartProductType(product),
+          quantity: safeQuantity,
+        },
+      ];
+    });
+  };
+
+  const handleUpdateCartItemQuantity = (itemId, nextQuantity) => {
+    const safeQuantity = Math.max(1, Number(nextQuantity) || 1);
+
+    setCartItems((currentItems) =>
+      currentItems.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              quantity: safeQuantity,
+            }
+          : item,
+      ),
+    );
+  };
+
+  const handleRemoveCartItem = (itemId) => {
+    setCartItems((currentItems) =>
+      currentItems.filter((item) => item.id !== itemId),
+    );
+  };
+
+  const handleClearCart = () => {
+    setCartItems([]);
   };
 
   const handleOpenTechnicalSheet = (product) => {
@@ -732,6 +839,116 @@ export default function Catalog() {
               </div>
             )}
 
+            <section className="mb-5 rounded-2xl border border-[#29466F] bg-[#102441]/80 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31] text-[#D7A91D]">
+                    <ShoppingCart className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-extrabold text-white">
+                      Carrito de compra
+                    </h2>
+
+                    <p className="text-sm text-slate-400">
+                      {cartItemsCount}{" "}
+                      {cartItemsCount === 1
+                        ? "unidad seleccionada"
+                        : "unidades seleccionadas"}
+                    </p>
+                  </div>
+                </div>
+
+                {cartItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearCart}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300/30 px-3.5 py-2 text-sm font-bold text-red-100 transition hover:bg-red-500/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Vaciar carrito
+                  </button>
+                )}
+              </div>
+
+              {cartItems.length > 0 ? (
+                <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {cartItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-col gap-3 rounded-xl border border-[#35547E] bg-[#091A31] p-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
+                            {item.catalogType}
+                          </span>
+
+                          <span className="truncate text-xs text-[#86A4CE]">
+                            {item.sku}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 truncate text-sm font-bold text-white">
+                          {item.name}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 sm:justify-end">
+                        <div className="flex items-center overflow-hidden rounded-xl border border-[#35547E] bg-[#102441]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateCartItemQuantity(
+                                item.id,
+                                item.quantity - 1,
+                              )
+                            }
+                            className="flex h-9 w-9 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                            aria-label={`Restar ${item.name}`}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+
+                          <span className="min-w-10 border-x border-[#35547E] px-3 text-center text-sm font-bold text-white">
+                            {item.quantity}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateCartItemQuantity(
+                                item.id,
+                                item.quantity + 1,
+                              )
+                            }
+                            className="flex h-9 w-9 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                            aria-label={`Sumar ${item.name}`}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCartItem(item.id)}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-red-300/25 text-red-100 transition hover:bg-red-500/10"
+                          aria-label={`Quitar ${item.name} del carrito`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-4 rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-4 py-3 text-sm text-slate-500">
+                  Selecciona cantidades en las tarjetas del catálogo para preparar el pedido.
+                </p>
+              )}
+            </section>
+
             {currentProducts.length > 0 ? (
               <>
                 <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -761,9 +978,7 @@ export default function Catalog() {
                   onOpenProductDetails={
                     handleOpenProductDetails
                   }
-                  onViewTechnicalSheet={
-                    handleOpenTechnicalSheet
-                  }
+                  onAddToCart={handleAddToCart}
                 />
 
                 <Pagination

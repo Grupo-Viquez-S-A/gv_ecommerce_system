@@ -3,7 +3,7 @@ import ProductCard from "./ProductCard";
 export default function CatalogGrid({
   products = [],
   onOpenProductDetails,
-  onViewTechnicalSheet,
+  onAddToCart,
 }) {
   const validProducts = Array.isArray(products) ? products : [];
 
@@ -27,7 +27,7 @@ export default function CatalogGrid({
           }
           product={product}
           onOpenProductDetails={onOpenProductDetails}
-          onViewTechnicalSheet={onViewTechnicalSheet}
+          onAddToCart={onAddToCart}
         />
       ))}
     </section>

@@ -188,7 +188,7 @@ function DashSideBar({
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3">
+        <nav className="scrollbar-hidden flex-1 overflow-y-auto py-3">
           {/* COMERCIAL */}
           {!sidebarCollapsed ? (
             <div className="px-4 pb-1 pt-2">
@@ -403,7 +403,7 @@ function DashSideBar({
             </div>
           </div>
 
-          <nav className="flex-1 overflow-y-auto py-3">
+          <nav className="scrollbar-hidden flex-1 overflow-y-auto py-3">
             {/* COMERCIAL */}
             <div className="px-4 pb-1 pt-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">

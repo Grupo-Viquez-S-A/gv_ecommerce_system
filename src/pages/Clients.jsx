@@ -7,10 +7,8 @@ import {
   RiUserFill,
 } from "react-icons/ri";
 
-import {
-  AVATAR_COLORS,
-  MOCK_CLIENTS,
-} from "../data/mockClients.js";
+import { AVATAR_COLORS } from "../data/mockClients.js";
+import { getBusinessClients } from "../services/clientService.js";
 
 import ClientsPageHeader from "../components/clients/ClientsPageHeader.jsx";
 import ClientMetrics from "../components/clients/ClientMetrics.jsx";
@@ -79,8 +77,10 @@ const parseSalesMillions = (sales) => {
 
 export default function Clients() {
   const [clients, setClients] = useState(() =>
-    MOCK_CLIENTS.map((client) => cloneClient(client)),
+    [],
   );
+  const [clientsLoading, setClientsLoading] = useState(true);
+  const [clientsError, setClientsError] = useState("");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
@@ -193,18 +193,61 @@ export default function Clients() {
   ];
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter]);
+    let mounted = true;
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+    async function loadClients() {
+      try {
+        setClientsLoading(true);
+        setClientsError("");
+
+        const businessClients = await getBusinessClients();
+
+        if (!mounted) {
+          return;
+        }
+
+        setClients(
+          businessClients.map((client) => cloneClient(client)),
+        );
+      } catch (error) {
+        console.error("Error cargando clientes:", error);
+
+        if (!mounted) {
+          return;
+        }
+
+        setClients([]);
+        setClientsError(
+          error.message ||
+            "No fue posible cargar los clientes registrados.",
+        );
+      } finally {
+        if (mounted) {
+          setClientsLoading(false);
+        }
+      }
     }
-  }, [currentPage, totalPages]);
+
+    loadClients();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("Todos");
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (nextSearch) => {
+    setSearch(nextSearch);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (nextStatusFilter) => {
+    setStatusFilter(nextStatusFilter);
     setCurrentPage(1);
   };
 
@@ -413,36 +456,75 @@ export default function Clients() {
         <ClientsToolbar
           search={search}
           statusFilter={statusFilter}
-          onSearchChange={setSearch}
-          onStatusFilterChange={setStatusFilter}
+          onSearchChange={handleSearchChange}
+          onStatusFilterChange={handleStatusFilterChange}
           onOpenAdvancedFilters={() => {}}
         />
 
-        <ClientsTable
-          clients={paginatedClients}
-          totalClients={filteredClients.length}
-          currentPage={safeCurrentPage}
-          totalPages={totalPages}
-          startItem={startItem}
-          endItem={endItem}
-          onPageChange={setCurrentPage}
-          onClearFilters={clearFilters}
-          onOpenBranches={setBranchModal}
-          onOpenRepresentatives={setRepModal}
-          onView={openViewDrawer}
-          onEdit={openEditDrawer}
-          onDeactivate={setDeactivateModal}
-        />
+        {clientsLoading && (
+          <div className="mb-4 rounded-xl border border-[#2a3550] bg-[#141d2e] px-4 py-3 text-sm text-gray-400">
+            Cargando clientes registrados...
+          </div>
+        )}
 
-        <ClientMobileList
-          clients={paginatedClients}
-          onClearFilters={clearFilters}
-          onOpenBranches={setBranchModal}
-          onOpenRepresentatives={setRepModal}
-          onView={openViewDrawer}
-          onEdit={openEditDrawer}
-          onDeactivate={setDeactivateModal}
-        />
+        {clientsError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+          >
+            {clientsError}
+          </div>
+        )}
+
+        {!clientsLoading && (
+          <>
+            <ClientsTable
+              clients={paginatedClients}
+              totalClients={filteredClients.length}
+              currentPage={safeCurrentPage}
+              totalPages={totalPages}
+              startItem={startItem}
+              endItem={endItem}
+              onPageChange={setCurrentPage}
+              onClearFilters={clearFilters}
+              onOpenBranches={setBranchModal}
+              onOpenRepresentatives={setRepModal}
+              onView={openViewDrawer}
+              onEdit={openEditDrawer}
+              onDeactivate={setDeactivateModal}
+              emptyTitle={
+                clients.length === 0
+                  ? "No hay clientes registrados"
+                  : "No se encontraron clientes"
+              }
+              emptyDescription={
+                clients.length === 0
+                  ? "Cuando registres empresas cliente en la base de datos aparecerán aquí."
+                  : "Prueba ajustando la búsqueda o los filtros aplicados."
+              }
+            />
+
+            <ClientMobileList
+              clients={paginatedClients}
+              onClearFilters={clearFilters}
+              onOpenBranches={setBranchModal}
+              onOpenRepresentatives={setRepModal}
+              onView={openViewDrawer}
+              onEdit={openEditDrawer}
+              onDeactivate={setDeactivateModal}
+              emptyTitle={
+                clients.length === 0
+                  ? "No hay clientes registrados"
+                  : "No se encontraron clientes"
+              }
+              emptyDescription={
+                clients.length === 0
+                  ? "Cuando registres empresas cliente en la base de datos aparecerán aquí."
+                  : "Prueba ajustando la búsqueda o los filtros aplicados."
+              }
+            />
+          </>
+        )}
 
         {filteredClients.length > 0 && (
           <div className="md:hidden mb-6 bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">

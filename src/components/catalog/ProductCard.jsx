@@ -1,14 +1,16 @@
 import {
-  ArrowUpRight,
   ImageOff,
+  Minus,
   Package,
+  Plus,
   Ruler,
+  ShoppingCart,
   Tag,
 } from "lucide-react";
+import { useState } from "react";
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
-import formatCurrency from "../../utils/formatCurrency";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -122,8 +124,9 @@ function getCollectionName(product) {
 export default function ProductCard({
   product,
   onOpenProductDetails,
-  onViewTechnicalSheet,
+  onAddToCart,
 }) {
+  const [quantity, setQuantity] = useState(1);
   const productImage = getProductImage(product);
 
   const isTextileProduct =
@@ -149,12 +152,6 @@ export default function ProductCard({
     product?.short_description ||
     "Este producto no cuenta con una descripción registrada.";
 
-  const price =
-    product?.price ??
-    product?.sale_price ??
-    product?.unit_price ??
-    null;
-
   const colors =
     product?.colors ||
     product?.color_variants ||
@@ -178,8 +175,26 @@ export default function ProductCard({
     onOpenProductDetails?.(product);
   };
 
-  const handleViewTechnicalSheet = () => {
-    onViewTechnicalSheet?.(product);
+  const decreaseQuantity = () => {
+    setQuantity((currentQuantity) =>
+      Math.max(1, currentQuantity - 1),
+    );
+  };
+
+  const increaseQuantity = () => {
+    setQuantity((currentQuantity) => currentQuantity + 1);
+  };
+
+  const handleQuantityChange = (event) => {
+    const nextQuantity = Number.parseInt(event.target.value, 10);
+
+    setQuantity(
+      Number.isNaN(nextQuantity) ? 1 : Math.max(1, nextQuantity),
+    );
+  };
+
+  const handleAddToCart = () => {
+    onAddToCart?.(product, quantity);
   };
 
   return (
@@ -343,30 +358,55 @@ export default function ProductCard({
           </div>
         )}
 
-        <div className="mt-5 flex items-end justify-between gap-3 border-t border-[#29466F] pt-4">
-          <div>
-            <p className="text-xs font-medium text-slate-400">
-              Precio desde
-            </p>
+        <div className="mt-5 space-y-3 border-t border-[#29466F] pt-4">
+          <div className="pointer-events-auto relative z-20 flex items-center justify-between gap-3">
+            <span className="text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+              Cantidad
+            </span>
 
-            <p className="mt-1 text-xl font-extrabold text-[#D7A91D]">
-              {formatCurrency(price)}
-            </p>
+            <div className="flex items-center overflow-hidden rounded-xl border border-[#35547E] bg-[#091A31]">
+              <button
+                type="button"
+                onClick={decreaseQuantity}
+                className="flex h-10 w-10 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                aria-label={`Restar cantidad de ${productName}`}
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={handleQuantityChange}
+                className="h-10 w-14 border-x border-[#35547E] bg-[#091A31] text-center text-sm font-bold text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                aria-label={`Cantidad de ${productName}`}
+              />
+
+              <button
+                type="button"
+                onClick={increaseQuantity}
+                className="flex h-10 w-10 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                aria-label={`Sumar cantidad de ${productName}`}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           <button
             type="button"
-            onClick={handleViewTechnicalSheet}
+            onClick={handleAddToCart}
             className="
-              pointer-events-auto relative z-20 inline-flex items-center gap-2
+              pointer-events-auto relative z-20 inline-flex w-full items-center justify-center gap-2
               rounded-xl border border-[#45648D] bg-[#132F58]
               px-3.5 py-2.5 text-sm font-bold text-white transition
               hover:border-[#D7A91D] hover:bg-[#1B3E6B]
               hover:text-[#E9BC2D] active:scale-[0.98]
             "
           >
-            Ficha técnica
-            <ArrowUpRight className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4" />
+            Agregar al carrito
           </button>
         </div>
       </div>

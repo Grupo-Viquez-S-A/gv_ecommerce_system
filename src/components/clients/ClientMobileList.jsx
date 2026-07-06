@@ -10,6 +10,8 @@ export default function ClientMobileList({
   onView,
   onEdit,
   onDeactivate,
+  emptyTitle,
+  emptyDescription,
 }) {
   return (
     <div className="md:hidden space-y-3 mb-6">
@@ -64,7 +66,11 @@ export default function ClientMobileList({
           </div>
         ))
       ) : (
-        <ClientsEmptyState onClearFilters={onClearFilters} />
+        <ClientsEmptyState
+          onClearFilters={onClearFilters}
+          title={emptyTitle}
+          description={emptyDescription}
+        />
       )}
     </div>
   );

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { getEcommerceUsers } from "../services/ecommerceUserService";
 import {
   RiSettings4Fill,
   RiArrowDownSFill,
@@ -13,8 +14,6 @@ import {
   RiFilterLine,
   RiAddFill,
   RiDeleteBinFill,
-  RiArrowLeftSLine,
-  RiArrowRightSFill,
   RiCheckboxCircleFill,
   RiCloseCircleFill,
   RiEditFill,
@@ -35,6 +34,10 @@ import {
   RiKey2Fill,
 } from "react-icons/ri";
 
+/*
+  Las pestañas Roles y Permisos, Actividad y Seguridad conservan datos mock.
+  La pestaña Usuarios sí carga datos reales de Supabase mediante getEcommerceUsers.
+*/
 /* ─── MOCK DATA ─────────────────────────────────────────────── */
 const MOCK_USERS = [
   {
@@ -377,21 +380,6 @@ const DEFAULT_ROLE_PERMISSIONS = {
 };
 
 /* ─── COMPONENTES AUXILIARES ───────────────────────────────── */
-function PagBtn({ icon, label, active }) {
-  return (
-    <button
-      type="button"
-      className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors cursor-pointer ${
-        active
-          ? "bg-[#C9A227] text-white"
-          : "text-gray-500 hover:text-white hover:bg-[#C9A227]/15"
-      }`}
-    >
-      {icon || label}
-    </button>
-  );
-}
-
 function FormField({
   label,
   placeholder,
@@ -418,9 +406,8 @@ function FormField({
           placeholder={placeholder}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className={`w-full bg-[#222e44] border border-[#2a3550] rounded-lg ${
-            icon ? "pl-9" : "pl-3"
-          } pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors`}
+          className={`w-full bg-[#222e44] border border-[#2a3550] rounded-lg ${icon ? "pl-9" : "pl-3"
+            } pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors`}
         />
       </div>
     </div>
@@ -432,14 +419,12 @@ function Toggle({ checked, onChange }) {
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 cursor-pointer ${
-        checked ? "bg-[#C9A227]" : "bg-[#2a3448]"
-      }`}
+      className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 cursor-pointer ${checked ? "bg-[#C9A227]" : "bg-[#2a3448]"
+        }`}
     >
       <span
-        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${
-          checked ? "left-5" : "left-0.5"
-        }`}
+        className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all duration-200 ${checked ? "left-5" : "left-0.5"
+          }`}
       />
     </button>
   );
@@ -545,6 +530,36 @@ export default function AdminConfig() {
   const [activitySearch, setActivitySearch] = useState("");
   const [activityType, setActivityType] = useState("Todos");
 
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState("");
+
+  const loadUsers = useCallback(async () => {
+    try {
+      setUsersLoading(true);
+      setUsersError("");
+
+      const ecommerceUsers = await getEcommerceUsers();
+
+      setUsers(ecommerceUsers);
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error("Error cargando usuarios e-commerce:", error);
+
+      setUsers([]);
+      setUsersError(
+        error.message ||
+        "No fue posible cargar los usuarios del e-commerce.",
+      );
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
   const openCreateDrawer = () => {
     setDrawerMode("create");
     setEditUser(null);
@@ -612,7 +627,7 @@ export default function AdminConfig() {
     }, 300);
   };
 
-  const filtered = MOCK_USERS.filter((user) => {
+  const filtered = users.filter((user) => {
     const query = search.toLowerCase();
 
     const matchesSearch =
@@ -651,8 +666,8 @@ export default function AdminConfig() {
         permissionIndex,
       )
         ? currentPermissions.filter(
-            (index) => index !== permissionIndex,
-          )
+          (index) => index !== permissionIndex,
+        )
         : [...currentPermissions, permissionIndex];
 
       return {
@@ -669,8 +684,8 @@ export default function AdminConfig() {
     setForm((previousForm) => {
       const companies = previousForm.companies.includes(company)
         ? previousForm.companies.filter(
-            (companyName) => companyName !== company,
-          )
+          (companyName) => companyName !== company,
+        )
         : [...previousForm.companies, company];
 
       return {
@@ -680,69 +695,54 @@ export default function AdminConfig() {
     });
   };
 
+  const totalUsers = users.length;
+
+  const activeUsersCount = users.filter(
+    (user) => user.status === "Activo",
+  ).length;
+
+  const inactiveUsersCount = users.filter(
+    (user) => user.status === "Inactivo",
+  ).length;
+
+  const registeredRolesCount = new Set(
+    users
+      .map((user) => user.role)
+      .filter((role) => role !== "Sin rol asignado"),
+  ).size;
+
   const metrics = [
     {
-      label: "Usuarios Totales",
-      value: "124",
+      label: "Usuarios e-commerce",
+      value: totalUsers,
       icon: <RiUserFill size={20} />,
       color: "bg-[#C9A227]/15",
       iconColor: "text-[#C9A227]",
-      growth: "+8%",
-      growthColor: "text-green-400",
+      detail: "Asignados a la aplicación",
     },
     {
-      label: "Usuarios Activos",
-      value: "112",
+      label: "Accesos activos",
+      value: activeUsersCount,
       icon: <RiUserFollowFill size={20} />,
       color: "bg-[#14301a]",
       iconColor: "text-[#4ade80]",
-      growth: "+10%",
-      growthColor: "text-green-400",
+      detail: "Con acceso vigente",
     },
     {
-      label: "Usuarios Inactivos",
-      value: "12",
+      label: "Accesos inactivos",
+      value: inactiveUsersCount,
       icon: <RiUserUnfollowFill size={20} />,
       color: "bg-[#3b1a1a]",
       iconColor: "text-[#f87171]",
-      growth: "-14%",
-      growthColor: "text-red-400",
+      detail: "Desactivados o vencidos",
     },
     {
-      label: "Roles Registrados",
-      value: "6",
+      label: "Roles en uso",
+      value: registeredRolesCount,
       icon: <RiShieldUserFill size={20} />,
       color: "bg-[#2d200a]",
       iconColor: "text-[#fbbf24]",
-      growth: "+2%",
-      growthColor: "text-green-400",
-    },
-    {
-      label: "Acceso Reciente",
-      value: "38",
-      icon: <RiTimeLine size={20} />,
-      color: "bg-[#0d2030]",
-      iconColor: "text-[#38bdf8]",
-      growth: "+5%",
-      growthColor: "text-green-400",
-    },
-    {
-      label: "Usuarios Bloqueados",
-      value: "3",
-      icon: <RiAlertFill size={20} />,
-      color: "bg-[#2d1818]",
-      iconColor: "text-[#f87171]",
-      growth: "+1",
-      growthColor: "text-red-400",
-    },
-    {
-      label: "Usuarios con 2FA",
-      value: "67",
-      icon: <RiShieldCheckFill size={20} />,
-      color: "bg-[#132813]",
-      iconColor: "text-[#4ade80]",
-      growth: "+12%",
-      growthColor: "text-green-400",
+      detail: "Entre usuarios e-commerce",
     },
   ];
 
@@ -785,8 +785,8 @@ export default function AdminConfig() {
             </h1>
 
             <p className="text-sm text-gray-400 mt-1">
-              Administra accesos, roles y permisos de los usuarios del
-              sistema corporativo.
+              Administra los usuarios asignados al e-commerce, sus accesos,
+              roles y empresas relacionadas.
             </p>
           </div>
 
@@ -829,7 +829,7 @@ export default function AdminConfig() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {metrics.map((metric) => (
             <div
               key={metric.label}
@@ -849,10 +849,8 @@ export default function AdminConfig() {
                 {metric.value}
               </div>
 
-              <div className="flex items-center gap-1 text-xs mt-0.5">
-                <span className={`font-medium ${metric.growthColor}`}>
-                  {metric.growth}
-                </span>
+              <div className="text-xs text-gray-500 mt-0.5">
+                {metric.detail}
               </div>
             </div>
           ))}
@@ -864,11 +862,10 @@ export default function AdminConfig() {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${
-                activeTab === tab.key
-                  ? "border-[#C9A227] text-white"
-                  : "border-transparent text-gray-500 hover:text-gray-300"
-              }`}
+              className={`flex items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px cursor-pointer ${activeTab === tab.key
+                ? "border-[#C9A227] text-white"
+                : "border-transparent text-gray-500 hover:text-gray-300"
+                }`}
             >
               {tab.icon}
               {tab.label}
@@ -878,6 +875,22 @@ export default function AdminConfig() {
 
         {activeTab === "usuarios" && (
           <>
+            {usersError && (
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3">
+                <p className="text-sm text-red-300">
+                  {usersError}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={loadUsers}
+                  className="text-sm font-medium text-red-200 hover:text-white underline"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
+
             {selectedUsers.length > 0 && (
               <div className="mb-4 bg-[#C9A227]/15 border border-[#C9A227]/50 rounded-xl px-5 py-3 flex items-center justify-between gap-3">
                 <span className="text-sm font-medium text-white">
@@ -987,7 +1000,7 @@ export default function AdminConfig() {
                       "ROL",
                       "EMPRESA",
                       "ESTADO",
-                      "ÚLTIMO ACCESO",
+                      "ÚLTIMA ACTIVIDAD",
                       "ACCIONES",
                     ].map((column) => (
                       <th
@@ -1001,122 +1014,133 @@ export default function AdminConfig() {
                 </thead>
 
                 <tbody>
-                  {filtered.map((user) => (
-                    <tr
-                      key={user.id}
-                      className={`border-b border-[#2a3550] last:border-0 hover:bg-[#1c2538] transition-colors ${
-                        selectedUsers.includes(user.id)
-                          ? "bg-[#C9A227]/10"
-                          : ""
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.includes(user.id)}
-                          onChange={() => toggleSelectUser(user.id)}
-                          className="accent-[#C9A227] w-4 h-4 rounded cursor-pointer"
-                        />
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                            style={{ backgroundColor: user.color }}
-                          >
-                            {user.initials}
-                          </div>
-
-                          <span className="font-medium text-white">
-                            {user.name}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3 text-gray-400">
-                        {user.email}
-                      </td>
-
-                      <td className="px-4 py-3 text-gray-400 text-xs">
-                        {user.phone}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs font-medium px-2.5 py-1 rounded-full ${user.roleColor}`}
-                        >
-                          {user.role}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3 text-gray-300 text-xs">
-                        {user.companies?.[0] || user.company}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {user.status === "Activo" ? (
-                          <span className="flex items-center gap-1.5 text-xs font-medium text-green-400 bg-green-400/10 px-2.5 py-1 rounded-full w-fit">
-                            <RiCheckboxCircleFill size={12} />
-                            Activo
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-400/10 px-2.5 py-1 rounded-full w-fit">
-                            <RiCloseCircleFill size={12} />
-                            Inactivo
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {user.lastAccess}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openProfileDrawer(user)}
-                            className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                            title="Ver perfil"
-                          >
-                            <RiEyeFill size={14} />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => openEditDrawer(user)}
-                            className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                            title="Editar"
-                          >
-                            <RiEditFill size={14} />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setDeactivateModal(user)}
-                            className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                            title="Desactivar"
-                          >
-                            <RiUserSharedFill size={14} />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setDeleteModal(user)}
-                            className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors cursor-pointer"
-                            title="Eliminar"
-                          >
-                            <RiDeleteBinFill size={14} />
-                          </button>
-                        </div>
+                  {usersLoading && (
+                    <tr>
+                      <td
+                        colSpan={9}
+                        className="px-4 py-12 text-center text-sm text-gray-400"
+                      >
+                        Cargando usuarios autorizados para e-commerce...
                       </td>
                     </tr>
-                  ))}
+                  )}
+
+                  {!usersLoading &&
+                    filtered.map((user) => (
+                      <tr
+                        key={user.id}
+                        className={`border-b border-[#2a3550] last:border-0 hover:bg-[#1c2538] transition-colors ${selectedUsers.includes(user.id)
+                          ? "bg-[#C9A227]/10"
+                          : ""
+                          }`}
+                      >
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.includes(user.id)}
+                            onChange={() => toggleSelectUser(user.id)}
+                            className="accent-[#C9A227] w-4 h-4 rounded cursor-pointer"
+                          />
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                              style={{ backgroundColor: user.color }}
+                            >
+                              {user.initials}
+                            </div>
+
+                            <span className="font-medium text-white">
+                              {user.name}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3 text-gray-400">
+                          {user.email}
+                        </td>
+
+                        <td className="px-4 py-3 text-gray-400 text-xs">
+                          {user.phone}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <span
+                            className={`text-xs font-medium px-2.5 py-1 rounded-full ${user.roleColor}`}
+                          >
+                            {user.role}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3 text-gray-300 text-xs">
+                          {user.companies?.[0] || user.company}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {user.status === "Activo" ? (
+                            <span className="flex items-center gap-1.5 text-xs font-medium text-green-400 bg-green-400/10 px-2.5 py-1 rounded-full w-fit">
+                              <RiCheckboxCircleFill size={12} />
+                              Activo
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-xs font-medium text-red-400 bg-red-400/10 px-2.5 py-1 rounded-full w-fit">
+                              <RiCloseCircleFill size={12} />
+                              Inactivo
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3 text-gray-500 text-xs">
+                          {user.lastActivity}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openProfileDrawer(user)}
+                              className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
+                              title="Ver perfil"
+                            >
+                              <RiEyeFill size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => openEditDrawer(user)}
+                              className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
+                              title="Editar"
+                            >
+                              <RiEditFill size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setDeactivateModal(user)}
+                              className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
+                              title="Desactivar"
+                            >
+                              <RiUserSharedFill size={14} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setDeleteModal(user)}
+                              className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 flex items-center justify-center transition-colors cursor-pointer"
+                              title="Eliminar"
+                            >
+                              <RiDeleteBinFill size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
 
-              {filtered.length === 0 && (
+              {!usersLoading && filtered.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-14 gap-3">
                   <div className="w-14 h-14 rounded-full bg-[#2a3550] flex items-center justify-center text-gray-600">
                     <RiUserFill size={28} />
@@ -1139,31 +1163,22 @@ export default function AdminConfig() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
+              <div className="px-5 py-3 border-t border-[#2a3550]">
                 <span className="text-xs text-gray-500">
-                  Mostrando 1 a {filtered.length} de 124 usuarios
+                  Mostrando {filtered.length > 0 ? 1 : 0} a {filtered.length} de{" "}
+                  {users.length} usuarios
                 </span>
-
-                <div className="flex items-center gap-1">
-                  <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-
-                  {[1, 2, 3].map((page) => (
-                    <PagBtn
-                      key={page}
-                      label={page}
-                      active={page === 1}
-                    />
-                  ))}
-
-                  <PagBtn label="..." />
-                  <PagBtn label={21} />
-                  <PagBtn icon={<RiArrowRightSFill size={14} />} />
-                </div>
               </div>
             </div>
 
             <div className="md:hidden space-y-3 mb-5">
-              {filtered.map((user) => (
+              {!usersLoading && filtered.length === 0 && (
+                <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-8 text-center text-sm text-gray-500">
+                  No se encontraron usuarios.
+                </div>
+              )}
+
+              {!usersLoading && filtered.map((user) => (
                 <div
                   key={user.id}
                   className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4"
@@ -1246,7 +1261,7 @@ export default function AdminConfig() {
                   </div>
 
                   <div className="mt-2 text-xs text-gray-600">
-                    {user.lastAccess}
+                    {user.lastActivity}
                   </div>
                 </div>
               ))}
@@ -1335,9 +1350,8 @@ export default function AdminConfig() {
                               <div
                                 className="h-1.5 bg-[#C9A227] rounded-full"
                                 style={{
-                                  width: `${
-                                    (role.permissions / 16) * 100
-                                  }%`,
+                                  width: `${(role.permissions / 16) * 100
+                                    }%`,
                                 }}
                               />
                             </div>
@@ -1478,11 +1492,10 @@ export default function AdminConfig() {
                     {group.items.map((item, index) => (
                       <div
                         key={`${item.user}-${item.time}`}
-                        className={`flex items-start gap-4 px-5 py-4 hover:bg-[#1c2538] transition-colors ${
-                          index < group.items.length - 1
-                            ? "border-b border-[#2a3550]"
-                            : ""
-                        }`}
+                        className={`flex items-start gap-4 px-5 py-4 hover:bg-[#1c2538] transition-colors ${index < group.items.length - 1
+                          ? "border-b border-[#2a3550]"
+                          : ""
+                          }`}
                       >
                         <div className="relative mt-0.5">
                           <div
@@ -1718,11 +1731,10 @@ export default function AdminConfig() {
       )}
 
       <div
-        className={`fixed top-0 right-0 h-full bg-[#141d2e] border-l border-[#2a3550] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
-          drawerMode === "editRole"
-            ? "w-full max-w-lg"
-            : "w-full max-w-md"
-        } ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed top-0 right-0 h-full bg-[#141d2e] border-l border-[#2a3550] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerMode === "editRole"
+          ? "w-full max-w-lg"
+          : "w-full max-w-md"
+          } ${drawerOpen ? "translate-x-0" : "translate-x-full"}`}
       >
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
           <div>
@@ -1851,11 +1863,10 @@ export default function AdminConfig() {
                       className="w-full flex items-center gap-3 text-left cursor-pointer group p-2 rounded-lg hover:bg-[#1c2538] transition-colors"
                     >
                       <span
-                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                          form.companies.includes(company)
-                            ? "border-[#C9A227] bg-[#C9A227]"
-                            : "border-[#2a3448]"
-                        }`}
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.companies.includes(company)
+                          ? "border-[#C9A227] bg-[#C9A227]"
+                          : "border-[#2a3448]"
+                          }`}
                       >
                         {form.companies.includes(company) && (
                           <RiCheckLine
@@ -1866,11 +1877,10 @@ export default function AdminConfig() {
                       </span>
 
                       <span
-                        className={`text-sm ${
-                          form.companies.includes(company)
-                            ? "text-white"
-                            : "text-gray-400"
-                        }`}
+                        className={`text-sm ${form.companies.includes(company)
+                          ? "text-white"
+                          : "text-gray-400"
+                          }`}
                       >
                         {company}
                       </span>
@@ -1928,31 +1938,28 @@ export default function AdminConfig() {
                       className="flex items-center gap-2 cursor-pointer"
                     >
                       <span
-                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${
-                          form.status === status
-                            ? status === "Activo"
-                              ? "border-green-400"
-                              : "border-red-400"
-                            : "border-gray-600"
-                        }`}
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${form.status === status
+                          ? status === "Activo"
+                            ? "border-green-400"
+                            : "border-red-400"
+                          : "border-gray-600"
+                          }`}
                       >
                         {form.status === status && (
                           <span
-                            className={`w-2 h-2 rounded-full ${
-                              status === "Activo"
-                                ? "bg-green-400"
-                                : "bg-red-400"
-                            }`}
+                            className={`w-2 h-2 rounded-full ${status === "Activo"
+                              ? "bg-green-400"
+                              : "bg-red-400"
+                              }`}
                           />
                         )}
                       </span>
 
                       <span
-                        className={`text-sm ${
-                          form.status === status
-                            ? "text-white"
-                            : "text-gray-400"
-                        }`}
+                        className={`text-sm ${form.status === status
+                          ? "text-white"
+                          : "text-gray-400"
+                          }`}
                       >
                         {status}
                       </span>
@@ -2039,11 +2046,10 @@ export default function AdminConfig() {
                           color: color.value,
                         })
                       }
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
-                        roleForm.color === color.value
-                          ? "border-white/40 text-white"
-                          : "border-[#2a3550] text-gray-500 hover:text-gray-300"
-                      } cursor-pointer`}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${roleForm.color === color.value
+                        ? "border-white/40 text-white"
+                        : "border-[#2a3550] text-gray-500 hover:text-gray-300"
+                        } cursor-pointer`}
                     >
                       <span
                         className={`w-3 h-3 rounded-full ${color.dot}`}
@@ -2098,11 +2104,10 @@ export default function AdminConfig() {
                             }),
                           );
                         }}
-                        className={`text-xs font-medium transition-colors cursor-pointer ${
-                          allChecked
-                            ? "text-[#C9A227] hover:text-gray-400"
-                            : "text-gray-500 hover:text-[#C9A227]"
-                        }`}
+                        className={`text-xs font-medium transition-colors cursor-pointer ${allChecked
+                          ? "text-[#C9A227] hover:text-gray-400"
+                          : "text-gray-500 hover:text-[#C9A227]"
+                          }`}
                       >
                         {allChecked
                           ? "Desmarcar todos"
@@ -2126,32 +2131,30 @@ export default function AdminConfig() {
                             className="flex items-center gap-3 text-left cursor-pointer group p-1.5 rounded-lg hover:bg-[#22304a] transition-colors"
                           >
                             <span
-                              className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                                activePermissions.includes(
-                                  permissionIndex,
-                                )
-                                  ? "border-[#C9A227] bg-[#C9A227]"
-                                  : "border-[#2a3448]"
-                              }`}
+                              className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${activePermissions.includes(
+                                permissionIndex,
+                              )
+                                ? "border-[#C9A227] bg-[#C9A227]"
+                                : "border-[#2a3448]"
+                                }`}
                             >
                               {activePermissions.includes(
                                 permissionIndex,
                               ) && (
-                                <RiCheckLine
-                                  size={10}
-                                  className="text-white"
-                                />
-                              )}
+                                  <RiCheckLine
+                                    size={10}
+                                    className="text-white"
+                                  />
+                                )}
                             </span>
 
                             <span
-                              className={`text-sm ${
-                                activePermissions.includes(
-                                  permissionIndex,
-                                )
-                                  ? "text-white"
-                                  : "text-gray-500"
-                              }`}
+                              className={`text-sm ${activePermissions.includes(
+                                permissionIndex,
+                              )
+                                ? "text-white"
+                                : "text-gray-500"
+                                }`}
                             >
                               {permission}
                             </span>
@@ -2274,8 +2277,8 @@ export default function AdminConfig() {
                       value: profileUser.created,
                     },
                     {
-                      label: "Último acceso",
-                      value: profileUser.lastAccess,
+                      label: "ÚLTIMA ACTIVIDAD",
+                      value: profileUser.lastActivity,
                     },
                     {
                       label: "Estado",
@@ -2283,9 +2286,7 @@ export default function AdminConfig() {
                     },
                     {
                       label: "2FA",
-                      value: profileUser.has2fa
-                        ? "Activo"
-                        : "Inactivo",
+                      value: "No disponible",
                     },
                   ].map(({ label, value }) => (
                     <div
@@ -2297,17 +2298,16 @@ export default function AdminConfig() {
                       </span>
 
                       <span
-                        className={`text-sm text-right ${
-                          label === "Estado"
+                        className={`text-sm text-right ${label === "Estado"
+                          ? value === "Activo"
+                            ? "text-green-400"
+                            : "text-red-400"
+                          : label === "2FA"
                             ? value === "Activo"
                               ? "text-green-400"
-                              : "text-red-400"
-                            : label === "2FA"
-                              ? value === "Activo"
-                                ? "text-green-400"
-                                : "text-gray-500"
-                              : "text-white"
-                        }`}
+                              : "text-gray-500"
+                            : "text-white"
+                          }`}
                       >
                         {value}
                       </span>
