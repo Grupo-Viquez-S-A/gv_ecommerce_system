@@ -69,58 +69,30 @@ function throwError(error, fallback) {
 }
 
 // ---------------------------------------------------------------------------
-// Direct REST calls to Supabase Auth Admin API
-// (supabase.auth.admin.* methods don't work from a browser context — they
-//  require server-side execution. We bypass the SDK and call the REST API
-//  directly with the service role key set in both apikey and Authorization.)
+// Auth Admin helpers — usan supabaseAdmin.auth.admin (service role key)
 // ---------------------------------------------------------------------------
 
-const AUTH_ADMIN_HEADERS = {
-  "Content-Type": "application/json",
-  apikey: SUPABASE_SERVICE_ROLE_KEY,
-  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-};
-
-async function authAdminFetch(method, path, body = null) {
-  const url = `${SUPABASE_URL}/auth/v1/admin${path}`;
-  const options = { method, headers: AUTH_ADMIN_HEADERS };
-  if (body !== null) options.body = JSON.stringify(body);
-
-  const response = await fetch(url, options);
-  const text = await response.text();
-
-  let data = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = { message: text };
-  }
-
-  if (!response.ok) {
-    const msg =
-      (data && (data.message || data.error || data.msg)) ||
-      `Error ${response.status} en la API de autenticación.`;
-    throw new Error(msg);
-  }
-
-  return data;
-}
-
 async function authAdminCreateUser({ email, password, name, surname, company_id, department_id, role_id }) {
-  return authAdminFetch("POST", "/users", {
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     user_metadata: { name, surname, company_id, department_id, role_id },
+    app_metadata: { company_id, department_id, role_id },
   });
+  if (error) throwError(error, "No fue posible crear la cuenta de acceso.");
+  return data.user;
 }
 
 async function authAdminUpdateUser(userId, payload) {
-  return authAdminFetch("PUT", `/users/${userId}`, payload);
+  const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, payload);
+  if (error) throwError(error, "No fue posible actualizar la cuenta de acceso.");
+  return data.user;
 }
 
 async function authAdminDeleteUser(userId) {
-  return authAdminFetch("DELETE", `/users/${userId}`);
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  if (error) throwError(error, "No fue posible eliminar la cuenta de acceso.");
 }
 
 // ---------------------------------------------------------------------------
