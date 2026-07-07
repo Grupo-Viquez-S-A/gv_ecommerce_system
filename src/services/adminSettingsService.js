@@ -106,12 +106,12 @@ async function authAdminFetch(method, path, body = null) {
   return data;
 }
 
-async function authAdminCreateUser({ email, password, name, surname }) {
+async function authAdminCreateUser({ email, password, name, surname, company_id, department_id, role_id }) {
   return authAdminFetch("POST", "/users", {
     email,
     password,
     email_confirm: true,
-    user_metadata: { name, surname },
+    user_metadata: { name, surname, company_id, department_id, role_id },
   });
 }
 
@@ -293,11 +293,21 @@ export async function createAdminUser({
     throw new Error("La contraseña temporal debe tener al menos 8 caracteres.");
   }
 
-  // 1. Crear cuenta de autenticación (llamada REST directa — auth.admin no
-  //    funciona desde el navegador con el SDK de Supabase JS)
+  // 1. Crear cuenta de autenticación (llamada REST directa).
+  //    Se incluyen company_id, department_id y role_id en user_metadata para que
+  //    los triggers de la base de datos (handle_new_user, etc.) puedan leerlos
+  //    y crear los registros de user_memberships sin fallar por null constraint.
   let authUser;
   try {
-    authUser = await authAdminCreateUser({ email: cleanEmail, password: cleanPassword, name, surname });
+    authUser = await authAdminCreateUser({
+      email: cleanEmail,
+      password: cleanPassword,
+      name,
+      surname,
+      company_id: companyId,
+      department_id: departmentId,
+      role_id: roleId,
+    });
   } catch (authError) {
     throw new Error(`No fue posible crear la cuenta de acceso: ${authError.message}`);
   }
@@ -309,7 +319,8 @@ export async function createAdminUser({
   const newUserId = authUser.id;
   const now = getNow();
 
-  // 2. Crear perfil
+  // 2. Crear / actualizar perfil.
+  //    Usa upsert por si el trigger ya creó un perfil básico.
   const { error: profileError } = await supabaseAdmin
     .from("profiles")
     .upsert(
@@ -332,24 +343,51 @@ export async function createAdminUser({
     throwError(profileError, "No fue posible guardar el perfil del usuario.");
   }
 
-  // 3. Asignar empresa, departamento y rol
-  const { error: membershipError } = await supabaseAdmin
+  // 3. Asignar empresa, departamento y rol.
+  //    El trigger puede haber creado ya un registro en user_memberships.
+  //    Si existe, lo actualizamos; si no, lo insertamos.
+  const { data: existingMembership } = await supabaseAdmin
     .from("user_memberships")
-    .insert({
-      user_id: newUserId,
-      company_id: companyId,
-      department_id: departmentId,
-      role_id: roleId,
-      is_active: true,
-      start_date: getToday(),
-      created_at: now,
-      updated_at: now,
-    });
+    .select("membership_id")
+    .eq("user_id", newUserId)
+    .maybeSingle();
 
-  if (membershipError) {
-    await supabaseAdmin.from("profiles").delete().eq("user_id", newUserId);
-    await authAdminDeleteUser(newUserId).catch(() => {});
-    throwError(membershipError, "No fue posible asignar empresa, departamento o rol.");
+  if (existingMembership) {
+    const { error: membershipError } = await supabaseAdmin
+      .from("user_memberships")
+      .update({
+        company_id: companyId,
+        department_id: departmentId,
+        role_id: roleId,
+        is_active: true,
+        start_date: getToday(),
+        updated_at: now,
+      })
+      .eq("membership_id", existingMembership.membership_id);
+
+    if (membershipError) {
+      await authAdminDeleteUser(newUserId).catch(() => {});
+      throwError(membershipError, "No fue posible actualizar la asignación del usuario.");
+    }
+  } else {
+    const { error: membershipError } = await supabaseAdmin
+      .from("user_memberships")
+      .insert({
+        user_id: newUserId,
+        company_id: companyId,
+        department_id: departmentId,
+        role_id: roleId,
+        is_active: true,
+        start_date: getToday(),
+        created_at: now,
+        updated_at: now,
+      });
+
+    if (membershipError) {
+      await supabaseAdmin.from("profiles").delete().eq("user_id", newUserId);
+      await authAdminDeleteUser(newUserId).catch(() => {});
+      throwError(membershipError, "No fue posible asignar empresa, departamento o rol.");
+    }
   }
 
   // 4. Asignar módulos
