@@ -160,3 +160,96 @@ export async function createAdminUser({
     "No fue posible crear el usuario.",
   );
 }
+
+export async function updateAdminUser({
+  userId,
+  email,
+  password,
+  profile,
+  membership,
+  moduleIds = [],
+}) {
+  const data = await invokeAdminSettingsFunction({
+    action: "update-user",
+    userId,
+    email,
+    password,
+    profile,
+    membership,
+    moduleIds,
+  });
+
+  return assertAdminSettingsResponse(
+    data,
+    null,
+    "No fue posible actualizar el usuario.",
+  );
+}
+
+export async function setAdminUserStatus({ userId, isActive }) {
+  const data = await invokeAdminSettingsFunction({
+    action: "set-user-status",
+    userId,
+    isActive,
+  });
+
+  return assertAdminSettingsResponse(
+    data,
+    null,
+    `No fue posible ${isActive ? "activar" : "desactivar"} el usuario.`,
+  );
+}
+
+export async function saveAdminDepartment({ department }) {
+  const data = await invokeAdminSettingsFunction({
+    action: "save-department",
+    department,
+  });
+
+  return assertAdminSettingsResponse(
+    data,
+    null,
+    "No fue posible guardar el departamento.",
+  );
+}
+
+export async function setAdminDepartmentStatus({ departmentId, isActive }) {
+  const data = await invokeAdminSettingsFunction({
+    action: "set-department-status",
+    departmentId,
+    isActive,
+  });
+
+  return assertAdminSettingsResponse(
+    data,
+    null,
+    `No fue posible ${isActive ? "activar" : "desactivar"} el departamento.`,
+  );
+}
+
+export async function saveAdminRole({ role }) {
+  const data = await invokeAdminSettingsFunction({
+    action: "save-role",
+    role,
+  });
+
+  return assertAdminSettingsResponse(
+    data,
+    null,
+    "No fue posible guardar el rol.",
+  );
+}
+
+export async function setAdminRoleStatus({ roleId, isActive }) {
+  const data = await invokeAdminSettingsFunction({
+    action: "set-role-status",
+    roleId,
+    isActive,
+  });
+
+  return assertAdminSettingsResponse(
+    data,
+    null,
+    `No fue posible ${isActive ? "activar" : "desactivar"} el rol.`,
+  );
+}
