@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getEcommerceUsers } from "../services/ecommerceUserService";
 import {
   createAdminUser,
-  getAdminSettingsCatalogs,
+  getAdminFormCatalogs,
 } from "../services/adminSettingsService";
 import {
   RiSettings4Fill,
@@ -603,25 +603,26 @@ export default function AdminConfig() {
       setAdminCatalogsLoading(true);
       setAdminCatalogsError("");
 
-      const settings = await getAdminSettingsCatalogs();
+      const catalogs = await getAdminFormCatalogs();
 
       setAdminCatalogs({
-        companies: (settings.companies || [])
-          .map((company) =>
-            normalizeCatalogItem(company, "company_id", "company_name"),
-          )
-          .filter((company) => company.id && company.label),
-        departments: (settings.departments || [])
-          .map((department) =>
-            normalizeCatalogItem(department, "department_id", "name"),
-          )
-          .filter((department) => department.id && department.label),
-        roles: (settings.roles || [])
-          .map((role) => normalizeCatalogItem(role, "role_id", "role_name"))
-          .filter((role) => role.id && role.label),
+        companies: (catalogs.companies || []).map((company) => ({
+          id: company.company_id,
+          label: company.company_name,
+        })).filter((c) => c.id && c.label),
+
+        departments: (catalogs.departments || []).map((dept) => ({
+          id: dept.department_id,
+          label: dept.name,
+        })).filter((d) => d.id && d.label),
+
+        roles: (catalogs.roles || []).map((role) => ({
+          id: role.role_id,
+          label: role.role_name,
+        })).filter((r) => r.id && r.label),
       });
     } catch (error) {
-      console.error("Error cargando catalogos administrativos:", error);
+      console.error("Error cargando catálogos del formulario:", error);
 
       setAdminCatalogsError(
         error.message ||
@@ -709,14 +710,7 @@ export default function AdminConfig() {
     }, 300);
   };
 
-  const availableCompanies =
-    adminCatalogs.companies.length > 0
-      ? adminCatalogs.companies
-      : COMPANIES.map((company) => ({
-        id: company,
-        label: company,
-        raw: null,
-      }));
+  const availableCompanies = adminCatalogs.companies;
 
   const availableDepartments = adminCatalogs.departments;
   const availableRoles = adminCatalogs.roles;

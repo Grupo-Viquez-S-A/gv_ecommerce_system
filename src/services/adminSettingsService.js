@@ -185,6 +185,49 @@ async function replaceUserModuleAccess(profileId, moduleIds) {
 }
 
 // ---------------------------------------------------------------------------
+// getAdminFormCatalogs — carga únicamente las opciones del formulario de usuario
+// Consulta directamente las tablas companies, departments y roles.
+// ---------------------------------------------------------------------------
+
+export async function getAdminFormCatalogs() {
+  const [companiesRes, departmentsRes, rolesRes] = await Promise.all([
+    supabaseAdmin
+      .from("companies")
+      .select("company_id, company_name")
+      .eq("is_active", true)
+      .order("company_name", { ascending: true }),
+
+    supabaseAdmin
+      .from("departments")
+      .select("department_id, name")
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
+
+    supabaseAdmin
+      .from("roles")
+      .select("role_id, role_name")
+      .eq("is_active", true)
+      .order("role_name", { ascending: true }),
+  ]);
+
+  if (companiesRes.error) {
+    throwError(companiesRes.error, "No fue posible cargar las empresas.");
+  }
+  if (departmentsRes.error) {
+    throwError(departmentsRes.error, "No fue posible cargar los departamentos.");
+  }
+  if (rolesRes.error) {
+    throwError(rolesRes.error, "No fue posible cargar los roles.");
+  }
+
+  return {
+    companies: companiesRes.data ?? [],
+    departments: departmentsRes.data ?? [],
+    roles: rolesRes.data ?? [],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // getAdminSettingsCatalogs — replaces "list" action
 // ---------------------------------------------------------------------------
 
