@@ -515,14 +515,6 @@ function splitFullName(fullName) {
   };
 }
 
-function normalizeCatalogItem(item, idKey, labelKey) {
-  return {
-    id: item?.[idKey] || item?.id || "",
-    label: item?.[labelKey] || item?.name || item?.company_name || "",
-    raw: item,
-  };
-}
-
 export default function AdminConfig() {
   const [activeTab, setActiveTab] = useState("usuarios");
 
@@ -843,8 +835,6 @@ export default function AdminConfig() {
           role_id: form.role,
         },
       };
-
-      console.log("createAdminUser payload", payload);
 
       await createAdminUser(payload);
 
