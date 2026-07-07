@@ -58,7 +58,6 @@ export default function RepresentativesModal({ client, onClose }) {
           aria-labelledby="representatives-modal-title"
           className="pointer-events-auto bg-[#141d2e] border border-[#2a3550] rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto"
         >
-          {/* Encabezado */}
           <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[#2a3550] sticky top-0 bg-[#141d2e] z-10 rounded-t-2xl">
             <div className="flex items-center gap-4 min-w-0">
               <div
@@ -95,7 +94,9 @@ export default function RepresentativesModal({ client, onClose }) {
           {!selectedBranch ? (
             <div className="px-6 py-5">
               <div className="mb-4">
-                <h4 className="text-base font-bold text-white">Sucursales</h4>
+                <h4 className="text-base font-bold text-white">
+                  Sucursales
+                </h4>
 
                 <p className="text-sm text-gray-500">
                   Selecciona una sucursal para ver sus representantes.
@@ -106,7 +107,7 @@ export default function RepresentativesModal({ client, onClose }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {branches.map((branch, index) => (
                     <button
-                      key={`${branch.name || "sucursal"}-${index}`}
+                      key={branch.branch_id || branch.id || index}
                       type="button"
                       onClick={() => setSelectedBranch(branch)}
                       className="text-left bg-[#1c2538] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/50 focus:outline-none focus:border-[#C9A227] transition-colors"
@@ -159,19 +160,6 @@ export default function RepresentativesModal({ client, onClose }) {
                             </span>
                           </div>
                         )}
-
-                        {branch.email && (
-                          <div className="flex items-center gap-2">
-                            <RiMailFill
-                              size={12}
-                              className="text-gray-500 flex-shrink-0"
-                            />
-
-                            <span className="text-xs text-gray-300 break-all">
-                              {branch.email}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     </button>
                   ))}
@@ -190,7 +178,6 @@ export default function RepresentativesModal({ client, onClose }) {
             </div>
           ) : (
             <div className="px-6 py-5">
-              {/* Encabezado de sucursal seleccionada */}
               <div className="flex items-center gap-3 mb-4">
                 <button
                   type="button"
@@ -214,7 +201,6 @@ export default function RepresentativesModal({ client, onClose }) {
 
               {representatives.length > 0 ? (
                 <>
-                  {/* Tabla para escritorio */}
                   <div className="hidden md:block bg-[#1c2538] border border-[#2a3550] rounded-xl overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -223,15 +209,11 @@ export default function RepresentativesModal({ client, onClose }) {
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                               Nombre
                             </th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                              Puesto
-                            </th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                              Teléfono
-                            </th>
+
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                               Correo
                             </th>
+
                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                               Estado
                             </th>
@@ -241,7 +223,11 @@ export default function RepresentativesModal({ client, onClose }) {
                         <tbody className="divide-y divide-[#2a3550]">
                           {representatives.map((representative, index) => (
                             <tr
-                              key={`${representative.email || representative.name}-${index}`}
+                              key={
+                                representative.representative_id ||
+                                representative.id ||
+                                `${representative.email}-${index}`
+                              }
                               className="hover:bg-[#222e44]/60 transition-colors"
                             >
                               <td className="px-4 py-3">
@@ -254,14 +240,6 @@ export default function RepresentativesModal({ client, onClose }) {
                                     {representative.name || "Sin nombre"}
                                   </span>
                                 </div>
-                              </td>
-
-                              <td className="px-4 py-3 text-sm text-gray-300">
-                                {representative.role || "No asignado"}
-                              </td>
-
-                              <td className="px-4 py-3 text-sm text-gray-300">
-                                {representative.phone || "No registrado"}
                               </td>
 
                               <td className="px-4 py-3 text-sm text-gray-300">
@@ -281,11 +259,14 @@ export default function RepresentativesModal({ client, onClose }) {
                     </div>
                   </div>
 
-                  {/* Tarjetas para móvil */}
                   <div className="md:hidden space-y-3">
                     {representatives.map((representative, index) => (
                       <article
-                        key={`${representative.email || representative.name}-${index}`}
+                        key={
+                          representative.representative_id ||
+                          representative.id ||
+                          `${representative.email}-${index}`
+                        }
                         className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-4"
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -300,7 +281,7 @@ export default function RepresentativesModal({ client, onClose }) {
                               </h5>
 
                               <p className="text-xs text-gray-500 truncate">
-                                {representative.role || "Puesto no asignado"}
+                                Representante de la sucursal
                               </p>
                             </div>
                           </div>
@@ -311,20 +292,13 @@ export default function RepresentativesModal({ client, onClose }) {
                           />
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-[#2a3550] space-y-2">
-                          <div className="flex items-center gap-2 text-xs text-gray-300">
-                            <RiPhoneFill
-                              size={12}
-                              className="text-gray-500 flex-shrink-0"
-                            />
-                            {representative.phone || "Teléfono no registrado"}
-                          </div>
-
+                        <div className="mt-4 pt-3 border-t border-[#2a3550]">
                           <div className="flex items-center gap-2 text-xs text-gray-300">
                             <RiMailFill
                               size={12}
                               className="text-gray-500 flex-shrink-0"
                             />
+
                             <span className="break-all">
                               {representative.email || "Correo no registrado"}
                             </span>
@@ -348,7 +322,6 @@ export default function RepresentativesModal({ client, onClose }) {
             </div>
           )}
 
-          {/* Pie */}
           <div className="flex items-center justify-end px-6 py-4 border-t border-[#2a3550] sticky bottom-0 bg-[#141d2e] rounded-b-2xl">
             <button
               type="button"

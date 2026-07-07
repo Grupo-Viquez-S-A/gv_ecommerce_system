@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   RiCheckboxCircleFill,
@@ -8,7 +8,15 @@ import {
 } from "react-icons/ri";
 
 import { AVATAR_COLORS } from "../data/mockClients.js";
-import { getBusinessClients } from "../services/clientService.js";
+
+import {
+  createBusinessClient,
+  getBusinessClients,
+  updateBusinessClient,
+  updateBusinessClientStatus,
+} from "../services/clientService.js";
+
+import { createEmptyClientForm } from "../components/clients/ClientForm.jsx";
 
 import ClientsPageHeader from "../components/clients/ClientsPageHeader.jsx";
 import ClientMetrics from "../components/clients/ClientMetrics.jsx";
@@ -23,39 +31,7 @@ import DeactivateClientModal from "../components/clients/DeactivateClientModal.j
 
 const ITEMS_PER_PAGE = 6;
 
-const createEmptyBranch = () => ({
-  name: "",
-  phone: "",
-  address: "",
-  representatives: [],
-});
-
-const createEmptyForm = () => ({
-  name: "",
-  legalId: "",
-  legalName: "",
-  email: "",
-  phone: "",
-  company: "",
-  address: "",
-  status: "Activo",
-  notes: "",
-  branches: [createEmptyBranch()],
-});
-
-const cloneClient = (client) => ({
-  ...client,
-  branches: (client.branches || []).map((branch) => ({
-    ...branch,
-    representatives: (branch.representatives || []).map(
-      (representative) => ({
-        ...representative,
-      }),
-    ),
-  })),
-});
-
-const getInitials = (name = "") => {
+function getInitials(name = "") {
   const initials = name
     .trim()
     .split(/\s+/)
@@ -65,20 +41,291 @@ const getInitials = (name = "") => {
     .join("");
 
   return initials || "CL";
-};
+}
 
-const parseSalesMillions = (sales) => {
+function parseSalesMillions(sales) {
   const normalizedValue = String(sales || "")
     .replace(/[^\d.,]/g, "")
     .replace(",", ".");
 
   return Number.parseFloat(normalizedValue) || 0;
-};
+}
+
+function normalizeStatus(value) {
+  return value === "Inactivo" ? "Inactivo" : "Activo";
+}
+
+function clonePhone(phone = {}, index = 0, prefix = "phone") {
+  return {
+    ...phone,
+    draftId:
+      phone.draftId ||
+      phone.phone_id ||
+      phone.id ||
+      `${prefix}-${index}`,
+    phone: phone.phone || "",
+    type: phone.type || "General",
+    isPrimary:
+      phone.isPrimary === true || phone.is_primary === true,
+  };
+}
+
+function cloneRepresentative(representative = {}, index = 0) {
+  return {
+    ...representative,
+    draftId:
+      representative.draftId ||
+      representative.representative_id ||
+      representative.id ||
+      `representative-${index}`,
+    name: representative.name || "",
+    email: representative.email || "",
+    status: normalizeStatus(
+      representative.status ||
+        (representative.is_active === false ? "Inactivo" : "Activo"),
+    ),
+  };
+}
+
+function cloneBranch(branch = {}, index = 0) {
+  const sourcePhones = Array.isArray(branch.phones)
+    ? branch.phones
+    : branch.phone
+      ? [
+          {
+            phone: branch.phone,
+            type: "Oficina",
+            isPrimary: true,
+          },
+        ]
+      : [];
+
+  return {
+    ...branch,
+    id: branch.id || branch.branch_id,
+    branchId: branch.branchId || branch.branch_id || branch.id || null,
+    draftId:
+      branch.draftId ||
+      branch.branch_id ||
+      branch.id ||
+      `branch-${index}`,
+    province: branch.province || "",
+    district: branch.district || "",
+    address: branch.address || "",
+    status: normalizeStatus(
+      branch.status || (branch.is_active === false ? "Inactivo" : "Activo"),
+    ),
+    phones: sourcePhones.map((phone, phoneIndex) =>
+      clonePhone(phone, phoneIndex, `branch-${index}-phone`),
+    ),
+    representatives: (branch.representatives || []).map(
+      (representative, representativeIndex) =>
+        cloneRepresentative(representative, representativeIndex),
+    ),
+  };
+}
+
+function cloneClient(client = {}, index = 0) {
+  const sourceClientPhones = Array.isArray(client.clientPhones)
+    ? client.clientPhones
+    : client.phone
+      ? [
+          {
+            phone: client.phone,
+            type: "General",
+            isPrimary: true,
+          },
+        ]
+      : [];
+
+  const clientName = client.name || client.business_name || "";
+
+  return {
+    ...client,
+    id: client.id || client.business_id,
+    businessId: client.businessId || client.business_id || client.id,
+    name: clientName,
+    initials: client.initials || getInitials(clientName),
+    color:
+      client.color ||
+      AVATAR_COLORS[index % AVATAR_COLORS.length],
+    companyId: client.companyId || client.company_id || "",
+    company:
+      client.company ||
+      client.companyName ||
+      "Sin empresa asignada",
+    legalId: client.legalId || client.legal_id || "",
+    legalName: client.legalName || client.legal_name || "",
+    activityCode: client.activityCode || client.activity_code || "",
+    email: client.email || "",
+    status: normalizeStatus(
+      client.status || (client.is_active === false ? "Inactivo" : "Activo"),
+    ),
+    sales: client.sales || "₡0 M",
+    lastPurchase: client.lastPurchase || "Sin compras",
+    totalOrders: client.totalOrders ?? 0,
+    totalQuotes: client.totalQuotes ?? 0,
+    clientPhones: sourceClientPhones.map((phone, phoneIndex) =>
+      clonePhone(phone, phoneIndex, `client-${client.id || index}-phone`),
+    ),
+    branches: (client.branches || []).map((branch, branchIndex) =>
+      cloneBranch(branch, branchIndex),
+    ),
+  };
+}
+
+function createEditableForm(client) {
+  const safeClient = cloneClient(client);
+
+  return {
+    businessId: safeClient.businessId || safeClient.id || null,
+    name: safeClient.name || "",
+    legalId: safeClient.legalId || "",
+    legalName: safeClient.legalName || "",
+    activityCode: safeClient.activityCode || "",
+    companyId: safeClient.companyId || "",
+    email: safeClient.email || "",
+    status: normalizeStatus(safeClient.status),
+    clientPhones: (safeClient.clientPhones || []).map(
+      (phone, index) => clonePhone(phone, index, "client-phone"),
+    ),
+    branches:
+      safeClient.branches?.length > 0
+        ? safeClient.branches.map((branch, index) =>
+            cloneBranch(branch, index),
+          )
+        : createEmptyClientForm().branches,
+  };
+}
+
+function cleanPhone(phone = {}) {
+  return {
+    ...phone,
+    phone: phone.phone?.trim() || "",
+    type: phone.type?.trim() || "General",
+    isPrimary: phone.isPrimary === true,
+  };
+}
+
+function cleanRepresentative(representative = {}) {
+  return {
+    ...representative,
+    name: representative.name?.trim() || "",
+    email: representative.email?.trim() || "",
+    status: normalizeStatus(representative.status),
+  };
+}
+
+function hasPhoneContent(phone = {}) {
+  return Boolean(phone.phone?.trim());
+}
+
+function hasRepresentativeContent(representative = {}) {
+  return Boolean(
+    representative.name?.trim() ||
+      representative.email?.trim(),
+  );
+}
+
+function hasBranchContent(branch = {}) {
+  return Boolean(
+    branch.province?.trim() ||
+      branch.district?.trim() ||
+      branch.address?.trim() ||
+      branch.phones?.some(hasPhoneContent) ||
+      branch.representatives?.some(hasRepresentativeContent),
+  );
+}
+
+function normalizeClientForm(form = {}) {
+  const name = form.name?.trim() || "";
+  const companyId = form.companyId || "";
+
+  if (!name) {
+    return {
+      valid: false,
+      message: "Ingresa el nombre comercial del cliente.",
+    };
+  }
+
+  if (!companyId) {
+    return {
+      valid: false,
+      message: "Selecciona la empresa del grupo a la que pertenece el cliente.",
+    };
+  }
+
+  const clientPhones = (form.clientPhones || [])
+    .map(cleanPhone)
+    .filter(hasPhoneContent);
+
+  const branches = [];
+
+  for (let index = 0; index < (form.branches || []).length; index += 1) {
+    const originalBranch = form.branches[index];
+
+    if (!hasBranchContent(originalBranch)) {
+      continue;
+    }
+
+    const branch = {
+      ...originalBranch,
+      province: originalBranch.province?.trim() || "",
+      district: originalBranch.district?.trim() || "",
+      address: originalBranch.address?.trim() || "",
+      status: normalizeStatus(originalBranch.status),
+      phones: (originalBranch.phones || [])
+        .map(cleanPhone)
+        .filter(hasPhoneContent),
+      representatives: (originalBranch.representatives || [])
+        .map(cleanRepresentative)
+        .filter(hasRepresentativeContent),
+    };
+
+    if (!branch.province || !branch.district || !branch.address) {
+      return {
+        valid: false,
+        message: `Completa provincia, distrito y dirección de la sucursal ${
+          index + 1
+        }.`,
+      };
+    }
+
+    const representativeWithoutName = branch.representatives.find(
+      (representative) => !representative.name,
+    );
+
+    if (representativeWithoutName) {
+      return {
+        valid: false,
+        message: `Completa el nombre de todos los representantes de la sucursal ${
+          index + 1
+        }.`,
+      };
+    }
+
+    branches.push(branch);
+  }
+
+  return {
+    valid: true,
+    value: {
+      businessId: form.businessId || null,
+      name,
+      legalId: form.legalId?.trim() || "",
+      legalName: form.legalName?.trim() || "",
+      activityCode: form.activityCode?.trim() || "",
+      companyId,
+      email: form.email?.trim() || "",
+      status: normalizeStatus(form.status),
+      clientPhones,
+      branches,
+    },
+  };
+}
 
 export default function Clients() {
-  const [clients, setClients] = useState(() =>
-    [],
-  );
+  const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsError, setClientsError] = useState("");
 
@@ -90,7 +337,7 @@ export default function Clients() {
   const [drawerMode, setDrawerMode] = useState("create");
   const [editClient, setEditClient] = useState(null);
   const [viewClient, setViewClient] = useState(null);
-  const [form, setForm] = useState(createEmptyForm);
+  const [form, setForm] = useState(createEmptyClientForm);
 
   const [branchModal, setBranchModal] = useState(null);
   const [repModal, setRepModal] = useState(null);
@@ -98,6 +345,39 @@ export default function Clients() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  const loadClients = useCallback(async () => {
+    try {
+      setClientsLoading(true);
+      setClientsError("");
+
+      const businessClients = await getBusinessClients();
+
+      const normalizedClients = (businessClients || []).map(
+        (client, index) => cloneClient(client, index),
+      );
+
+      setClients(normalizedClients);
+
+      return normalizedClients;
+    } catch (error) {
+      console.error("Error cargando clientes:", error);
+
+      setClients([]);
+      setClientsError(
+        error.message ||
+          "No fue posible cargar los clientes registrados.",
+      );
+
+      return [];
+    } finally {
+      setClientsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadClients();
+  }, [loadClients]);
 
   const filteredClients = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -108,9 +388,12 @@ export default function Clients() {
         client.name?.toLowerCase().includes(normalizedSearch) ||
         client.email?.toLowerCase().includes(normalizedSearch) ||
         client.company?.toLowerCase().includes(normalizedSearch) ||
-        client.phone?.toLowerCase().includes(normalizedSearch) ||
         client.legalId?.toLowerCase().includes(normalizedSearch) ||
-        client.legalName?.toLowerCase().includes(normalizedSearch);
+        client.legalName?.toLowerCase().includes(normalizedSearch) ||
+        client.activityCode?.toLowerCase().includes(normalizedSearch) ||
+        client.clientPhones?.some((phone) =>
+          phone.phone?.toLowerCase().includes(normalizedSearch),
+        );
 
       const matchesStatus =
         statusFilter === "Todos" || client.status === statusFilter;
@@ -192,49 +475,6 @@ export default function Clients() {
     },
   ];
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadClients() {
-      try {
-        setClientsLoading(true);
-        setClientsError("");
-
-        const businessClients = await getBusinessClients();
-
-        if (!mounted) {
-          return;
-        }
-
-        setClients(
-          businessClients.map((client) => cloneClient(client)),
-        );
-      } catch (error) {
-        console.error("Error cargando clientes:", error);
-
-        if (!mounted) {
-          return;
-        }
-
-        setClients([]);
-        setClientsError(
-          error.message ||
-            "No fue posible cargar los clientes registrados.",
-        );
-      } finally {
-        if (mounted) {
-          setClientsLoading(false);
-        }
-      }
-    }
-
-    loadClients();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("Todos");
@@ -256,194 +496,117 @@ export default function Clients() {
     setDrawerMode("create");
     setEditClient(null);
     setViewClient(null);
-    setForm(createEmptyForm());
+    setForm(createEmptyClientForm());
   };
 
   const openCreateDrawer = () => {
     setDrawerMode("create");
     setEditClient(null);
     setViewClient(null);
-    setForm(createEmptyForm());
+    setForm(createEmptyClientForm());
     setDrawerOpen(true);
   };
 
   const openEditDrawer = (client) => {
-    const safeBranches =
-      client.branches?.length > 0
-        ? client.branches.map((branch) => ({
-            ...branch,
-            representatives: (branch.representatives || []).map(
-              (representative) => ({
-                ...representative,
-              }),
-            ),
-          }))
-        : [createEmptyBranch()];
+    const safeClient = cloneClient(client);
 
     setDrawerMode("edit");
-    setEditClient(client);
+    setEditClient(safeClient);
     setViewClient(null);
-
-    setForm({
-      name: client.name || "",
-      legalId: client.legalId || "",
-      legalName: client.legalName || "",
-      email: client.email || "",
-      phone: client.phone || "",
-      company: client.company || "",
-      address: client.address || "",
-      status: client.status || "Activo",
-      notes: client.notes || "",
-      branches: safeBranches,
-    });
-
+    setForm(createEditableForm(safeClient));
     setDrawerOpen(true);
   };
 
   const openViewDrawer = (client) => {
     setDrawerMode("view");
-    setViewClient(client);
+    setViewClient(cloneClient(client));
     setEditClient(null);
     setDrawerOpen(true);
   };
 
-  const handleSaveClient = () => {
-    const clientName = form.name.trim();
-    const companyName = form.company.trim();
+  const handleSaveClient = async () => {
+    const normalizedResult = normalizeClientForm(form);
 
-    if (!clientName) {
-      window.alert("Ingresa el nombre del cliente antes de guardar.");
+    if (!normalizedResult.valid) {
+      window.alert(normalizedResult.message);
       return;
     }
 
-    if (!companyName) {
-      window.alert("Selecciona la empresa del grupo antes de guardar.");
-      return;
+    try {
+      setIsSaving(true);
+      setClientsError("");
+
+      if (drawerMode === "create") {
+        await createBusinessClient(normalizedResult.value);
+      }
+
+      if (drawerMode === "edit" && editClient) {
+        await updateBusinessClient(
+          editClient.businessId || editClient.id,
+          normalizedResult.value,
+        );
+      }
+
+      await loadClients();
+
+      setCurrentPage(1);
+      closeDrawer();
+    } catch (error) {
+      console.error("Error guardando cliente:", error);
+
+      const message =
+        error.message ||
+        "No fue posible guardar la información del cliente.";
+
+      setClientsError(message);
+      window.alert(message);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsSaving(true);
-
-    const cleanedBranches =
-      form.branches?.length > 0
-        ? form.branches.map((branch) => ({
-            ...branch,
-            name: branch.name?.trim() || "",
-            phone: branch.phone?.trim() || "",
-            address: branch.address?.trim() || "",
-            representatives: (branch.representatives || []).map(
-              (representative) => ({
-                ...representative,
-                name: representative.name?.trim() || "",
-                role: representative.role?.trim() || "",
-                phone: representative.phone?.trim() || "",
-                email: representative.email?.trim() || "",
-                status:
-                  representative.status === "Inactivo"
-                    ? "Inactivo"
-                    : "Activo",
-              }),
-            ),
-          }))
-        : [createEmptyBranch()];
-
-    const normalizedForm = {
-      name: clientName,
-      legalId: form.legalId?.trim() || "",
-      legalName: form.legalName?.trim() || "",
-      email: form.email?.trim() || "",
-      phone: form.phone?.trim() || "",
-      company: companyName,
-      address: form.address?.trim() || "",
-      status: form.status === "Inactivo" ? "Inactivo" : "Activo",
-      notes: form.notes?.trim() || "",
-      branches: cleanedBranches,
-    };
-
-    if (drawerMode === "create") {
-      const newClient = {
-        id: Date.now(),
-        initials: getInitials(normalizedForm.name),
-        color: AVATAR_COLORS[clients.length % AVATAR_COLORS.length],
-        sales: "₡0",
-        lastPurchase: "Sin compras",
-        totalOrders: 0,
-        totalQuotes: 0,
-        ...normalizedForm,
-      };
-
-      setClients((previousClients) => [
-        newClient,
-        ...previousClients,
-      ]);
-    }
-
-    if (drawerMode === "edit" && editClient) {
-      setClients((previousClients) =>
-        previousClients.map((client) => {
-          if (client.id !== editClient.id) {
-            return client;
-          }
-
-          return {
-            ...client,
-            ...normalizedForm,
-            initials: getInitials(normalizedForm.name),
-          };
-        }),
-      );
-
-      setViewClient((previousClient) => {
-        if (!previousClient || previousClient.id !== editClient.id) {
-          return previousClient;
-        }
-
-        return {
-          ...previousClient,
-          ...normalizedForm,
-          initials: getInitials(normalizedForm.name),
-        };
-      });
-    }
-
-    setCurrentPage(1);
-    setIsSaving(false);
-    closeDrawer();
   };
 
-  const handleToggleClientStatus = (client) => {
+  const handleToggleClientStatus = async (client) => {
     if (!client) {
       return;
     }
 
-    setIsUpdatingStatus(true);
-
     const nextStatus =
       client.status === "Activo" ? "Inactivo" : "Activo";
 
-    setClients((previousClients) =>
-      previousClients.map((currentClient) =>
-        currentClient.id === client.id
-          ? {
-              ...currentClient,
-              status: nextStatus,
-            }
-          : currentClient,
-      ),
-    );
+    try {
+      setIsUpdatingStatus(true);
+      setClientsError("");
 
-    setViewClient((previousClient) => {
-      if (!previousClient || previousClient.id !== client.id) {
-        return previousClient;
+      await updateBusinessClientStatus(
+        client.businessId || client.id,
+        nextStatus === "Activo",
+      );
+
+      const refreshedClients = await loadClients();
+
+      const refreshedClient = refreshedClients.find(
+        (currentClient) =>
+          currentClient.id === client.id ||
+          currentClient.businessId === client.businessId,
+      );
+
+      if (refreshedClient) {
+        setViewClient(refreshedClient);
       }
 
-      return {
-        ...previousClient,
-        status: nextStatus,
-      };
-    });
+      setDeactivateModal(null);
+    } catch (error) {
+      console.error("Error actualizando estado del cliente:", error);
 
-    setDeactivateModal(null);
-    setIsUpdatingStatus(false);
+      const message =
+        error.message ||
+        "No fue posible actualizar el estado del cliente.";
+
+      setClientsError(message);
+      window.alert(message);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   return (
@@ -527,7 +690,7 @@ export default function Clients() {
         )}
 
         {filteredClients.length > 0 && (
-          <div className="md:hidden mb-6 bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden">
+          <div className="mb-6 overflow-hidden rounded-xl border border-[#2a3550] bg-[#141d2e] md:hidden">
             <ClientsPagination
               currentPage={safeCurrentPage}
               totalPages={totalPages}

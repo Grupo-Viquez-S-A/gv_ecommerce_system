@@ -41,28 +41,6 @@ export default function RepresentativeEditor({
         className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
       />
 
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Puesto"
-          value={representative.role ?? ""}
-          onChange={(event) =>
-            handleFieldChange("role", event.target.value)
-          }
-          className="flex-1 min-w-0 bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
-        />
-
-        <input
-          type="tel"
-          placeholder="Teléfono"
-          value={representative.phone ?? ""}
-          onChange={(event) =>
-            handleFieldChange("phone", event.target.value)
-          }
-          className="flex-1 min-w-0 bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
-        />
-      </div>
-
       <input
         type="email"
         placeholder="Correo electrónico"
