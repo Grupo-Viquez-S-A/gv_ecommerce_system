@@ -12,7 +12,7 @@ import { getBusinessClients } from "../services/clientService.js";
 
 import ClientsPageHeader from "../components/clients/ClientsPageHeader.jsx";
 import ClientMetrics from "../components/clients/ClientMetrics.jsx";
-import ClientsToolbar from "../components/clients/ClientsToolbar.jsx";
+import ClientsToolbar from "../components/clients/ClientsToolBar.jsx";
 import ClientsTable from "../components/clients/ClientsTable.jsx";
 import ClientMobileList from "../components/clients/ClientMobileList.jsx";
 import ClientsPagination from "../components/clients/ClientsPagination.jsx";
