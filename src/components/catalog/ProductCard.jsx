@@ -358,57 +358,59 @@ export default function ProductCard({
           </div>
         )}
 
-        <div className="mt-5 space-y-3 border-t border-[#29466F] pt-4">
-          <div className="pointer-events-auto relative z-20 flex items-center justify-between gap-3">
-            <span className="text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-              Cantidad
-            </span>
+        {isTextileProduct && (
+          <div className="mt-5 space-y-3 border-t border-[#29466F] pt-4">
+            <div className="pointer-events-auto relative z-20 flex items-center justify-between gap-3">
+              <span className="text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+                Cantidad
+              </span>
 
-            <div className="flex items-center overflow-hidden rounded-xl border border-[#35547E] bg-[#091A31]">
-              <button
-                type="button"
-                onClick={decreaseQuantity}
-                className="flex h-10 w-10 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
-                aria-label={`Restar cantidad de ${productName}`}
-              >
-                <Minus className="h-4 w-4" />
-              </button>
+              <div className="flex items-center overflow-hidden rounded-xl border border-[#35547E] bg-[#091A31]">
+                <button
+                  type="button"
+                  onClick={decreaseQuantity}
+                  className="flex h-10 w-10 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                  aria-label={`Restar cantidad de ${productName}`}
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
 
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={handleQuantityChange}
-                className="h-10 w-14 border-x border-[#35547E] bg-[#091A31] text-center text-sm font-bold text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                aria-label={`Cantidad de ${productName}`}
-              />
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={handleQuantityChange}
+                  className="h-10 w-14 border-x border-[#35547E] bg-[#091A31] text-center text-sm font-bold text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  aria-label={`Cantidad de ${productName}`}
+                />
 
-              <button
-                type="button"
-                onClick={increaseQuantity}
-                className="flex h-10 w-10 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
-                aria-label={`Sumar cantidad de ${productName}`}
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+                <button
+                  type="button"
+                  onClick={increaseQuantity}
+                  className="flex h-10 w-10 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                  aria-label={`Sumar cantidad de ${productName}`}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className="
-              pointer-events-auto relative z-20 inline-flex w-full items-center justify-center gap-2
-              rounded-xl border border-[#45648D] bg-[#132F58]
-              px-3.5 py-2.5 text-sm font-bold text-white transition
-              hover:border-[#D7A91D] hover:bg-[#1B3E6B]
-              hover:text-[#E9BC2D] active:scale-[0.98]
-            "
-          >
-            <ShoppingCart className="h-4 w-4" />
-            Agregar al carrito
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={handleAddToCart}
+              className="
+                pointer-events-auto relative z-20 inline-flex w-full items-center justify-center gap-2
+                rounded-xl border border-[#45648D] bg-[#132F58]
+                px-3.5 py-2.5 text-sm font-bold text-white transition
+                hover:border-[#D7A91D] hover:bg-[#1B3E6B]
+                hover:text-[#E9BC2D] active:scale-[0.98]
+              "
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Agregar al carrito
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );

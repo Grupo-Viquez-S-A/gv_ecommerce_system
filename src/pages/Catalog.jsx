@@ -28,6 +28,7 @@ import {
   Plus,
   ShoppingCart,
   Trash2,
+  X,
 } from "lucide-react";
 
 import {
@@ -99,6 +100,7 @@ export default function Catalog() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [cartItems, setCartItems] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const isTextileProductsCatalog =
     activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
@@ -653,6 +655,14 @@ export default function Catalog() {
     });
   };
 
+  const handleOpenCart = () => {
+    setCartOpen(true);
+  };
+
+  const handleCloseCart = () => {
+    setCartOpen(false);
+  };
+
   const handleUpdateCartItemQuantity = (itemId, nextQuantity) => {
     const safeQuantity = Math.max(1, Number(nextQuantity) || 1);
 
@@ -676,6 +686,14 @@ export default function Catalog() {
 
   const handleClearCart = () => {
     setCartItems([]);
+  };
+
+  const handleQuoteCart = () => {
+    setCartOpen(false);
+  };
+
+  const handlePlaceOrder = () => {
+    setCartOpen(false);
   };
 
   const handleOpenTechnicalSheet = (product) => {
@@ -839,7 +857,7 @@ export default function Catalog() {
               </div>
             )}
 
-            <section className="mb-5 rounded-2xl border border-[#29466F] bg-[#102441]/80 p-4">
+            <section className="hidden">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31] text-[#D7A91D]">
@@ -951,7 +969,7 @@ export default function Catalog() {
 
             {currentProducts.length > 0 ? (
               <>
-                <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-slate-400">
                     Mostrando{" "}
                     <span className="font-bold text-white">
@@ -966,11 +984,30 @@ export default function Catalog() {
                       : "telas"}
                   </p>
 
-                  {hasActiveFilters && (
-                    <p className="text-xs font-medium text-[#86A4CE]">
-                      Resultados filtrados
-                    </p>
-                  )}
+                  <div className="flex flex-wrap items-center gap-3">
+                    {hasActiveFilters && (
+                      <p className="text-xs font-medium text-[#86A4CE]">
+                        Resultados filtrados
+                      </p>
+                    )}
+
+                    {isTextileProductsCatalog && (
+                      <button
+                        type="button"
+                        onClick={handleOpenCart}
+                        className="relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#45648D] bg-[#132F58] px-4 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
+                        aria-label="Abrir carrito de compra"
+                      >
+                        <ShoppingCart className="h-5 w-5" />
+                        Carrito
+                        {cartItemsCount > 0 && (
+                          <span className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-[#D7A91D] px-1.5 text-xs font-extrabold text-[#071426]">
+                            {cartItemsCount}
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <CatalogGrid
@@ -996,6 +1033,172 @@ export default function Catalog() {
           </>
         )}
       </div>
+
+      {cartOpen && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#020817]/85 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Carrito de compra"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              handleCloseCart();
+            }
+          }}
+        >
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#35547E] bg-[#102441] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[#29466F] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31] text-[#D7A91D]">
+                  <ShoppingCart className="h-5 w-5" />
+                </div>
+
+                <div className="min-w-0">
+                  <h2 className="text-lg font-extrabold text-white">
+                    Carrito de compra
+                  </h2>
+
+                  <p className="text-sm text-slate-400">
+                    {cartItemsCount}{" "}
+                    {cartItemsCount === 1
+                      ? "unidad seleccionada"
+                      : "unidades seleccionadas"}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseCart}
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#45648D] bg-[#132F58] text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
+                aria-label="Cerrar carrito de compra"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+              {cartItems.length > 0 ? (
+                <div className="space-y-3">
+                  {cartItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-col gap-3 rounded-xl border border-[#35547E] bg-[#091A31] p-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
+                            {item.catalogType}
+                          </span>
+
+                          <span className="truncate text-xs text-[#86A4CE]">
+                            {item.sku}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 truncate text-sm font-bold text-white">
+                          {item.name}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 sm:justify-end">
+                        <div className="flex items-center overflow-hidden rounded-xl border border-[#35547E] bg-[#102441]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateCartItemQuantity(
+                                item.id,
+                                item.quantity - 1,
+                              )
+                            }
+                            className="flex h-9 w-9 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                            aria-label={`Restar ${item.name}`}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+
+                          <span className="min-w-10 border-x border-[#35547E] px-3 text-center text-sm font-bold text-white">
+                            {item.quantity}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUpdateCartItemQuantity(
+                                item.id,
+                                item.quantity + 1,
+                              )
+                            }
+                            className="flex h-9 w-9 items-center justify-center text-[#C9D8EC] transition hover:bg-[#132F58] hover:text-[#E9BC2D]"
+                            aria-label={`Sumar ${item.name}`}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCartItem(item.id)}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-red-300/25 text-red-100 transition hover:bg-red-500/10"
+                          aria-label={`Quitar ${item.name} del carrito`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-[260px] flex-col items-center justify-center rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-6 py-10 text-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#35547E] bg-[#102441] text-[#D7A91D]">
+                    <ShoppingCart className="h-6 w-6" />
+                  </div>
+
+                  <p className="mt-4 text-sm font-bold text-white">
+                    El carrito está vacío
+                  </p>
+
+                  <p className="mt-1 max-w-sm text-sm text-slate-500">
+                    Selecciona cantidades en las tarjetas del catálogo para preparar una cotización o pedido.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-[#29466F] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={handleClearCart}
+                disabled={cartItems.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300/30 px-4 py-2.5 text-sm font-bold text-red-100 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Vaciar carrito
+              </button>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={handleQuoteCart}
+                  disabled={cartItems.length === 0}
+                  className="rounded-xl border border-[#45648D] bg-[#132F58] px-5 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cotizar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handlePlaceOrder}
+                  disabled={cartItems.length === 0}
+                  className="rounded-xl border border-[#D7A91D]/50 bg-[#D7A91D] px-5 py-2.5 text-sm font-bold text-[#071426] transition hover:bg-[#E9BC2D] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Realizar pedido
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CatalogProductDetailsModal
         product={selectedProductDetails}
