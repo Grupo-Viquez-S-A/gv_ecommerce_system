@@ -16,6 +16,7 @@ const ROLE_BADGES = {
   admin: "bg-[#C9A227]/15 text-[#C9A227]",
   manager: "bg-[#C9A227]/15 text-[#C9A227]",
   gerente: "bg-[#C9A227]/15 text-[#C9A227]",
+  encargado: "bg-[#C9A227]/15 text-[#C9A227]",
 
   supervisor: "bg-[#2d1b4e] text-[#c084fc]",
 

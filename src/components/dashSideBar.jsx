@@ -15,6 +15,7 @@ import {
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
+import { canManageSystemUsers } from "../utils/adminAccess.js";
 
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
@@ -49,6 +50,7 @@ function DashSideBar({
   const location = useLocation();
 
   const activeCompany = currentCompany || DEFAULT_COMPANY;
+  const canAccessUserAdministration = canManageSystemUsers(user);
 
   const handleCloseMobileSidebar = () => {
     setSidebarOpen?.(false);
@@ -285,23 +287,27 @@ function DashSideBar({
             collapsed={sidebarCollapsed}
           />
 
-          {/* SISTEMA */}
-          {!sidebarCollapsed ? (
-            <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
-                Sistema
-              </span>
-            </div>
-          ) : (
-            <div className="mx-3 my-1 border-t border-[#2a3550]" />
-          )}
+          {canAccessUserAdministration && (
+            <>
+              {/* SISTEMA */}
+              {!sidebarCollapsed ? (
+                <div className="px-4 pb-1 pt-4">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
+                    Sistema
+                  </span>
+                </div>
+              ) : (
+                <div className="mx-3 my-1 border-t border-[#2a3550]" />
+              )}
 
-          <NavItem
-            icon={<RiSettings4Fill size={18} />}
-            label="Administración de Usuarios"
-            to="/admin/usuarios"
-            collapsed={sidebarCollapsed}
-          />
+              <NavItem
+                icon={<RiSettings4Fill size={18} />}
+                label="Administración de Usuarios"
+                to="/admin/usuarios"
+                collapsed={sidebarCollapsed}
+              />
+            </>
+          )}
         </nav>
 
         <div
@@ -488,19 +494,23 @@ function DashSideBar({
               collapsed={false}
             />
 
-            {/* SISTEMA */}
-            <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
-                Sistema
-              </span>
-            </div>
+            {canAccessUserAdministration && (
+              <>
+                {/* SISTEMA */}
+                <div className="px-4 pb-1 pt-4">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
+                    Sistema
+                  </span>
+                </div>
 
-            <NavItem
-              icon={<RiSettings4Fill size={18} />}
-              label="Administración de Usuarios"
-              to="/admin/usuarios"
-              collapsed={false}
-            />
+                <NavItem
+                  icon={<RiSettings4Fill size={18} />}
+                  label="Administración de Usuarios"
+                  to="/admin/usuarios"
+                  collapsed={false}
+                />
+              </>
+            )}
           </nav>
 
           <div className="border-t border-[#2a3550] p-4">

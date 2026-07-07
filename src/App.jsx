@@ -15,6 +15,7 @@ import Agenda from "./pages/Agenda";
 import Reports from "./pages/Reports";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import AdminUsersRoute from "./components/AdminUsersRoute.jsx";
 import MainLayout from "./components/layouts/MainLayout.jsx";
 
 function App() {
@@ -112,7 +113,9 @@ function App() {
             path="/admin/usuarios"
             element={
               <ProtectedRoute>
-                <AdminConfig />
+                <AdminUsersRoute>
+                  <AdminConfig />
+                </AdminUsersRoute>
               </ProtectedRoute>
             }
           />

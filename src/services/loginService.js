@@ -52,6 +52,36 @@ export async function signOut() {
   return { error };
 }
 
+function getRelationValue(value) {
+  if (Array.isArray(value)) {
+    return value[0] || null;
+  }
+
+  return value || null;
+}
+
+function normalizeAccessValue(value) {
+  return String(value || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
+function isUserAdministrationMembership(membership) {
+  const role = getRelationValue(membership?.roles);
+  const department = getRelationValue(membership?.departments);
+
+  const departmentName = normalizeAccessValue(department?.name);
+  const roleName = normalizeAccessValue(role?.role_name);
+  const roleCode = normalizeAccessValue(role?.role_code);
+
+  return (
+    departmentName === "INFORMATICA" &&
+    (roleName === "ENCARGADO" || roleCode === "ENCARGADO")
+  );
+}
+
 export async function getCorporateUserData(userId, authEmail) {
   // Perfil base
   const { data: profile, error: profileError } = await supabase
@@ -75,7 +105,22 @@ export async function getCorporateUserData(userId, authEmail) {
   // Membresías (roles + empresas + departamento)
   const { data: memberships, error: memError } = await supabase
     .from("user_memberships")
-    .select("company_id, department_id, role_id")
+    .select(`
+      company_id,
+      department_id,
+      role_id,
+      roles (
+        role_id,
+        role_name,
+        role_code,
+        description
+      ),
+      departments (
+        department_id,
+        name,
+        email
+      )
+    `)
     .eq("user_id", userId);
 
   if (memError && !memError.message.includes("does not exist")) {
@@ -85,10 +130,25 @@ export async function getCorporateUserData(userId, authEmail) {
   let role = null;
   let companies = [];
   let department = null;
+  const primaryMembership =
+    memberships?.find(isUserAdministrationMembership) ||
+    memberships?.[0] ||
+    null;
 
   // Obtener roles
-  if (memberships && memberships.length > 0) {
-    const roleId = memberships[0].role_id;
+  if (primaryMembership) {
+    const membershipRole = getRelationValue(primaryMembership.roles);
+
+    if (membershipRole) {
+      role = {
+        id: membershipRole.role_id,
+        name: membershipRole.role_name,
+        code: membershipRole.role_code,
+        description: membershipRole.description,
+      };
+    }
+
+    const roleId = primaryMembership.role_id;
     if (roleId) {
       const { data: roleData } = await supabase
         .from("roles")
@@ -107,8 +167,20 @@ export async function getCorporateUserData(userId, authEmail) {
   }
 
   // Obtener departamento
-  if (memberships && memberships.length > 0) {
-    const deptId = memberships[0].department_id;
+  if (primaryMembership) {
+    const membershipDepartment = getRelationValue(
+      primaryMembership.departments,
+    );
+
+    if (membershipDepartment) {
+      department = {
+        id: membershipDepartment.department_id,
+        name: membershipDepartment.name,
+        email: membershipDepartment.email,
+      };
+    }
+
+    const deptId = primaryMembership.department_id;
     if (deptId) {
       const { data: deptData } = await supabase
         .from("departments")
