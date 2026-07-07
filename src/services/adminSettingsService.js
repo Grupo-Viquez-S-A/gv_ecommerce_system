@@ -24,42 +24,29 @@ async function getFunctionAuthHeader() {
   return `Bearer ${accessToken}`;
 }
 
-function getFunctionErrorMessage(error, fallbackMessage) {
-  if (!error) {
-    return fallbackMessage;
-  }
+function getFunctionErrorMessage(data, rawText, fallbackMessage) {
+  if (data && typeof data === "object") {
+    const message =
+      data.error || data.message || data.msg || data.details || data.hint;
 
-  if (typeof error === "string") {
-    return error;
-  }
-
-  if (error.message) {
-    return String(error.message);
-  }
-
-  if (error.error) {
-    return String(error.error);
-  }
-
-  if (error.details) {
-    return String(error.details);
-  }
-
-  if (error.hint) {
-    return String(error.hint);
-  }
-
-  if (error.status && error.statusText) {
-    return `Status ${error.status} ${String(error.statusText)}`;
-  }
-
-  try {
-    const serialized = JSON.stringify(error, Object.getOwnPropertyNames(error));
-    if (serialized && serialized !== "{}") {
-      return serialized;
+    if (message && typeof message === "string" && message.trim()) {
+      return message.trim();
     }
-  } catch {
-    // ignore
+
+    if (message && typeof message !== "string") {
+      const stringified = JSON.stringify(message);
+      if (stringified && stringified !== "{}") {
+        return stringified;
+      }
+    }
+  }
+
+  if (typeof data === "string" && data.trim() && data !== "{}") {
+    return data.trim();
+  }
+
+  if (rawText && rawText.trim() && rawText !== "{}") {
+    return rawText.trim();
   }
 
   return fallbackMessage;
@@ -68,11 +55,15 @@ function getFunctionErrorMessage(error, fallbackMessage) {
 function assertAdminSettingsResponse(data, error, fallbackMessage) {
   if (error) {
     console.error("adminSettingsService error response:", { data, error });
-    throw new Error(getFunctionErrorMessage(error, fallbackMessage));
+    throw new Error(getFunctionErrorMessage(error, "", fallbackMessage));
   }
 
   if (data?.ok === false) {
-    throw new Error(data.error || fallbackMessage);
+    const msg =
+      typeof data.error === "string" && data.error.trim()
+        ? data.error.trim()
+        : fallbackMessage;
+    throw new Error(msg);
   }
 
   return data || {};
@@ -109,15 +100,14 @@ async function invokeAdminSettingsFunction(body) {
   }
 
   if (!response.ok) {
-    const message = getFunctionErrorMessage(
-      data,
-      `Edge Function returned ${response.status} ${response.statusText}`,
-    );
+    const fallback = `Error ${response.status} al llamar la función admin-settings.`;
+    const message = getFunctionErrorMessage(data, text, fallback);
     console.error("adminSettingsService failed function call", {
       url: `${SUPABASE_FUNCTIONS_URL}/admin-settings`,
       status: response.status,
       statusText: response.statusText,
       requestBody: body,
+      responseText: text,
       responseBody: data,
     });
     throw new Error(message);
