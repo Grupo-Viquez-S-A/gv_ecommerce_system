@@ -69,6 +69,61 @@ function throwError(error, fallback) {
 }
 
 // ---------------------------------------------------------------------------
+// Direct REST calls to Supabase Auth Admin API
+// (supabase.auth.admin.* methods don't work from a browser context — they
+//  require server-side execution. We bypass the SDK and call the REST API
+//  directly with the service role key set in both apikey and Authorization.)
+// ---------------------------------------------------------------------------
+
+const AUTH_ADMIN_HEADERS = {
+  "Content-Type": "application/json",
+  apikey: SUPABASE_SERVICE_ROLE_KEY,
+  Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+};
+
+async function authAdminFetch(method, path, body = null) {
+  const url = `${SUPABASE_URL}/auth/v1/admin${path}`;
+  const options = { method, headers: AUTH_ADMIN_HEADERS };
+  if (body !== null) options.body = JSON.stringify(body);
+
+  const response = await fetch(url, options);
+  const text = await response.text();
+
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { message: text };
+  }
+
+  if (!response.ok) {
+    const msg =
+      (data && (data.message || data.error || data.msg)) ||
+      `Error ${response.status} en la API de autenticación.`;
+    throw new Error(msg);
+  }
+
+  return data;
+}
+
+async function authAdminCreateUser({ email, password, name, surname }) {
+  return authAdminFetch("POST", "/users", {
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { name, surname },
+  });
+}
+
+async function authAdminUpdateUser(userId, payload) {
+  return authAdminFetch("PUT", `/users/${userId}`, payload);
+}
+
+async function authAdminDeleteUser(userId) {
+  return authAdminFetch("DELETE", `/users/${userId}`);
+}
+
+// ---------------------------------------------------------------------------
 // Replace module access (same logic as edge function)
 // ---------------------------------------------------------------------------
 
@@ -238,19 +293,20 @@ export async function createAdminUser({
     throw new Error("La contraseña temporal debe tener al menos 8 caracteres.");
   }
 
-  // 1. Crear cuenta de autenticación
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email: cleanEmail,
-    password: cleanPassword,
-    email_confirm: true,
-    user_metadata: { name, surname },
-  });
-
-  if (authError || !authData?.user) {
-    throwError(authError, "No fue posible crear la cuenta de acceso.");
+  // 1. Crear cuenta de autenticación (llamada REST directa — auth.admin no
+  //    funciona desde el navegador con el SDK de Supabase JS)
+  let authUser;
+  try {
+    authUser = await authAdminCreateUser({ email: cleanEmail, password: cleanPassword, name, surname });
+  } catch (authError) {
+    throw new Error(`No fue posible crear la cuenta de acceso: ${authError.message}`);
   }
 
-  const newUserId = authData.user.id;
+  if (!authUser?.id) {
+    throw new Error("No fue posible crear la cuenta de acceso: la respuesta no contiene un usuario.");
+  }
+
+  const newUserId = authUser.id;
   const now = getNow();
 
   // 2. Crear perfil
@@ -272,11 +328,8 @@ export async function createAdminUser({
     );
 
   if (profileError) {
-    await supabaseAdmin.auth.admin.deleteUser(newUserId);
-    throwError(
-      profileError,
-      "No fue posible guardar el perfil del usuario."
-    );
+    await authAdminDeleteUser(newUserId).catch(() => {});
+    throwError(profileError, "No fue posible guardar el perfil del usuario.");
   }
 
   // 3. Asignar empresa, departamento y rol
@@ -295,11 +348,8 @@ export async function createAdminUser({
 
   if (membershipError) {
     await supabaseAdmin.from("profiles").delete().eq("user_id", newUserId);
-    await supabaseAdmin.auth.admin.deleteUser(newUserId);
-    throwError(
-      membershipError,
-      "No fue posible asignar empresa, departamento o rol."
-    );
+    await authAdminDeleteUser(newUserId).catch(() => {});
+    throwError(membershipError, "No fue posible asignar empresa, departamento o rol.");
   }
 
   // 4. Asignar módulos
@@ -308,7 +358,7 @@ export async function createAdminUser({
   } catch (moduleAccessError) {
     await supabaseAdmin.from("user_memberships").delete().eq("user_id", newUserId);
     await supabaseAdmin.from("profiles").delete().eq("user_id", newUserId);
-    await supabaseAdmin.auth.admin.deleteUser(newUserId);
+    await authAdminDeleteUser(newUserId).catch(() => {});
     throw new Error(
       `No fue posible asignar los módulos al usuario: ${moduleAccessError.message}`
     );
@@ -363,13 +413,10 @@ export async function updateAdminUser({
   };
   if (cleanPassword) authPayload.password = cleanPassword;
 
-  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
-    cleanUserId,
-    authPayload
-  );
-
-  if (authError) {
-    throwError(authError, "No fue posible actualizar la cuenta de acceso.");
+  try {
+    await authAdminUpdateUser(cleanUserId, authPayload);
+  } catch (authError) {
+    throw new Error(`No fue posible actualizar la cuenta de acceso: ${authError.message}`);
   }
 
   const now = getNow();
@@ -472,12 +519,12 @@ export async function setAdminUserStatus({ userId, isActive }) {
     throwError(membershipError, "No fue posible actualizar la membresía del usuario.");
   }
 
-  const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(cleanUserId, {
-    ban_duration: isActive ? "none" : "876000h",
-  });
-
-  if (authError) {
-    throwError(authError, "No fue posible actualizar el acceso del usuario.");
+  try {
+    await authAdminUpdateUser(cleanUserId, {
+      ban_duration: isActive ? "none" : "876000h",
+    });
+  } catch (authError) {
+    throw new Error(`No fue posible actualizar el acceso del usuario: ${authError.message}`);
   }
 
   return {
