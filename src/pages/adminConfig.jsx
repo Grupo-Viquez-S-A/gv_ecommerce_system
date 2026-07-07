@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { getEcommerceUsers } from "../services/ecommerceUserService";
 import {
+  createAdminUser,
+  getAdminSettingsCatalogs,
+} from "../services/adminSettingsService";
+import {
   RiSettings4Fill,
   RiArrowDownSFill,
   RiArrowRightSLine,
@@ -30,7 +34,6 @@ import {
   RiBarChartFill,
   RiTeamFill,
   RiFileListFill,
-  RiAlertFill,
   RiKey2Fill,
 } from "react-icons/ri";
 
@@ -482,6 +485,44 @@ function ActivityIcon({ type }) {
 }
 
 /* ─── COMPONENTE PRINCIPAL ─────────────────────────────────── */
+function generateTemporaryPassword() {
+  const randomText = Math.random().toString(36).slice(2, 10);
+  const randomNumber = Math.floor(100 + Math.random() * 900);
+
+  return `GV-${randomText}${randomNumber}!`;
+}
+
+function getEmptyUserForm() {
+  return {
+    name: "",
+    email: "",
+    phone: "",
+    companies: [],
+    departmentId: "",
+    role: "",
+    password: generateTemporaryPassword(),
+    status: "Activo",
+  };
+}
+
+function splitFullName(fullName) {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  const [name, ...surnameParts] = parts;
+
+  return {
+    name: name || "",
+    surname: surnameParts.join(" "),
+  };
+}
+
+function normalizeCatalogItem(item, idKey, labelKey) {
+  return {
+    id: item?.[idKey] || item?.id || "",
+    label: item?.[labelKey] || item?.name || item?.company_name || "",
+    raw: item,
+  };
+}
+
 export default function AdminConfig() {
   const [activeTab, setActiveTab] = useState("usuarios");
 
@@ -491,18 +532,10 @@ export default function AdminConfig() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("create");
-  const [editUser, setEditUser] = useState(null);
   const [editRole, setEditRole] = useState(null);
   const [profileUser, setProfileUser] = useState(null);
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    companies: [],
-    role: "",
-    status: "Activo",
-  });
+  const [form, setForm] = useState(() => getEmptyUserForm());
 
   const [roleForm, setRoleForm] = useState({
     name: "",
@@ -533,6 +566,15 @@ export default function AdminConfig() {
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState("");
+  const [adminCatalogs, setAdminCatalogs] = useState({
+    companies: [],
+    departments: [],
+    roles: [],
+  });
+  const [adminCatalogsLoading, setAdminCatalogsLoading] = useState(false);
+  const [adminCatalogsError, setAdminCatalogsError] = useState("");
+  const [savingUser, setSavingUser] = useState(false);
+  const [saveUserError, setSaveUserError] = useState("");
 
   const loadUsers = useCallback(async () => {
     try {
@@ -556,36 +598,77 @@ export default function AdminConfig() {
     }
   }, []);
 
+  const loadAdminCatalogs = useCallback(async () => {
+    try {
+      setAdminCatalogsLoading(true);
+      setAdminCatalogsError("");
+
+      const settings = await getAdminSettingsCatalogs();
+
+      setAdminCatalogs({
+        companies: (settings.companies || [])
+          .map((company) =>
+            normalizeCatalogItem(company, "company_id", "company_name"),
+          )
+          .filter((company) => company.id && company.label),
+        departments: (settings.departments || [])
+          .map((department) =>
+            normalizeCatalogItem(department, "department_id", "name"),
+          )
+          .filter((department) => department.id && department.label),
+        roles: (settings.roles || [])
+          .map((role) => normalizeCatalogItem(role, "role_id", "role_name"))
+          .filter((role) => role.id && role.label),
+      });
+    } catch (error) {
+      console.error("Error cargando catalogos administrativos:", error);
+
+      setAdminCatalogsError(
+        error.message ||
+        "No fue posible cargar empresas, departamentos y roles.",
+      );
+    } finally {
+      setAdminCatalogsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+    let isMounted = true;
+
+    Promise.resolve().then(() => {
+      if (!isMounted) {
+        return;
+      }
+
+      loadUsers();
+      loadAdminCatalogs();
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadAdminCatalogs, loadUsers]);
 
   const openCreateDrawer = () => {
     setDrawerMode("create");
-    setEditUser(null);
-
-    setForm({
-      name: "",
-      email: "",
-      phone: "",
-      companies: [],
-      role: "",
-      status: "Activo",
-    });
+    setForm(getEmptyUserForm());
+    setSaveUserError("");
 
     setDrawerOpen(true);
   };
 
   const openEditDrawer = (user) => {
     setDrawerMode("edit");
-    setEditUser(user);
+    setSaveUserError("");
 
     setForm({
       name: user.name,
       email: user.email,
       phone: user.phone || "",
       companies: user.companies || [],
+      departmentId: "",
       role: user.role,
+      password: "",
       status: user.status,
     });
 
@@ -621,11 +704,22 @@ export default function AdminConfig() {
 
     window.setTimeout(() => {
       setDrawerMode("create");
-      setEditUser(null);
       setEditRole(null);
       setProfileUser(null);
     }, 300);
   };
+
+  const availableCompanies =
+    adminCatalogs.companies.length > 0
+      ? adminCatalogs.companies
+      : COMPANIES.map((company) => ({
+        id: company,
+        label: company,
+        raw: null,
+      }));
+
+  const availableDepartments = adminCatalogs.departments;
+  const availableRoles = adminCatalogs.roles;
 
   const filtered = users.filter((user) => {
     const query = search.toLowerCase();
@@ -693,6 +787,82 @@ export default function AdminConfig() {
         companies,
       };
     });
+  };
+
+  const handleSaveDrawer = async () => {
+    if (drawerMode !== "create") {
+      closeDrawer();
+      return;
+    }
+
+    const { name, surname } = splitFullName(form.name);
+    const email = form.email.trim().toLowerCase();
+    const password = form.password.trim();
+    const companyId = form.companies[0];
+
+    if (!name || !surname) {
+      setSaveUserError("Ingresa nombre y apellido para crear el usuario.");
+      return;
+    }
+
+    if (!email) {
+      setSaveUserError("Ingresa el correo electronico del usuario.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setSaveUserError("La contrasena temporal debe tener al menos 8 caracteres.");
+      return;
+    }
+
+    if (!companyId) {
+      setSaveUserError("Selecciona al menos una empresa para el usuario.");
+      return;
+    }
+
+    if (!form.departmentId) {
+      setSaveUserError("Selecciona el departamento del usuario.");
+      return;
+    }
+
+    if (!form.role) {
+      setSaveUserError("Selecciona el rol del usuario.");
+      return;
+    }
+
+    try {
+      setSavingUser(true);
+      setUsersError("");
+      setSaveUserError("");
+
+      const payload = {
+        email,
+        password,
+        profile: {
+          name,
+          surname,
+          phone: form.phone.trim() || null,
+        },
+        membership: {
+          company_id: companyId,
+          department_id: form.departmentId,
+          role_id: form.role,
+        },
+      };
+
+      console.log("createAdminUser payload", payload);
+
+      await createAdminUser(payload);
+
+      await loadUsers();
+      closeDrawer();
+    } catch (error) {
+      console.error("Error creando usuario e-commerce:", error);
+
+      setSaveUserError(error.message || "No fue posible crear el usuario.");
+    } finally {
+      setSavingUser(false);
+    }
   };
 
   const totalUsers = users.length;
@@ -1849,26 +2019,54 @@ export default function AdminConfig() {
                 icon="📞"
               />
 
+              {drawerMode === "create" && (
+                <FormField
+                  label="Contraseña Temporal"
+                  placeholder="Mínimo 8 caracteres"
+                  value={form.password}
+                  onChange={(value) =>
+                    setForm({
+                      ...form,
+                      password: value,
+                    })
+                  }
+                  type="text"
+                  icon="🔐"
+                />
+              )}
+
+              {adminCatalogsError && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {adminCatalogsError}
+                </div>
+              )}
+
+              {saveUserError && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {saveUserError}
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
                   Empresas Asignadas
                 </label>
 
                 <div className="space-y-2">
-                  {COMPANIES.map((company) => (
+                  {availableCompanies.map((company) => (
                     <button
-                      key={company}
+                      key={company.id}
                       type="button"
-                      onClick={() => toggleCompanyInForm(company)}
+                      onClick={() => toggleCompanyInForm(company.id)}
                       className="w-full flex items-center gap-3 text-left cursor-pointer group p-2 rounded-lg hover:bg-[#1c2538] transition-colors"
                     >
                       <span
-                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.companies.includes(company)
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.companies.includes(company.id)
                           ? "border-[#C9A227] bg-[#C9A227]"
                           : "border-[#2a3448]"
                           }`}
                       >
-                        {form.companies.includes(company) && (
+                        {form.companies.includes(company.id) && (
                           <RiCheckLine
                             size={10}
                             className="text-white"
@@ -1877,15 +2075,52 @@ export default function AdminConfig() {
                       </span>
 
                       <span
-                        className={`text-sm ${form.companies.includes(company)
+                        className={`text-sm ${form.companies.includes(company.id)
                           ? "text-white"
                           : "text-gray-400"
                           }`}
                       >
-                        {company}
+                        {company.label}
                       </span>
                     </button>
                   ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+                  Departamento
+                </label>
+
+                <div className="relative">
+                  <select
+                    value={form.departmentId}
+                    onChange={(event) =>
+                      setForm({
+                        ...form,
+                        departmentId: event.target.value,
+                      })
+                    }
+                    disabled={adminCatalogsLoading}
+                    className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer disabled:opacity-60"
+                  >
+                    <option value="">
+                      {adminCatalogsLoading
+                        ? "Cargando departamentos..."
+                        : "Seleccionar departamento"}
+                    </option>
+
+                    {availableDepartments.map((department) => (
+                      <option key={department.id} value={department.id}>
+                        {department.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <RiArrowDownSFill
+                    size={16}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+                  />
                 </div>
               </div>
 
@@ -1903,13 +2138,18 @@ export default function AdminConfig() {
                         role: event.target.value,
                       })
                     }
-                    className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer"
+                    disabled={adminCatalogsLoading}
+                    className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors appearance-none cursor-pointer disabled:opacity-60"
                   >
-                    <option value="">Seleccionar rol</option>
-                    <option>Administrador</option>
-                    <option>Supervisor</option>
-                    <option>Vendedor</option>
-                    <option>Contabilidad</option>
+                    <option value="">
+                      {adminCatalogsLoading ? "Cargando roles..." : "Seleccionar rol"}
+                    </option>
+
+                    {availableRoles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.label}
+                      </option>
+                    ))}
                   </select>
 
                   <RiArrowDownSFill
@@ -2331,9 +2571,13 @@ export default function AdminConfig() {
 
             <button
               type="button"
-              className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+              onClick={handleSaveDrawer}
+              disabled={savingUser}
+              className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {drawerMode === "create"
+              {savingUser
+                ? "Guardando..."
+                : drawerMode === "create"
                 ? "Guardar Usuario"
                 : drawerMode === "edit"
                   ? "Guardar Cambios"
