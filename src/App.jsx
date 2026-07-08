@@ -14,6 +14,8 @@ import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
 import Agenda from "./pages/Agenda";
 import Reports from "./pages/Reports";
+import MyOrders from "./pages/MyOrders";
+import MyQuotations from "./pages/MyQuotations";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import AdminUsersRoute from "./components/AdminUsersRoute.jsx";
@@ -120,6 +122,24 @@ function App() {
           />
 
           <Route
+            path="/mis-pedidos"
+            element={
+              <ProtectedRoute>
+                <MyOrders />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/mis-cotizaciones"
+            element={
+              <ProtectedRoute>
+                <MyQuotations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
             path="/admin/usuarios"
             element={
               <ProtectedRoute>
@@ -143,6 +163,8 @@ function App() {
           <Route path="/pedidos-dev" element={<Orders />} />
           <Route path="/agenda-dev" element={<Agenda />} />
           <Route path="/reportes-dev" element={<Reports />} />
+          <Route path="/mis-pedidos-dev" element={<MyOrders />} />
+          <Route path="/mis-cotizaciones-dev" element={<MyQuotations />} />
           <Route path="/admin/usuarios-dev" element={<AdminConfig />} />
         </Route>
       </Routes>

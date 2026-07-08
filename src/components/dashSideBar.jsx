@@ -290,14 +290,14 @@ function DashSideBar({
           <NavItem
             icon={<RiDashboardFill size={18} />}
             label="Mis pedidos"
-            to="/"
+            to="/mis-pedidos"
             collapsed={sidebarCollapsed}
           />
 
           <NavItem
             icon={<RiDashboardFill size={18} />}
             label="Mis cotizaciones"
-            to="/"
+            to="/mis-cotizaciones"
             collapsed={sidebarCollapsed}
           />
 
@@ -515,38 +515,28 @@ function DashSideBar({
               collapsed={false}
             />
 
-{/* CLIENTE */}
-<div className="px-4 pb-1 pt-4">
-  <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
-    Mi cuenta
-  </span>
-</div>
+            {/* CLIENTE */}
+            <div className="px-4 pb-1 pt-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
+                Mi cuenta
+              </span>
+            </div>
 
-<NavItem
-  icon={<RiDashboardFill size={18} />}
-  label="Mis pedidos"
-  to="/"
-  collapsed={false}
-  onNavigate={handleCloseMobileSidebar}
-/>
+            <NavItem
+              icon={<RiDashboardFill size={18} />}
+              label="Mis pedidos"
+              to="/mis-pedidos"
+              collapsed={false}
+              onNavigate={handleCloseMobileSidebar}
+            />
 
-<NavItem
-  icon={<RiDashboardFill size={18} />}
-  label="Mis cotizaciones"
-  to="/"
-  collapsed={false}
-  onNavigate={handleCloseMobileSidebar}
-/>
-
-<NavItem
-  icon={<RiShoppingBagFill size={18} />}
-  label="Catálogo"
-  to="/cliente/catalogo"
-  collapsed={false}
-  onNavigate={handleCloseMobileSidebar}
-/>
-
-
+            <NavItem
+              icon={<RiDashboardFill size={18} />}
+              label="Mis cotizaciones"
+              to="/mis-cotizaciones"
+              collapsed={false}
+              onNavigate={handleCloseMobileSidebar}
+            />
             {canAccessUserAdministration && (
               <>
                 {/* SISTEMA */}
