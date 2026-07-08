@@ -35,18 +35,6 @@ export function onAuthStateChange(callback) {
   return subscription;
 }
 
-export async function signUpWithEmail(email, password, options = {}) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: options,
-      emailRedirectTo: `${window.location.origin}/dashboard`,
-    },
-  });
-  return { data, error };
-}
-
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   return { error };
