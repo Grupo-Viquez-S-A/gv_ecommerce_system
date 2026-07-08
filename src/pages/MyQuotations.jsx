@@ -3,7 +3,11 @@ import { RiCheckboxCircleFill, RiFileList3Fill, RiTimeFill, RiErrorWarningFill }
 
 import ClientSummaryCard from "../components/clientPanel/ClientSummaryCard.jsx";
 import MyQuotationsList from "../components/clientPanel/MyQuotationsList.jsx";
-import { getMyQuotations } from "../services/clientPanelService.js";
+import QuotationDetailModal from "../components/clientPanel/QuotationDetailModal.jsx";
+import {
+  getMyQuotationDetail,
+  getMyQuotations,
+} from "../services/clientPanelService.js";
 
 function isStatusOneOf(status, values) {
   const normalizedStatus = String(status || "").trim().toLowerCase();
@@ -15,6 +19,10 @@ export default function MyQuotations() {
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedQuotation, setSelectedQuotation] = useState(null);
+  const [quotationDetail, setQuotationDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -45,6 +53,50 @@ export default function MyQuotations() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadQuotationDetail() {
+      if (!selectedQuotation?.quotationId) {
+        setQuotationDetail(null);
+        setDetailError("");
+        setDetailLoading(false);
+        return;
+      }
+
+      try {
+        setDetailLoading(true);
+        setDetailError("");
+        const detail = await getMyQuotationDetail(selectedQuotation.quotationId);
+
+        if (mounted) {
+          setQuotationDetail(detail);
+        }
+      } catch (loadError) {
+        if (mounted) {
+          setQuotationDetail(null);
+          setDetailError(loadError.message || "No fue posible cargar el detalle.");
+        }
+      } finally {
+        if (mounted) {
+          setDetailLoading(false);
+        }
+      }
+    }
+
+    loadQuotationDetail();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedQuotation]);
+
+  const closeDetail = () => {
+    setSelectedQuotation(null);
+    setQuotationDetail(null);
+    setDetailError("");
+  };
 
   const summary = useMemo(() => {
     const pending = quotations.filter((quotation) =>
@@ -98,8 +150,21 @@ export default function MyQuotations() {
           </div>
         )}
 
-        {!loading && !error && <MyQuotationsList quotations={quotations} />}
+        {!loading && !error && (
+          <MyQuotationsList
+            quotations={quotations}
+            onSelectQuotation={setSelectedQuotation}
+          />
+        )}
       </section>
+
+      <QuotationDetailModal
+        isOpen={Boolean(selectedQuotation)}
+        quotation={quotationDetail}
+        loading={detailLoading}
+        error={detailError}
+        onClose={closeDetail}
+      />
     </div>
   );
 }

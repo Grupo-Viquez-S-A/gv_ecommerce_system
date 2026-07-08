@@ -302,6 +302,25 @@ function PagBtn({ icon, label, active = false }) {
   );
 }
 
+function ProductThumb({ item }) {
+  if (item.imageUrl) {
+    return (
+      <img
+        src={item.imageUrl}
+        alt={item.name || "Producto"}
+        className="h-20 w-20 rounded-lg border border-[#2a3550] bg-[#0B1120] object-cover"
+        loading="lazy"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-[#2a3550] bg-[#10192b] text-xs font-bold text-[#C9A227]">
+      IMG
+    </div>
+  );
+}
+
 function StatusBadge({ status }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.Pendiente;
 
@@ -1527,8 +1546,18 @@ export default function Quotations() {
                     <tbody className="divide-y divide-[#2a3550]">
                       {selectedQuotation.items.map((item) => (
                         <tr key={item.id}>
-                          <td className="px-4 py-3 text-sm font-semibold text-white">
-                            {item.name}
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <ProductThumb item={item} />
+                              <div className="min-w-0">
+                                <p className="break-words text-sm font-semibold text-white">
+                                  {item.name}
+                                </p>
+                                <p className="mt-0.5 text-xs text-gray-500">
+                                  {item.productId}
+                                </p>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-400">
                             {item.sku}

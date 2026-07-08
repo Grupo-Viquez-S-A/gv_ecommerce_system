@@ -20,7 +20,7 @@ function formatDate(dateValue) {
   }).format(date);
 }
 
-export default function MyQuotationsList({ quotations }) {
+export default function MyQuotationsList({ quotations, onSelectQuotation }) {
   if (!quotations.length) {
     return (
       <EmptyClientState
@@ -45,7 +45,11 @@ export default function MyQuotationsList({ quotations }) {
           </thead>
           <tbody className="divide-y divide-[#2a3550]">
             {quotations.map((quotation) => (
-              <tr key={quotation.id} className="transition-colors hover:bg-[#202b40]">
+              <tr
+                key={quotation.id}
+                className="cursor-pointer transition-colors hover:bg-[#202b40]"
+                onClick={() => onSelectQuotation?.(quotation)}
+              >
                 <td className="px-5 py-4">
                   <p className="font-semibold text-white">{quotation.number}</p>
                   {quotation.notes && <p className="mt-1 max-w-lg text-xs text-gray-400">{quotation.notes}</p>}
@@ -62,7 +66,11 @@ export default function MyQuotationsList({ quotations }) {
 
       <div className="grid gap-3 p-4 lg:hidden">
         {quotations.map((quotation) => (
-          <article key={quotation.id} className="rounded-lg border border-[#2a3550] bg-[#141d2e] p-4">
+          <article
+            key={quotation.id}
+            className="cursor-pointer rounded-lg border border-[#2a3550] bg-[#141d2e] p-4 transition-colors hover:border-[#C9A227]/45 hover:bg-[#182235]"
+            onClick={() => onSelectQuotation?.(quotation)}
+          >
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="font-semibold text-white">{quotation.number}</p>

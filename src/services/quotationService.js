@@ -167,6 +167,49 @@ function getQuotationTotal(items = []) {
   return items.reduce((total, item) => total + getNumber(item.total, 0), 0);
 }
 
+function getFileUrl(file) {
+  return file?.public_url || file?.url || file?.file_url || null;
+}
+
+function normalizeFileText(value) {
+  return String(value || "").toLowerCase();
+}
+
+function isImageFile(file) {
+  const fileText = normalizeFileText(
+    [file?.mime_type, file?.file_name, file?.file_path, getFileUrl(file)]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  return (
+    fileText.includes("image/") ||
+    /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/.test(fileText)
+  );
+}
+
+function isTechnicalSheetFile(file) {
+  const fileText = normalizeFileText(
+    [file?.file_type, file?.type, file?.file_name, file?.file_path, getFileUrl(file)]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  return (
+    fileText.includes("ficha") ||
+    fileText.includes("technical") ||
+    fileText.includes("datasheet") ||
+    fileText.includes("especificacion") ||
+    fileText.includes("specification")
+  );
+}
+
+function getProductImageUrl(files = []) {
+  const imageFile = files.find((file) => isImageFile(file) && !isTechnicalSheetFile(file));
+
+  return getFileUrl(imageFile);
+}
+
 function normalizeQuotation({
   quotation,
   business,
@@ -183,6 +226,11 @@ function normalizeQuotation({
     sku: item.product?.sku || "Sin SKU",
     name: item.product?.product_name || "Producto sin nombre",
     description: item.product?.description || "",
+    imageUrl:
+      item.product?.image_url ||
+      item.product?.main_image_url ||
+      item.product?.cover_image_url ||
+      getProductImageUrl(item.productFiles || []),
     quantity: getNumber(item.quantity, 0),
     unitPrice: getNumber(item.unit_price, 0),
     ivaAmount: getNumber(item.iva_amount, 0),
@@ -449,11 +497,23 @@ export async function getQuotations() {
       )
     : [];
 
+  const productFiles = productIds.length
+    ? throwIfError(
+        await supabase
+          .from("textile_product_files")
+          .select("*")
+          .in("product_id", productIds)
+          .order("created_at", { ascending: true }),
+        "No fue posible cargar las imagenes de productos cotizados",
+      )
+    : [];
+
   const businessesById = indexById(businesses, "business_id");
   const branchesById = indexById(branches, "branch_id");
   const representativesById = indexById(representatives, "representative_id");
   const sellersById = indexById(sellers, "user_id");
   const productsById = indexById(products, "product_id");
+  const productFilesById = groupById(productFiles, "product_id");
   const quoteProductsByQuotationId = groupById(quoteProducts, "quotation_id");
 
   return quotations.map((quotation) => {
@@ -462,6 +522,7 @@ export async function getQuotations() {
     ).map((item) => ({
       ...item,
       product: productsById[item.product_id],
+      productFiles: productFilesById[item.product_id] || [],
     }));
 
     return normalizeQuotation({

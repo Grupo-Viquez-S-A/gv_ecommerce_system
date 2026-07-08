@@ -28,7 +28,7 @@ function Detail({ label, value }) {
   );
 }
 
-export default function MyOrdersList({ orders }) {
+export default function MyOrdersList({ orders, onSelectOrder }) {
   if (!orders.length) {
     return (
       <EmptyClientState
@@ -41,7 +41,11 @@ export default function MyOrdersList({ orders }) {
   return (
     <div className="grid gap-4">
       {orders.map((order) => (
-        <article key={order.id} className="rounded-lg border border-[#2a3550] bg-[#1b2538] p-5 shadow-sm">
+        <article
+          key={order.id}
+          className="cursor-pointer rounded-lg border border-[#2a3550] bg-[#1b2538] p-5 shadow-sm transition-colors hover:border-[#C9A227]/45 hover:bg-[#202b40]"
+          onClick={() => onSelectOrder?.(order)}
+        >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-[#C9A227]">Orden de produccion</p>

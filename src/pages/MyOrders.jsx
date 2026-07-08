@@ -3,7 +3,11 @@ import { RiCheckboxCircleFill, RiFileList3Fill, RiSettings3Fill, RiTimeFill } fr
 
 import ClientSummaryCard from "../components/clientPanel/ClientSummaryCard.jsx";
 import MyOrdersList from "../components/clientPanel/MyOrdersList.jsx";
-import { getMyProductionOrders } from "../services/clientPanelService.js";
+import OrderDetailModal from "../components/clientPanel/OrderDetailModal.jsx";
+import {
+  getMyOrderDetail,
+  getMyProductionOrders,
+} from "../services/clientPanelService.js";
 
 function isStatusOneOf(status, values) {
   const normalizedStatus = String(status || "").trim().toLowerCase();
@@ -15,6 +19,10 @@ export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderDetail, setOrderDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -45,6 +53,50 @@ export default function MyOrders() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadOrderDetail() {
+      if (!selectedOrder?.productionOrderId) {
+        setOrderDetail(null);
+        setDetailError("");
+        setDetailLoading(false);
+        return;
+      }
+
+      try {
+        setDetailLoading(true);
+        setDetailError("");
+        const detail = await getMyOrderDetail(selectedOrder.productionOrderId);
+
+        if (mounted) {
+          setOrderDetail(detail);
+        }
+      } catch (loadError) {
+        if (mounted) {
+          setOrderDetail(null);
+          setDetailError(loadError.message || "No fue posible cargar el detalle.");
+        }
+      } finally {
+        if (mounted) {
+          setDetailLoading(false);
+        }
+      }
+    }
+
+    loadOrderDetail();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedOrder]);
+
+  const closeDetail = () => {
+    setSelectedOrder(null);
+    setOrderDetail(null);
+    setDetailError("");
+  };
 
   const summary = useMemo(() => {
     const pending = orders.filter((order) =>
@@ -98,8 +150,18 @@ export default function MyOrders() {
           </div>
         )}
 
-        {!loading && !error && <MyOrdersList orders={orders} />}
+        {!loading && !error && (
+          <MyOrdersList orders={orders} onSelectOrder={setSelectedOrder} />
+        )}
       </section>
+
+      <OrderDetailModal
+        isOpen={Boolean(selectedOrder)}
+        order={orderDetail}
+        loading={detailLoading}
+        error={detailError}
+        onClose={closeDetail}
+      />
     </div>
   );
 }

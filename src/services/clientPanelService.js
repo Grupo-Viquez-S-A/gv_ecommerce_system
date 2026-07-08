@@ -2,7 +2,7 @@
 
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
-    return response?.data || [];
+    return response?.data ?? [];
   }
 
   throw new Error(`${actionMessage}: ${response.error.message}`);
@@ -52,6 +52,192 @@ function getItemTotal(items = []) {
   return items.reduce((total, item) => total + getNumber(item.total), 0);
 }
 
+function getFileUrl(file) {
+  return file?.public_url || file?.url || file?.file_url || null;
+}
+
+function normalizeText(value) {
+  return String(value || "").toLowerCase();
+}
+
+function isImageFile(file) {
+  const fileText = normalizeText(
+    [file?.mime_type, file?.file_name, file?.file_path, getFileUrl(file)]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  return (
+    fileText.includes("image/") ||
+    /\.(png|jpe?g|webp|gif|avif)(\?.*)?$/.test(fileText)
+  );
+}
+
+function isTechnicalSheetFile(file) {
+  const fileText = normalizeText(
+    [file?.file_type, file?.type, file?.file_name, file?.file_path, getFileUrl(file)]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  return (
+    fileText.includes("ficha") ||
+    fileText.includes("technical") ||
+    fileText.includes("datasheet") ||
+    fileText.includes("especificacion") ||
+    fileText.includes("specification")
+  );
+}
+
+function getProductImageUrl(files = []) {
+  const imageFile = files.find((file) => isImageFile(file) && !isTechnicalSheetFile(file));
+
+  return getFileUrl(imageFile);
+}
+
+function normalizeProductItem(item, product, files = []) {
+  return {
+    id: item.quote_product_id,
+    quoteProductId: item.quote_product_id,
+    quotationId: item.quotation_id,
+    productId: item.product_id,
+    name: product?.product_name || product?.fabric_name || "Producto sin nombre",
+    sku: product?.sku || product?.fabric_code || item.product_id || "Sin codigo",
+    imageUrl: product?.image_url || product?.main_image_url || product?.cover_image_url || getProductImageUrl(files),
+    quantity: getNumber(item.quantity, 0),
+    unitPrice: getNumber(item.unit_price, 0),
+    ivaAmount: getNumber(item.iva_amount, 0),
+    subtotal: getNumber(item.subtotal, 0),
+    total: getNumber(item.total, 0),
+  };
+}
+
+async function getQuotationProducts(quotationIds = []) {
+  if (!quotationIds.length) {
+    return [];
+  }
+
+  const quoteProducts = throwIfError(
+    await supabase
+      .from("quote_products")
+      .select(
+        "quote_product_id, quotation_id, product_id, quantity, unit_price, iva_amount, subtotal, total, created_at, updated_at",
+      )
+      .in("quotation_id", quotationIds),
+    "No fue posible cargar los productos cotizados",
+  );
+
+  const productIds = [...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean))];
+
+  const products = productIds.length
+    ? throwIfError(
+        await supabase
+          .from("textile_products")
+          .select("product_id, sku, product_name, description, price, iva_amount")
+          .in("product_id", productIds),
+        "No fue posible cargar el catalogo de productos",
+      )
+    : [];
+
+  const productFiles = productIds.length
+    ? throwIfError(
+        await supabase
+          .from("textile_product_files")
+          .select("*")
+          .in("product_id", productIds)
+          .order("created_at", { ascending: true }),
+        "No fue posible cargar las imagenes de productos",
+      )
+    : [];
+
+  const productsById = indexRowsByKey(products, "product_id");
+  const filesByProductId = groupRowsByKey(productFiles, "product_id");
+
+  return quoteProducts.map((item) =>
+    normalizeProductItem(
+      item,
+      productsById[item.product_id],
+      filesByProductId[item.product_id] || [],
+    ),
+  );
+}
+
+async function getQuotationRelations(quotation) {
+  const [business, branch, representative] = await Promise.all([
+    quotation.business_id
+      ? throwIfError(
+          await supabase
+            .from("businesses")
+            .select("business_id, legal_id, legal_name, business_name, activity_code")
+            .eq("business_id", quotation.business_id)
+            .maybeSingle(),
+          "No fue posible cargar el cliente",
+        )
+      : null,
+    quotation.branch_id
+      ? throwIfError(
+          await supabase
+            .from("branches")
+            .select("branch_id, business_id, province, district, address")
+            .eq("branch_id", quotation.branch_id)
+            .maybeSingle(),
+          "No fue posible cargar la sucursal",
+        )
+      : null,
+    quotation.representative_id
+      ? throwIfError(
+          await supabase
+            .from("representatives")
+            .select("representative_id, business_id, branch_id, name, email")
+            .eq("representative_id", quotation.representative_id)
+            .maybeSingle(),
+          "No fue posible cargar el representante",
+        )
+      : null,
+  ]);
+
+  return { business, branch, representative };
+}
+
+function normalizeQuotationDetail({ quotation, business, branch, representative, items }) {
+  return {
+    id: quotation.quotation_id,
+    quotationId: quotation.quotation_id,
+    number: quotation.quotation_number || "Sin numero",
+    status: getQuotationStatus(quotation),
+    notes: quotation.notes || "",
+    createdAt: quotation.created_at,
+    updatedAt: quotation.updated_at,
+    itemsCount: items.length,
+    total: getItemTotal(items),
+    business: business
+      ? {
+          id: business.business_id,
+          name: business.business_name || business.legal_name || "Cliente sin nombre",
+          legalName: business.legal_name || "",
+          legalId: business.legal_id || "",
+          activityCode: business.activity_code || "",
+        }
+      : null,
+    branch: branch
+      ? {
+          id: branch.branch_id,
+          province: branch.province || "",
+          district: branch.district || "",
+          address: branch.address || "",
+        }
+      : null,
+    representative: representative
+      ? {
+          id: representative.representative_id,
+          name: representative.name || "Representante sin nombre",
+          email: representative.email || "",
+        }
+      : null,
+    items,
+  };
+}
+
 export async function getAuthenticatedUserId() {
   const {
     data: { user },
@@ -90,17 +276,9 @@ export async function getMyQuotations() {
 
   const quotationIds = quotations.map((quotation) => quotation.quotation_id);
 
-  const quoteProducts = throwIfError(
-    await supabase
-      .from("quote_products")
-      .select(
-        "quote_product_id, quotation_id, product_id, quantity, unit_price, iva_amount, subtotal, total, created_at, updated_at",
-      )
-      .in("quotation_id", quotationIds),
-    "No fue posible cargar los productos cotizados",
-  );
+  const quoteProducts = await getQuotationProducts(quotationIds);
 
-  const productsByQuotationId = groupRowsByKey(quoteProducts, "quotation_id");
+  const productsByQuotationId = groupRowsByKey(quoteProducts, "quotationId");
 
   return quotations.map((quotation) => {
     const items = productsByQuotationId[quotation.quotation_id] || [];
@@ -158,4 +336,119 @@ export async function getMyProductionOrders() {
     createdAt: order.created_at,
     updatedAt: order.updated_at,
   }));
+}
+
+export async function getMyQuotationDetail(quotationId) {
+  const userId = await getAuthenticatedUserId();
+
+  if (!quotationId) {
+    throw new Error("No se encontro la cotizacion seleccionada.");
+  }
+
+  const quotation = throwIfError(
+    await supabase
+      .from("quotations")
+      .select(
+        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id",
+      )
+      .eq("quotation_id", quotationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    "No fue posible cargar el detalle de la cotizacion",
+  );
+
+  if (!quotation) {
+    throw new Error("No se encontro la cotizacion o no pertenece a tu usuario.");
+  }
+
+  const [{ business, branch, representative }, items] = await Promise.all([
+    getQuotationRelations(quotation),
+    getQuotationProducts([quotation.quotation_id]),
+  ]);
+
+  return normalizeQuotationDetail({
+    quotation,
+    business,
+    branch,
+    representative,
+    items,
+  });
+}
+
+export async function getMyOrderDetail(productionOrderId) {
+  const userId = await getAuthenticatedUserId();
+
+  if (!productionOrderId) {
+    throw new Error("No se encontro el pedido seleccionado.");
+  }
+
+  const order = throwIfError(
+    await supabase
+      .from("production_orders")
+      .select(
+        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, payment_method, next_payment_date, is_active, created_at, updated_at",
+      )
+      .eq("production_order_id", productionOrderId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    "No fue posible cargar el detalle del pedido",
+  );
+
+  if (!order) {
+    throw new Error("No se encontro el pedido seleccionado.");
+  }
+
+  const quotation = throwIfError(
+    await supabase
+      .from("quotations")
+      .select(
+        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id",
+      )
+      .eq("quotation_id", order.quotation_id)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    "No fue posible validar la cotizacion relacionada",
+  );
+
+  if (!quotation) {
+    throw new Error("El pedido no pertenece a una cotizacion de tu usuario.");
+  }
+
+  const [{ business, branch, representative }, items] = await Promise.all([
+    getQuotationRelations(quotation),
+    getQuotationProducts([quotation.quotation_id]),
+  ]);
+
+  const quotationDetail = normalizeQuotationDetail({
+    quotation,
+    business,
+    branch,
+    representative,
+    items,
+  });
+
+  return {
+    id: order.production_order_id,
+    productionOrderId: order.production_order_id,
+    code: order.production_order_code || "Sin codigo",
+    quotationId: order.quotation_id,
+    quotationNumber: quotationDetail.number,
+    productionStatus: order.production_order_status || "pending",
+    paymentStatus: order.payment_status || "pending",
+    paymentMethod: order.payment_method || "No definido",
+    committedDeliveryDate: order.committed_delivery_date,
+    unexpectedDeliveryDate: order.unexpected_delivery_date,
+    nextPaymentDate: order.next_payment_date,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at,
+    total: quotationDetail.total,
+    itemsCount: quotationDetail.itemsCount,
+    notes: quotationDetail.notes,
+    business: quotationDetail.business,
+    branch: quotationDetail.branch,
+    representative: quotationDetail.representative,
+    items: quotationDetail.items,
+  };
 }
