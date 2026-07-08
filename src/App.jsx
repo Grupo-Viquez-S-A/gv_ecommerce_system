@@ -6,6 +6,7 @@ import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Catalog from "./pages/Catalog";
+import ClientCatalog from "./pages/ClientCatalog";
 import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
@@ -42,6 +43,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Catalog />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/cliente/catalogo"
+            element={
+              <ProtectedRoute>
+                <ClientCatalog />
               </ProtectedRoute>
             }
           />
@@ -122,6 +132,10 @@ function App() {
 
           {/* Rutas de pruebas sin ProtectedRoute */}
           <Route path="/catalogo-dev" element={<Catalog />} />
+          <Route
+            path="/cliente/catalogo-dev"
+            element={<ClientCatalog />}
+          />
           <Route path="/clientes-dev" element={<Clients />} />
           <Route path="/agentes-dev" element={<Agents />} />
           <Route path="/cotizaciones-dev" element={<Quotations />} />
