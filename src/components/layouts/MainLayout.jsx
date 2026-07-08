@@ -37,7 +37,7 @@ function normalizeCompany(company, index = 0) {
 }
 
 export default function MainLayout() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -86,8 +86,7 @@ export default function MainLayout() {
           currentCompany={currentCompany}
           companies={availableCompanies}
           onCompanyChange={handleCompanyChange}
-          onOpenSidebar={toggleSidebar}
-          onSignOut={signOut}
+          onOpenSidebar={toggleSidebar}
         />
 
         <main className="flex-1 overflow-y-auto">

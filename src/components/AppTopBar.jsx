@@ -1,10 +1,8 @@
 import { useState } from "react";
 import {
-  RiArrowDownSFill,
-  RiLogoutBoxLine,
+  RiArrowDownSFill,
   RiMenuFill,
-  RiNotification3Fill,
-  RiSettings4Fill,
+  RiNotification3Fill,
 } from "react-icons/ri";
 
 const FALLBACK_COMPANY = {
@@ -43,9 +41,7 @@ export default function AppTopBar({
   companies = [],
   onCompanyChange,
   onOpenSidebar,
-  onNotificationsClick,
-  onSettingsClick,
-  onSignOut,
+  onNotificationsClick,
 }) {
   const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
 
@@ -136,34 +132,14 @@ export default function AppTopBar({
         <button
           type="button"
           onClick={onNotificationsClick}
-          className="relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer"
+          className="invisible pointer-events-none relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400"
           aria-label="Notificaciones"
           title="Notificaciones"
         >
           <RiNotification3Fill size={16} />
 
           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
-
-        <button
-          type="button"
-          onClick={onSettingsClick}
-          className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer"
-          aria-label="Configuración"
-          title="Configuración"
-        >
-          <RiSettings4Fill size={16} />
-        </button>
-
-        <button
-          type="button"
-          onClick={onSignOut}
-          className="w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400 hover:text-white hover:bg-[#C9A227]/15 transition-colors cursor-pointer"
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-        >
-          <RiLogoutBoxLine size={16} />
-        </button>
+        </button>
       </div>
     </header>
   );
