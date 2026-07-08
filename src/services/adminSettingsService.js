@@ -1,8 +1,31 @@
 import { supabase } from "./primarySupabaseClient";
 
-function assertEdgeResponse(data, error, fallbackMessage) {
+async function getFunctionErrorMessage(error, fallbackMessage) {
+  if (!error) {
+    return fallbackMessage;
+  }
+
+  const response = error.context;
+
+  if (response && typeof response.json === "function") {
+    try {
+      const body = await response.json();
+      const message = body?.error || body?.message;
+
+      if (message) {
+        return message;
+      }
+    } catch {
+      // If the response body is not JSON, keep the original error message.
+    }
+  }
+
+  return error.message || fallbackMessage;
+}
+
+async function assertEdgeResponse(data, error, fallbackMessage) {
   if (error) {
-    throw new Error(error.message || fallbackMessage);
+    throw new Error(await getFunctionErrorMessage(error, fallbackMessage));
   }
 
   if (data?.ok === false) {
@@ -20,7 +43,7 @@ async function invokeAdminUsers(action, payload = {}) {
     },
   });
 
-  return assertEdgeResponse(
+  return await assertEdgeResponse(
     data,
     error,
     "No fue posible completar la accion administrativa.",

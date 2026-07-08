@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   RiAddFill,
@@ -30,6 +30,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+import {
+  getQuotations,
+  updateQuotationStatus,
+} from "../services/quotationService.js";
 
 /* ─── MOCK DATA: COTIZACIONES ─────────────────────────────── */
 const MOCK_QUOTATIONS = [
@@ -198,6 +203,49 @@ const STATUS_COLORS = {
   Convertida: "#14b8a6",
 };
 
+const QUOTATION_STATUSES = [
+  "Pendiente",
+  "En revision",
+  "Aprobada",
+  "Rechazada",
+  "Vencida",
+  "Convertida",
+];
+
+const currencyFormatter = new Intl.NumberFormat("es-CR", {
+  style: "currency",
+  currency: "CRC",
+  maximumFractionDigits: 0,
+});
+
+const dateFormatter = new Intl.DateTimeFormat("es-CR", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+function formatCurrency(value) {
+  return currencyFormatter.format(Number(value) || 0);
+}
+
+function formatDate(value) {
+  const date = value ? new Date(value) : null;
+
+  if (!date || Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return dateFormatter.format(date);
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 /* ─── DATOS PARA GRÁFICOS ─────────────────────────────────── */
 const donutData = [
   { name: "Pendientes", value: 28, count: 28 },
@@ -273,12 +321,79 @@ export default function Quotations() {
   const [companyFilter, setCompanyFilter] = useState("Todas");
   const [agentFilter, setAgentFilter] = useState("Todos");
   const [clientFilter, setClientFilter] = useState("Todos");
-  const [dateFrom, setDateFrom] = useState("01/06/2024");
-  const [dateTo, setDateTo] = useState("30/06/2024");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [quotations, setQuotations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedQuotation, setSelectedQuotation] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState("create");
-  const [viewQuote, setViewQuote] = useState(null);
+  const loadQuotations = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setQuotations(await getQuotations());
+    } catch (loadError) {
+      console.error("Quotations loading error:", loadError);
+      setError(
+        loadError?.message || "No fue posible cargar las cotizaciones.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      loadQuotations();
+    });
+  }, []);
+
+  const companyOptions = useMemo(
+    () => [
+      "Todas",
+      ...new Set(quotations.map((quotation) => quotation.company).filter(Boolean)),
+    ],
+    [quotations],
+  );
+
+  const agentOptions = useMemo(
+    () => [
+      "Todos",
+      ...new Set(quotations.map((quotation) => quotation.agent).filter(Boolean)),
+    ],
+    [quotations],
+  );
+
+  const clientOptions = useMemo(
+    () => [
+      "Todos",
+      ...new Set(quotations.map((quotation) => quotation.client).filter(Boolean)),
+    ],
+    [quotations],
+  );
+
+  const statusCounts = useMemo(
+    () =>
+      quotations.reduce((counts, quotation) => {
+        const status = quotation.status || "Pendiente";
+
+        counts[status] = (counts[status] || 0) + 1;
+
+        return counts;
+      }, {}),
+    [quotations],
+  );
+
+  const totalQuotedValue = useMemo(
+    () =>
+      quotations.reduce(
+        (total, quotation) => total + (Number(quotation.total) || 0),
+        0,
+      ),
+    [quotations],
+  );
 
   const companies = [
     "Todas",
@@ -318,11 +433,17 @@ export default function Quotations() {
     "Occidente Lab",
   ];
 
+  void MOCK_QUOTATIONS;
+  void donutData;
+  void companies;
+  void agents;
+  void clients;
+
   const metrics = [
     {
       label: "COTIZACIONES TOTALES",
-      value: "172",
-      growth: "+15%",
+      value: String(quotations.length),
+      growth: "Base real",
       growthColor: "text-green-400",
       color: "#8b5cf6",
       iconColor: "text-[#8b5cf6]",
@@ -330,8 +451,8 @@ export default function Quotations() {
     },
     {
       label: "PENDIENTES",
-      value: "28",
-      growth: "+12%",
+      value: String(statusCounts.Pendiente || 0),
+      growth: "Por revisar",
       growthColor: "text-red-400",
       color: "#f59e0b",
       iconColor: "text-[#f59e0b]",
@@ -339,8 +460,8 @@ export default function Quotations() {
     },
     {
       label: "EN REVISIÓN",
-      value: "16",
-      growth: "+6%",
+      value: String(statusCounts["En revision"] || statusCounts["En revisiÃ³n"] || 0),
+      growth: "En seguimiento",
       growthColor: "text-green-400",
       color: "#C9A227",
       iconColor: "text-[#C9A227]",
@@ -348,8 +469,8 @@ export default function Quotations() {
     },
     {
       label: "APROBADAS",
-      value: "82",
-      growth: "+18%",
+      value: String(statusCounts.Aprobada || 0),
+      growth: "Confirmadas",
       growthColor: "text-green-400",
       color: "#22c55e",
       iconColor: "text-[#22c55e]",
@@ -357,8 +478,8 @@ export default function Quotations() {
     },
     {
       label: "RECHAZADAS",
-      value: "12",
-      growth: "-4%",
+      value: String(statusCounts.Rechazada || 0),
+      growth: "No aceptadas",
       growthColor: "text-red-400",
       color: "#ef4444",
       iconColor: "text-[#ef4444]",
@@ -366,8 +487,8 @@ export default function Quotations() {
     },
     {
       label: "VENCIDAS",
-      value: "22",
-      growth: "+10%",
+      value: String(statusCounts.Vencida || 0),
+      growth: "Fuera de vigencia",
       growthColor: "text-green-400",
       color: "#ec4899",
       iconColor: "text-[#ec4899]",
@@ -375,58 +496,95 @@ export default function Quotations() {
     },
   ];
 
-  const filtered = MOCK_QUOTATIONS.filter((quotation) => {
-    const normalizedSearch = search.trim().toLowerCase();
+  const filtered = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(search);
+    const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const toDate = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
 
-    const matchesSearch =
-      !normalizedSearch ||
-      quotation.number.toLowerCase().includes(normalizedSearch) ||
-      quotation.client.toLowerCase().includes(normalizedSearch);
+    return quotations.filter((quotation) => {
+      const quotationDate = quotation.date ? new Date(quotation.date) : null;
 
-    const matchesStatus =
-      statusFilter === "Todos" ||
-      quotation.status === statusFilter;
+      const matchesSearch =
+        !normalizedSearch ||
+        normalizeSearchText(quotation.number).includes(normalizedSearch) ||
+        normalizeSearchText(quotation.client).includes(normalizedSearch) ||
+        normalizeSearchText(quotation.company).includes(normalizedSearch);
 
-    const matchesCompany =
-      companyFilter === "Todas" ||
-      quotation.company === companyFilter;
+      const matchesStatus =
+        statusFilter === "Todos" || quotation.status === statusFilter;
 
-    const matchesAgent =
-      agentFilter === "Todos" ||
-      quotation.agent === agentFilter;
+      const matchesCompany =
+        companyFilter === "Todas" || quotation.company === companyFilter;
 
-    const matchesClient =
-      clientFilter === "Todos" ||
-      quotation.client === clientFilter;
+      const matchesAgent =
+        agentFilter === "Todos" || quotation.agent === agentFilter;
 
-    return (
-      matchesSearch &&
-      matchesStatus &&
-      matchesCompany &&
-      matchesAgent &&
-      matchesClient
-    );
-  });
+      const matchesClient =
+        clientFilter === "Todos" || quotation.client === clientFilter;
 
-  const openCreateDrawer = () => {
-    setDrawerMode("create");
-    setViewQuote(null);
-    setDrawerOpen(true);
+      const matchesFrom =
+        !fromDate ||
+        (quotationDate &&
+          !Number.isNaN(quotationDate.getTime()) &&
+          quotationDate >= fromDate);
+
+      const matchesTo =
+        !toDate ||
+        (quotationDate &&
+          !Number.isNaN(quotationDate.getTime()) &&
+          quotationDate <= toDate);
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesCompany &&
+        matchesAgent &&
+        matchesClient &&
+        matchesFrom &&
+        matchesTo
+      );
+    });
+  }, [
+    agentFilter,
+    clientFilter,
+    companyFilter,
+    dateFrom,
+    dateTo,
+    quotations,
+    search,
+    statusFilter,
+  ]);
+
+  const openQuotationModal = (quotation) => {
+    setSelectedQuotation(quotation);
   };
 
-  const openViewDrawer = (quotation) => {
-    setDrawerMode("view");
-    setViewQuote(quotation);
-    setDrawerOpen(true);
+  const closeQuotationModal = () => {
+    setSelectedQuotation(null);
   };
 
-  const closeDrawer = () => {
-    setDrawerOpen(false);
+  const handleQuotationStatus = async (status) => {
+    if (!selectedQuotation) {
+      return;
+    }
 
-    window.setTimeout(() => {
-      setDrawerMode("create");
-      setViewQuote(null);
-    }, 300);
+    try {
+      setUpdatingStatus(true);
+      await updateQuotationStatus(selectedQuotation.quotationId, status);
+      await loadQuotations();
+      setSelectedQuotation((currentQuotation) => ({
+        ...currentQuotation,
+        status,
+      }));
+    } catch (statusError) {
+      console.error("Quotation status update error:", statusError);
+      setError(
+        statusError?.message ||
+          "No fue posible actualizar el estado de la cotizacion.",
+      );
+    } finally {
+      setUpdatingStatus(false);
+    }
   };
 
   const clearFilters = () => {
@@ -435,9 +593,19 @@ export default function Quotations() {
     setCompanyFilter("Todas");
     setAgentFilter("Todos");
     setClientFilter("Todos");
-    setDateFrom("01/06/2024");
-    setDateTo("30/06/2024");
+    setDateFrom("");
+    setDateTo("");
   };
+
+  const dynamicDonutData = QUOTATION_STATUSES.map((status) => ({
+    name: status,
+    value: statusCounts[status] || 0,
+    count: statusCounts[status] || 0,
+  }));
+  const drawerOpen = false;
+  const drawerMode = "view";
+  const viewQuote = selectedQuotation;
+  const closeDrawer = closeQuotationModal;
 
   return (
     <>
@@ -462,11 +630,11 @@ export default function Quotations() {
 
           <button
             type="button"
-            onClick={openCreateDrawer}
+            onClick={loadQuotations}
             className="flex items-center justify-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20 cursor-pointer"
           >
-            <RiAddFill size={16} />
-            Nueva Cotización
+            <RiDownloadFill size={16} />
+            Actualizar cotizaciones
           </button>
         </div>
 
@@ -536,7 +704,7 @@ export default function Quotations() {
                   }
                   className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
                 >
-                  {clients.map((client) => (
+                  {clientOptions.map((client) => (
                     <option key={client}>{client}</option>
                   ))}
                 </select>
@@ -561,7 +729,7 @@ export default function Quotations() {
                   }
                   className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
                 >
-                  {companies.map((company) => (
+                  {companyOptions.map((company) => (
                     <option key={company}>{company}</option>
                   ))}
                 </select>
@@ -615,7 +783,7 @@ export default function Quotations() {
                   }
                   className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
                 >
-                  {agents.map((agent) => (
+                  {agentOptions.map((agent) => (
                     <option key={agent}>{agent}</option>
                   ))}
                 </select>
@@ -639,7 +807,7 @@ export default function Quotations() {
                 />
 
                 <input
-                  type="text"
+                  type="date"
                   value={dateFrom}
                   onChange={(event) => setDateFrom(event.target.value)}
                   className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors"
@@ -659,7 +827,7 @@ export default function Quotations() {
                 />
 
                 <input
-                  type="text"
+                  type="date"
                   value={dateTo}
                   onChange={(event) => setDateTo(event.target.value)}
                   className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors"
@@ -685,6 +853,12 @@ export default function Quotations() {
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            {error}
+          </div>
+        )}
 
         {/* Tabla de cotizaciones */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-6">
@@ -740,7 +914,8 @@ export default function Quotations() {
               {filtered.map((quotation) => (
                 <tr
                   key={quotation.id}
-                  className="hover:bg-[#1c2538]/50 transition-colors"
+                  onClick={() => openQuotationModal(quotation)}
+                  className="hover:bg-[#1c2538]/50 transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3 text-sm text-gray-300 font-mono">
                     {quotation.number}
@@ -755,15 +930,15 @@ export default function Quotations() {
                   </td>
 
                   <td className="px-4 py-3 text-sm text-gray-400">
-                    {quotation.date}
+                    {formatDate(quotation.date)}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-gray-400">
-                    {quotation.validity}
+                    {formatDate(quotation.validity)}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-white font-semibold">
-                    {quotation.total}
+                    {formatCurrency(quotation.total)}
                   </td>
 
                   <td className="px-4 py-3">
@@ -786,7 +961,10 @@ export default function Quotations() {
                     <div className="flex items-center justify-end gap-0.5">
                       <button
                         type="button"
-                        onClick={() => openViewDrawer(quotation)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openQuotationModal(quotation);
+                        }}
                         className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
                         title="Ver"
                       >
@@ -839,7 +1017,17 @@ export default function Quotations() {
             </tbody>
           </table>
 
-          {filtered.length === 0 && (
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <RiSearchLine size={28} className="text-gray-600 animate-pulse" />
+
+              <p className="text-sm text-gray-500">
+                Cargando cotizaciones...
+              </p>
+            </div>
+          )}
+
+          {!loading && filtered.length === 0 && (
             <div className="flex flex-col items-center justify-center py-14 gap-3">
               <RiSearchLine size={28} className="text-gray-600" />
 
@@ -859,7 +1047,8 @@ export default function Quotations() {
 
           <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
             <span className="text-xs text-gray-500">
-              Mostrando 1 a {filtered.length} de 172 cotizaciones
+              Mostrando {filtered.length === 0 ? 0 : 1} a {filtered.length} de{" "}
+              {quotations.length} cotizaciones
             </span>
 
             <div className="flex items-center gap-1">
@@ -890,7 +1079,7 @@ export default function Quotations() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={donutData}
+                      data={dynamicDonutData}
                       cx="50%"
                       cy="50%"
                       innerRadius={40}
@@ -899,7 +1088,7 @@ export default function Quotations() {
                       dataKey="value"
                       stroke="none"
                     >
-                      {donutData.map((entry, index) => (
+                      {dynamicDonutData.map((entry, index) => (
                         <Cell
                           key={`cell-${entry.name}`}
                           fill={Object.values(STATUS_COLORS)[index]}
@@ -911,7 +1100,7 @@ export default function Quotations() {
 
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-lg font-bold text-white">
-                    172
+                    {quotations.length}
                   </span>
                   <span className="text-[10px] text-gray-500">
                     Total
@@ -920,7 +1109,7 @@ export default function Quotations() {
               </div>
 
               <div className="flex-1 space-y-2">
-                {donutData.map((item, index) => (
+                {dynamicDonutData.map((item, index) => (
                   <div
                     key={item.name}
                     className="flex items-center justify-between text-xs"
@@ -945,7 +1134,11 @@ export default function Quotations() {
                       </span>
 
                       <span className="text-gray-500">
-                        ({Math.round((item.count / 172) * 100)}%)
+                        (
+                        {quotations.length
+                          ? Math.round((item.count / quotations.length) * 100)
+                          : 0}
+                        %)
                       </span>
                     </div>
                   </div>
@@ -960,7 +1153,7 @@ export default function Quotations() {
             </h3>
 
             <div className="text-xl font-bold text-white mb-1">
-              €156.800.000
+              {formatCurrency(totalQuotedValue)}
             </div>
 
             <div className="text-xs text-green-400 mb-4">
@@ -1198,6 +1391,199 @@ export default function Quotations() {
           </div>
         )}
       </div>
+
+      {selectedQuotation && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#35547E] bg-[#102441] shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[#2a3550] px-5 py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31] text-[#C9A227]">
+                  <RiEyeFill size={20} />
+                </div>
+
+                <div className="min-w-0">
+                  <h2 className="truncate text-lg font-bold text-white">
+                    {selectedQuotation.number}
+                  </h2>
+                  <p className="truncate text-sm text-gray-400">
+                    {selectedQuotation.client} - {selectedQuotation.agent}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeQuotationModal}
+                className="h-10 w-10 flex-shrink-0 rounded-xl border border-[#35547E] text-xl text-white transition hover:border-[#C9A227] hover:bg-[#1c2538]"
+                aria-label="Cerrar detalle"
+              >
+                x
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="mb-4 grid gap-3 md:grid-cols-4">
+                {[
+                  { label: "Estado", value: selectedQuotation.status },
+                  { label: "Fecha", value: formatDate(selectedQuotation.date) },
+                  {
+                    label: "Vigencia",
+                    value: formatDate(selectedQuotation.validity),
+                  },
+                  {
+                    label: "Total",
+                    value: formatCurrency(selectedQuotation.total),
+                  },
+                ].map(({ label, value }) => (
+                  <div
+                    key={label}
+                    className="rounded-xl border border-[#2a3550] bg-[#091A31] p-3"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                      {label}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-white">
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mb-4 grid gap-3 md:grid-cols-3">
+                <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
+                  <h3 className="text-sm font-bold text-white">
+                    Cliente
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-300">
+                    {selectedQuotation.company}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {selectedQuotation.legalName || "Sin razon social"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {selectedQuotation.legalId || "Sin cedula juridica"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
+                  <h3 className="text-sm font-bold text-white">
+                    Sucursal
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-300">
+                    {selectedQuotation.branch?.address || "Sin direccion"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {[selectedQuotation.branch?.province, selectedQuotation.branch?.district]
+                      .filter(Boolean)
+                      .join(", ") || "Sin ubicacion"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
+                  <h3 className="text-sm font-bold text-white">
+                    Representante
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-300">
+                    {selectedQuotation.representative?.name ||
+                      "Sin representante"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {selectedQuotation.representative?.email || "Sin correo"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-[#2a3550]">
+                <div className="border-b border-[#2a3550] bg-[#091A31] px-4 py-3">
+                  <h3 className="text-sm font-bold text-white">
+                    Articulos cotizados
+                  </h3>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left">
+                    <thead>
+                      <tr className="border-b border-[#2a3550]">
+                        <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                          Producto
+                        </th>
+                        <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                          SKU
+                        </th>
+                        <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                          Cantidad
+                        </th>
+                        <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                          Precio
+                        </th>
+                        <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                          IVA
+                        </th>
+                        <th className="px-4 py-3 text-right text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#2a3550]">
+                      {selectedQuotation.items.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-4 py-3 text-sm font-semibold text-white">
+                            {item.name}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-400">
+                            {item.sku}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-300">
+                            {item.quantity}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-300">
+                            {formatCurrency(item.unitPrice)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-300">
+                            {formatCurrency(item.ivaAmount)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-bold text-white">
+                            {formatCurrency(item.total)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {selectedQuotation.notes && (
+                <div className="mt-4 rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
+                  <h3 className="text-sm font-bold text-white">Notas</h3>
+                  <p className="mt-2 text-sm text-gray-300">
+                    {selectedQuotation.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-[#2a3550] px-5 py-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => handleQuotationStatus("Rechazada")}
+                disabled={updatingStatus}
+                className="rounded-xl border border-red-400/40 bg-red-500/10 px-5 py-2.5 text-sm font-bold text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Rechazar
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuotationStatus("Aprobada")}
+                disabled={updatingStatus}
+                className="rounded-xl border border-green-400/40 bg-green-500/15 px-5 py-2.5 text-sm font-bold text-green-100 transition hover:bg-green-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {updatingStatus ? "Guardando..." : "Aprobar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

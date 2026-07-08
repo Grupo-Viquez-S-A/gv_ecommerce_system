@@ -36,8 +36,29 @@ import {
   createCatalogFilterId,
   getCatalogProducts,
 } from "../services/catalogService.js";
+import {
+  createBusinessQuotation,
+  getQuotationCompanies,
+} from "../services/quotationService.js";
 
 const PAGE_SIZE = 8;
+
+const EMPTY_QUOTATION_CLIENT_FORM = {
+  companyId: "",
+  legalId: "",
+  legalName: "",
+  businessName: "",
+  activityCode: "",
+  businessEmail: "",
+  businessPhone: "",
+  branchProvince: "",
+  branchDistrict: "",
+  branchAddress: "",
+  branchPhone: "",
+  representativeName: "",
+  representativeEmail: "",
+  notes: "",
+};
 
 function getCartProductId(product) {
   return (
@@ -63,6 +84,18 @@ function getCartProductSku(product) {
     product?.fabric_code ||
     "SKU no disponible"
   );
+}
+
+function getCartProductPrice(product) {
+  const price = Number(product?.price);
+
+  return Number.isFinite(price) ? price : 0;
+}
+
+function getCartProductIva(product) {
+  const ivaAmount = Number(product?.iva_amount);
+
+  return Number.isFinite(ivaAmount) ? ivaAmount : 0;
 }
 
 function getCartProductType(product) {
@@ -101,6 +134,13 @@ export default function Catalog() {
   const [currentPage, setCurrentPage] = useState(1);
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
+  const [quotationCompanies, setQuotationCompanies] = useState([]);
+  const [quotationClientForm, setQuotationClientForm] = useState(
+    EMPTY_QUOTATION_CLIENT_FORM,
+  );
+  const [quotationError, setQuotationError] = useState("");
+  const [quotationSuccess, setQuotationSuccess] = useState("");
+  const [quotationSubmitting, setQuotationSubmitting] = useState(false);
 
   const isTextileProductsCatalog =
     activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
@@ -175,8 +215,36 @@ export default function Catalog() {
   );
 
   useEffect(() => {
-    loadCatalog({ showFullLoader: true });
+    let isMounted = true;
+
+    Promise.resolve().then(() => {
+      if (isMounted) {
+        loadCatalog({ showFullLoader: true });
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [loadCatalog]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getQuotationCompanies()
+      .then((companies) => {
+        if (isMounted) {
+          setQuotationCompanies(companies || []);
+        }
+      })
+      .catch((error) => {
+        console.error("Quotation companies loading error:", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories = useMemo(() => {
     const uniqueCategories = new Map();
@@ -523,7 +591,9 @@ export default function Catalog() {
 
   useEffect(() => {
     if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+      Promise.resolve().then(() => {
+        setCurrentPage(totalPages);
+      });
     }
   }, [currentPage, totalPages]);
 
@@ -650,12 +720,17 @@ export default function Catalog() {
           sku: getCartProductSku(product),
           catalogType: getCartProductType(product),
           quantity: safeQuantity,
+          productId,
+          unitPrice: getCartProductPrice(product),
+          ivaAmount: getCartProductIva(product),
         },
       ];
     });
   };
 
   const handleOpenCart = () => {
+    setQuotationError("");
+    setQuotationSuccess("");
     setCartOpen(true);
   };
 
@@ -688,12 +763,43 @@ export default function Catalog() {
     setCartItems([]);
   };
 
-  const handleQuoteCart = () => {
-    setCartOpen(false);
+  const handleQuotationClientFormChange = (fieldName, value) => {
+    setQuotationClientForm((currentForm) => ({
+      ...currentForm,
+      [fieldName]: value,
+    }));
   };
 
-  const handlePlaceOrder = () => {
-    setCartOpen(false);
+  const handleSaveCartQuotation = async (status) => {
+    try {
+      setQuotationSubmitting(true);
+      setQuotationError("");
+      setQuotationSuccess("");
+
+      const quotation = await createBusinessQuotation({
+        client: quotationClientForm,
+        items: cartItems,
+        status,
+      });
+
+      setQuotationSuccess(
+        `Cotizacion guardada: ${quotation.quotationNumber}`,
+      );
+      setCartItems([]);
+      setQuotationClientForm(EMPTY_QUOTATION_CLIENT_FORM);
+    } catch (error) {
+      console.error("Cart quotation error:", error);
+      setQuotationError(
+        error?.message ||
+          "No fue posible guardar la cotizacion del carrito.",
+      );
+    } finally {
+      setQuotationSubmitting(false);
+    }
+  };
+
+  const handleQuoteCart = () => {
+    handleSaveCartQuotation("pending");
   };
 
   const handleOpenTechnicalSheet = (product) => {
@@ -959,6 +1065,294 @@ export default function Catalog() {
                       </div>
                     </div>
                   ))}
+
+                  <div className="rounded-xl border border-[#35547E] bg-[#091A31] p-4">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-sm font-extrabold uppercase tracking-[0.12em] text-[#D7A91D]">
+                        Datos del cliente
+                      </h3>
+                      <p className="text-sm text-slate-400">
+                        Registra la empresa cliente, su sucursal y el representante para guardar la cotizacion.
+                      </p>
+                    </div>
+
+                    {quotationError && (
+                      <div className="mt-4 rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                        {quotationError}
+                      </div>
+                    )}
+
+                    {quotationSuccess && (
+                      <div className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                        {quotationSuccess}
+                      </div>
+                    )}
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Empresa del grupo
+                        </span>
+                        <select
+                          value={quotationClientForm.companyId}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "companyId",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+                        >
+                          <option value="">Seleccionar empresa</option>
+                          {quotationCompanies.map((company) => (
+                            <option
+                              key={company.company_id}
+                              value={company.company_id}
+                            >
+                              {company.commercial_name ||
+                                company.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Cedula juridica
+                        </span>
+                        <input
+                          value={quotationClientForm.legalId}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "legalId",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. 3-101-000000"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Codigo actividad
+                        </span>
+                        <input
+                          value={quotationClientForm.activityCode}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "activityCode",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Opcional"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Razon social
+                        </span>
+                        <input
+                          value={quotationClientForm.legalName}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "legalName",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. Cliente S.A."
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Nombre comercial
+                        </span>
+                        <input
+                          value={quotationClientForm.businessName}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "businessName",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. Tienda Central"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Correo empresa
+                        </span>
+                        <input
+                          type="email"
+                          value={quotationClientForm.businessEmail}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "businessEmail",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="facturacion@cliente.com"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Telefono empresa
+                        </span>
+                        <input
+                          value={quotationClientForm.businessPhone}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "businessPhone",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. 2222-2222"
+                        />
+                      </label>
+
+                      <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
+                        <p className="text-sm font-extrabold text-white">
+                          Sucursal
+                        </p>
+                      </div>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Provincia
+                        </span>
+                        <input
+                          value={quotationClientForm.branchProvince}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchProvince",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. San Jose"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Distrito
+                        </span>
+                        <input
+                          value={quotationClientForm.branchDistrict}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchDistrict",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. Catedral"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Telefono sucursal
+                        </span>
+                        <input
+                          value={quotationClientForm.branchPhone}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchPhone",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. 2222-3333"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Direccion
+                        </span>
+                        <input
+                          value={quotationClientForm.branchAddress}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchAddress",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Direccion exacta"
+                        />
+                      </label>
+
+                      <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
+                        <p className="text-sm font-extrabold text-white">
+                          Representante
+                        </p>
+                      </div>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Nombre
+                        </span>
+                        <input
+                          value={quotationClientForm.representativeName}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "representativeName",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Nombre del contacto"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Correo representante
+                        </span>
+                        <input
+                          type="email"
+                          value={quotationClientForm.representativeEmail}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "representativeEmail",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="contacto@cliente.com"
+                        />
+                      </label>
+
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Notas
+                        </span>
+                        <textarea
+                          value={quotationClientForm.notes}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "notes",
+                              event.target.value,
+                            )
+                          }
+                          rows={3}
+                          className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Observaciones para la cotizacion"
+                        />
+                      </label>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="mt-4 rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-4 py-3 text-sm text-slate-500">
@@ -1046,7 +1440,7 @@ export default function Catalog() {
             }
           }}
         >
-          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#35547E] bg-[#102441] shadow-2xl">
+          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#35547E] bg-[#102441] shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-[#29466F] px-5 py-4">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31] text-[#D7A91D]">
@@ -1147,6 +1541,290 @@ export default function Catalog() {
                       </div>
                     </div>
                   ))}
+
+                  <div className="rounded-xl border border-[#35547E] bg-[#091A31] p-4">
+                    <div>
+                      <h3 className="text-sm font-extrabold uppercase tracking-[0.12em] text-[#D7A91D]">
+                        Datos del cliente
+                      </h3>
+                      <p className="mt-1 text-sm text-slate-400">
+                        Empresa cliente, sucursal y representante para guardar la cotizacion.
+                      </p>
+                    </div>
+
+                    {quotationError && (
+                      <div className="mt-4 rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+                        {quotationError}
+                      </div>
+                    )}
+
+                    {quotationSuccess && (
+                      <div className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                        {quotationSuccess}
+                      </div>
+                    )}
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Empresa del grupo
+                        </span>
+                        <select
+                          value={quotationClientForm.companyId}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "companyId",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+                        >
+                          <option value="">Seleccionar empresa</option>
+                          {quotationCompanies.map((company) => (
+                            <option
+                              key={company.company_id}
+                              value={company.company_id}
+                            >
+                              {company.commercial_name ||
+                                company.company_name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Cedula juridica
+                        </span>
+                        <input
+                          value={quotationClientForm.legalId}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "legalId",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. 3-101-000000"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Codigo actividad
+                        </span>
+                        <input
+                          value={quotationClientForm.activityCode}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "activityCode",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Opcional"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Razon social
+                        </span>
+                        <input
+                          value={quotationClientForm.legalName}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "legalName",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. Cliente S.A."
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Nombre comercial
+                        </span>
+                        <input
+                          value={quotationClientForm.businessName}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "businessName",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. Tienda Central"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Correo empresa
+                        </span>
+                        <input
+                          type="email"
+                          value={quotationClientForm.businessEmail}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "businessEmail",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="facturacion@cliente.com"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Telefono empresa
+                        </span>
+                        <input
+                          value={quotationClientForm.businessPhone}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "businessPhone",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. 2222-2222"
+                        />
+                      </label>
+
+                      <div className="md:col-span-2 border-t border-[#29466F] pt-4 text-sm font-extrabold text-white">
+                        Sucursal
+                      </div>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Provincia
+                        </span>
+                        <input
+                          value={quotationClientForm.branchProvince}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchProvince",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. San Jose"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Distrito
+                        </span>
+                        <input
+                          value={quotationClientForm.branchDistrict}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchDistrict",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. Catedral"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Direccion
+                        </span>
+                        <input
+                          value={quotationClientForm.branchAddress}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchAddress",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Direccion exacta"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Telefono sucursal
+                        </span>
+                        <input
+                          value={quotationClientForm.branchPhone}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "branchPhone",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Ej. 2222-3333"
+                        />
+                      </label>
+
+                      <div className="md:col-span-2 border-t border-[#29466F] pt-4 text-sm font-extrabold text-white">
+                        Representante
+                      </div>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Nombre
+                        </span>
+                        <input
+                          value={quotationClientForm.representativeName}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "representativeName",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Nombre del contacto"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Correo representante
+                        </span>
+                        <input
+                          type="email"
+                          value={quotationClientForm.representativeEmail}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "representativeEmail",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="contacto@cliente.com"
+                        />
+                      </label>
+
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Notas
+                        </span>
+                        <textarea
+                          value={quotationClientForm.notes}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "notes",
+                              event.target.value,
+                            )
+                          }
+                          rows={3}
+                          className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                          placeholder="Observaciones para la cotizacion"
+                        />
+                      </label>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="flex min-h-[260px] flex-col items-center justify-center rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-6 py-10 text-center">
@@ -1169,7 +1847,7 @@ export default function Catalog() {
               <button
                 type="button"
                 onClick={handleClearCart}
-                disabled={cartItems.length === 0}
+                disabled={cartItems.length === 0 || quotationSubmitting}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300/30 px-4 py-2.5 text-sm font-bold text-red-100 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
@@ -1180,20 +1858,12 @@ export default function Catalog() {
                 <button
                   type="button"
                   onClick={handleQuoteCart}
-                  disabled={cartItems.length === 0}
+                  disabled={cartItems.length === 0 || quotationSubmitting}
                   className="rounded-xl border border-[#45648D] bg-[#132F58] px-5 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Cotizar
+                  {quotationSubmitting ? "Guardando..." : "Cotizar"}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={handlePlaceOrder}
-                  disabled={cartItems.length === 0}
-                  className="rounded-xl border border-[#D7A91D]/50 bg-[#D7A91D] px-5 py-2.5 text-sm font-bold text-[#071426] transition hover:bg-[#E9BC2D] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Realizar pedido
-                </button>
               </div>
             </div>
           </div>
