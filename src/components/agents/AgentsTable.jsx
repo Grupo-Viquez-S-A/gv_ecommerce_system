@@ -32,9 +32,6 @@ export default function AgentsTable({
               Empresa
             </th>
             <th className="px-5 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider">
-              Territorio
-            </th>
-            <th className="px-5 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider">
               Clientes
             </th>
             <th className="px-5 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider">

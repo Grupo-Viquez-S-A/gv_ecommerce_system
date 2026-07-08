@@ -20,6 +20,7 @@ export default function AgentDrawer({
   const isCreateMode = mode === AGENT_DRAWER_MODES.CREATE;
   const isEditMode = mode === AGENT_DRAWER_MODES.EDIT;
   const isViewMode = mode === AGENT_DRAWER_MODES.VIEW;
+  const canRenderForm = isOpen && (isCreateMode || isEditMode) && form && onFormChange;
 
   const drawerTitle = isCreateMode
     ? "Nuevo Agente"
@@ -102,14 +103,14 @@ export default function AgentDrawer({
 
         {/* Contenido */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {(isCreateMode || isEditMode) && (
+          {canRenderForm && (
             <AgentForm
               form={form}
               onChange={onFormChange}
             />
           )}
 
-          {isViewMode && (
+          {isOpen && isViewMode && (
             <AgentDetails agent={agent} />
           )}
         </div>

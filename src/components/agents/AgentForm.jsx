@@ -2,7 +2,6 @@ import {
   RiArrowDownSFill,
   RiBriefcaseFill,
   RiMailFill,
-  RiMapPinFill,
   RiPhoneFill,
   RiStarFill,
   RiUserFill,
@@ -120,14 +119,6 @@ export default function AgentForm({
           />
         </div>
       </div>
-
-      <FormField
-        icon={<RiMapPinFill size={14} />}
-        label="Territorio"
-        placeholder="Ej. Occidente, Centro, Nacional..."
-        value={form.territory}
-        onChange={(event) => updateField("territory", event.target.value)}
-      />
 
       <FormField
         icon={<RiStarFill size={14} />}

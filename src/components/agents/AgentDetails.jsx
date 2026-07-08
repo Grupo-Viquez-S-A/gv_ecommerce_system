@@ -2,7 +2,6 @@ import {
   RiBriefcaseFill,
   RiClipboardFill,
   RiMailFill,
-  RiMapPinFill,
   RiMoneyDollarCircleFill,
   RiPhoneFill,
   RiStarFill,
@@ -82,12 +81,6 @@ export default function AgentDetails({ agent }) {
             label="Empresa"
             value={agent.company}
             icon={<RiBriefcaseFill size={12} />}
-          />
-
-          <DetailItem
-            label="Territorio"
-            value={agent.territory}
-            icon={<RiMapPinFill size={12} />}
           />
 
           <DetailItem

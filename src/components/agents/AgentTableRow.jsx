@@ -34,10 +34,6 @@ export default function AgentTableRow({
         {agent.company}
       </td>
 
-      <td className="px-5 py-3 text-gray-300 text-sm">
-        {agent.territory}
-      </td>
-
       <td className="px-5 py-3 text-white font-semibold text-sm">
         {agent.clientsCount}
       </td>

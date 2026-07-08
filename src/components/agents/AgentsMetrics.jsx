@@ -7,43 +7,42 @@ import {
 
 import AgentMetricCard from "./AgentMetricCard.jsx";
 
-export default function AgentsMetrics() {
+export default function AgentsMetrics({ agents = [] }) {
+  const totalAgents = agents.length;
+  const activeAgents = agents.filter((agent) => agent.status === "Activo").length;
+  const inactiveAgents = totalAgents - activeAgents;
+  const companyCount = new Set(
+    agents.map((agent) => agent.company).filter(Boolean),
+  ).size;
+
   const metrics = [
     {
       label: "Agentes Totales",
-      value: "42",
+      value: totalAgents,
       icon: <RiUserFill size={20} />,
       iconContainerClass: "bg-[#C9A227]/15",
       iconClass: "text-[#C9A227]",
-      growth: "+8",
-      growthClass: "text-green-400",
     },
     {
       label: "Activos",
-      value: "38",
+      value: activeAgents,
       icon: <RiCheckboxCircleFill size={20} />,
       iconContainerClass: "bg-[#14301a]",
       iconClass: "text-[#4ade80]",
-      growth: "+5",
-      growthClass: "text-green-400",
     },
     {
       label: "Inactivos",
-      value: "4",
+      value: inactiveAgents,
       icon: <RiCloseCircleFill size={20} />,
       iconContainerClass: "bg-[#3b1a1a]",
       iconClass: "text-[#f87171]",
-      growth: "-1",
-      growthClass: "text-red-400",
     },
     {
-      label: "Ventas Acumuladas",
-      value: "₡104.0 M",
+      label: "Empresas",
+      value: companyCount,
       icon: <RiMoneyDollarCircleFill size={20} />,
       iconContainerClass: "bg-[#2d200a]",
       iconClass: "text-[#fbbf24]",
-      growth: "+18%",
-      growthClass: "text-green-400",
     },
   ];
 
