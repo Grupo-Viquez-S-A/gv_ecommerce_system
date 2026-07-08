@@ -12,6 +12,14 @@ function getNumber(value, fallback = 0) {
   return Number.isFinite(numberValue) ? numberValue : fallback;
 }
 
+function getBoolean(value) {
+  return value === true || value === "true";
+}
+
+function getTodayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
     return response?.data;
@@ -167,6 +175,7 @@ function getQuotationTotal(items = []) {
   return items.reduce((total, item) => total + getNumber(item.total, 0), 0);
 }
 
+<<<<<<< Updated upstream
 function getFileUrl(file) {
   return file?.public_url || file?.url || file?.file_url || null;
 }
@@ -208,6 +217,12 @@ function getProductImageUrl(files = []) {
   const imageFile = files.find((file) => isImageFile(file) && !isTechnicalSheetFile(file));
 
   return getFileUrl(imageFile);
+=======
+function getPrimaryValue(rows = [], valueKey) {
+  const primaryRow = rows.find((row) => row.is_primary) || rows[0];
+
+  return primaryRow?.[valueKey] || "";
+>>>>>>> Stashed changes
 }
 
 function normalizeQuotation({
@@ -296,6 +311,9 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
 
   return {
     client: {
+      businessId: getText(client.businessId),
+      branchId: getText(client.branchId),
+      representativeId: getText(client.representativeId),
       companyId,
       legalId: getText(client.legalId),
       legalName,
@@ -310,6 +328,7 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       representativeName,
       representativeEmail: getText(client.representativeEmail),
       notes: getText(client.notes),
+      earlyDelivery: getBoolean(client.earlyDelivery),
     },
     items: items.map((item) => {
       const productId = getText(item.productId || item.id);
@@ -404,6 +423,111 @@ export async function getQuotationCompanies() {
     .order("company_name", { ascending: true });
 
   return throwIfError(response, "No fue posible cargar las empresas del grupo");
+}
+
+export async function getQuotationClientByLegalId(legalId) {
+  const normalizedLegalId = getText(legalId);
+
+  if (!normalizedLegalId) {
+    return null;
+  }
+
+  const business = throwIfError(
+    await supabase
+      .from("businesses")
+      .select(
+        "business_id, company_id, legal_id, legal_name, business_name, activity_code, is_active",
+      )
+      .eq("legal_id", normalizedLegalId)
+      .maybeSingle(),
+    "No fue posible buscar el cliente por cedula juridica",
+  );
+
+  if (!business) {
+    return null;
+  }
+
+  const [emails, businessPhones, branches] = await Promise.all([
+    throwIfError(
+      await supabase
+        .from("emails")
+        .select("email_id, business_id, email, type, is_primary, created_at")
+        .eq("business_id", business.business_id),
+      "No fue posible cargar los correos del cliente",
+    ),
+    throwIfError(
+      await supabase
+        .from("phones")
+        .select("phone_id, business_id, branch_id, phone, type, is_primary, created_at")
+        .eq("business_id", business.business_id)
+        .is("branch_id", null),
+      "No fue posible cargar los telefonos del cliente",
+    ),
+    throwIfError(
+      await supabase
+        .from("branches")
+        .select("branch_id, business_id, province, district, address, is_active, created_at")
+        .eq("business_id", business.business_id)
+        .order("created_at", { ascending: true }),
+      "No fue posible cargar las sucursales del cliente",
+    ),
+  ]);
+
+  const activeBranch =
+    branches.find((branch) => branch.is_active !== false) || branches[0] || null;
+
+  const [branchPhones, representatives] = await Promise.all([
+    activeBranch?.branch_id
+      ? throwIfError(
+          await supabase
+            .from("phones")
+            .select("phone_id, branch_id, phone, type, is_primary, created_at")
+            .eq("branch_id", activeBranch.branch_id),
+          "No fue posible cargar los telefonos de la sucursal",
+        )
+      : [],
+    throwIfError(
+      await supabase
+        .from("representatives")
+        .select(
+          "representative_id, business_id, branch_id, name, email, is_active, created_at",
+        )
+        .eq("business_id", business.business_id)
+        .order("created_at", { ascending: true }),
+      "No fue posible cargar los representantes del cliente",
+    ),
+  ]);
+
+  const activeRepresentative =
+    representatives.find((representative) => {
+      const belongsToBranch =
+        !activeBranch?.branch_id ||
+        representative.branch_id === activeBranch.branch_id;
+
+      return representative.is_active !== false && belongsToBranch;
+    }) ||
+    representatives.find((representative) => representative.is_active !== false) ||
+    representatives[0] ||
+    null;
+
+  return {
+    businessId: business.business_id,
+    branchId: activeBranch?.branch_id || "",
+    representativeId: activeRepresentative?.representative_id || "",
+    companyId: business.company_id || "",
+    legalId: business.legal_id || normalizedLegalId,
+    legalName: business.legal_name || "",
+    businessName: business.business_name || business.legal_name || "",
+    activityCode: business.activity_code || "",
+    businessEmail: getPrimaryValue(emails, "email"),
+    businessPhone: getPrimaryValue(businessPhones, "phone"),
+    branchProvince: activeBranch?.province || "",
+    branchDistrict: activeBranch?.district || "",
+    branchAddress: activeBranch?.address || "",
+    branchPhone: getPrimaryValue(branchPhones, "phone"),
+    representativeName: activeRepresentative?.name || "",
+    representativeEmail: activeRepresentative?.email || "",
+  };
 }
 
 export async function getQuotations() {
@@ -559,96 +683,120 @@ export async function createBusinessQuotation(payload) {
   const normalizedPayload = normalizeQuotationPayload(payload);
   const { client, items, status } = normalizedPayload;
 
-  let businessId = null;
-  let branchId = null;
-  let representativeId = null;
+  let businessId = client.businessId || null;
+  let branchId = client.branchId || null;
+  let representativeId = client.representativeId || null;
   let quotationId = null;
+  let createdBusinessId = null;
+  let createdBranchId = null;
+  let createdRepresentativeId = null;
+  const earlyDeliveryDate = client.earlyDelivery ? getTodayDate() : null;
   const createdPhoneIds = [];
 
   try {
-    const businessResponse = await supabase
-      .from("businesses")
-      .insert({
-        company_id: client.companyId,
-        legal_id: client.legalId,
-        legal_name: client.legalName,
-        business_name: client.businessName,
-        activity_code: client.activityCode,
-        is_active: true,
-      })
-      .select("business_id")
-      .single();
+    if (!businessId && client.legalId) {
+      const existingClient = await getQuotationClientByLegalId(client.legalId);
 
-    const business = throwIfError(
-      businessResponse,
-      "No fue posible crear el cliente",
-    );
+      if (existingClient?.businessId) {
+        businessId = existingClient.businessId;
+        branchId = branchId || existingClient.branchId || null;
+        representativeId =
+          representativeId || existingClient.representativeId || null;
+      }
+    }
 
-    businessId = business.business_id;
+    if (!businessId) {
+      const businessResponse = await supabase
+        .from("businesses")
+        .insert({
+          company_id: client.companyId,
+          legal_id: client.legalId,
+          legal_name: client.legalName,
+          business_name: client.businessName,
+          activity_code: client.activityCode,
+          is_active: true,
+        })
+        .select("business_id")
+        .single();
 
-    if (client.businessEmail) {
-      throwIfError(
-        await supabase.from("emails").insert({
+      const business = throwIfError(
+        businessResponse,
+        "No fue posible crear el cliente",
+      );
+
+      businessId = business.business_id;
+      createdBusinessId = businessId;
+
+      if (client.businessEmail) {
+        throwIfError(
+          await supabase.from("emails").insert({
+            business_id: businessId,
+            email: client.businessEmail,
+            type: "Principal",
+            is_primary: true,
+          }),
+          "No fue posible guardar el correo del cliente",
+        );
+      }
+
+      await insertPhone(
+        {
           business_id: businessId,
-          email: client.businessEmail,
+          company_id: null,
+          branch_id: null,
+          representative_id: null,
+          phone: client.businessPhone,
           type: "Principal",
           is_primary: true,
-        }),
-        "No fue posible guardar el correo del cliente",
+        },
+        createdPhoneIds,
       );
     }
 
-    await insertPhone(
-      {
-        business_id: businessId,
-        company_id: null,
-        branch_id: null,
-        representative_id: null,
-        phone: client.businessPhone,
-        type: "Principal",
-        is_primary: true,
-      },
-      createdPhoneIds,
-    );
+    if (!branchId) {
+      const branchResponse = await supabase
+        .from("branches")
+        .insert({
+          business_id: businessId,
+          province: client.branchProvince,
+          district: client.branchDistrict,
+          address: client.branchAddress,
+          is_active: true,
+        })
+        .select("branch_id")
+        .single();
 
-    const branchResponse = await supabase
-      .from("branches")
-      .insert({
-        business_id: businessId,
-        province: client.branchProvince,
-        district: client.branchDistrict,
-        address: client.branchAddress,
-        is_active: true,
-      })
-      .select("branch_id")
-      .single();
+      const branch = throwIfError(
+        branchResponse,
+        "No fue posible guardar la sucursal",
+      );
 
-    const branch = throwIfError(
-      branchResponse,
-      "No fue posible guardar la sucursal",
-    );
+      branchId = branch.branch_id;
+      createdBranchId = branchId;
+    }
 
-    branchId = branch.branch_id;
+    if (!representativeId) {
+      const representativeResponse = await supabase
+        .from("representatives")
+        .insert({
+          business_id: businessId,
+          branch_id: branchId,
+          user_id: null,
+          name: client.representativeName,
+          email: client.representativeEmail,
+          is_active: true,
+        })
+        .select("representative_id")
+        .single();
 
-    const representativeResponse = await supabase
-      .from("representatives")
-      .insert({
-        business_id: businessId,
-        branch_id: branchId,
-        user_id: null,
-        name: client.representativeName,
-        email: client.representativeEmail,
-        is_active: true,
-      })
-      .select("representative_id")
-      .single();
+      const representative = throwIfError(
+        representativeResponse,
+        "No fue posible guardar el representante",
+      );
 
-    const representative = throwIfError(
-      representativeResponse,
-      "No fue posible guardar el representante",
-    );
-
-    representativeId = representative.representative_id;
+      representativeId = representative.representative_id;
+      createdRepresentativeId = representativeId;
+    }
 
     const quotationResponse = await supabase
       .from("quotations")
@@ -660,8 +808,10 @@ export async function createBusinessQuotation(payload) {
         state: status,
         notes: client.notes,
         is_active: true,
+        early_delivery: client.earlyDelivery,
+        early_delivery_date: earlyDeliveryDate,
       })
-      .select("quotation_id, quotation_number")
+      .select("quotation_id, quotation_number, early_delivery, early_delivery_date")
       .single();
 
     const quotation = throwIfError(
@@ -687,13 +837,15 @@ export async function createBusinessQuotation(payload) {
       representativeId,
       quotationId,
       quotationNumber: quotation.quotation_number,
+      earlyDelivery: quotation.early_delivery,
+      earlyDeliveryDate: quotation.early_delivery_date,
     };
   } catch (error) {
     await rollbackQuotation({
       quotationId,
-      businessId,
-      branchId,
-      representativeId,
+      businessId: createdBusinessId,
+      branchId: createdBranchId,
+      representativeId: createdRepresentativeId,
       phoneIds: createdPhoneIds,
     });
 

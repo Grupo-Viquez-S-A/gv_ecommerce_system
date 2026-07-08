@@ -38,12 +38,16 @@ import {
 } from "../services/catalogService.js";
 import {
   createBusinessQuotation,
+  getQuotationClientByLegalId,
   getQuotationCompanies,
 } from "../services/quotationService.js";
 
 const PAGE_SIZE = 8;
 
 const EMPTY_QUOTATION_CLIENT_FORM = {
+  businessId: "",
+  branchId: "",
+  representativeId: "",
   companyId: "",
   legalId: "",
   legalName: "",
@@ -58,6 +62,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   representativeName: "",
   representativeEmail: "",
   notes: "",
+  earlyDelivery: false,
 };
 
 function getCartProductId(product) {
@@ -141,6 +146,8 @@ export default function Catalog() {
   const [quotationError, setQuotationError] = useState("");
   const [quotationSuccess, setQuotationSuccess] = useState("");
   const [quotationSubmitting, setQuotationSubmitting] = useState(false);
+  const [clientLookupLoading, setClientLookupLoading] = useState(false);
+  const [clientLookupMessage, setClientLookupMessage] = useState("");
 
   const isTextileProductsCatalog =
     activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
@@ -766,8 +773,60 @@ export default function Catalog() {
   const handleQuotationClientFormChange = (fieldName, value) => {
     setQuotationClientForm((currentForm) => ({
       ...currentForm,
+      ...(fieldName === "legalId"
+        ? {
+            businessId: "",
+            branchId: "",
+            representativeId: "",
+          }
+        : {}),
       [fieldName]: value,
     }));
+
+    if (fieldName === "legalId") {
+      setClientLookupMessage("");
+    }
+  };
+
+  const handleLookupClientByLegalId = async () => {
+    const legalId = quotationClientForm.legalId.trim();
+
+    if (!legalId) {
+      setClientLookupMessage("");
+      return;
+    }
+
+    try {
+      setClientLookupLoading(true);
+      setClientLookupMessage("");
+
+      const existingClient = await getQuotationClientByLegalId(legalId);
+
+      if (!existingClient) {
+        setClientLookupMessage(
+          "No se encontro un cliente registrado con esta cedula juridica.",
+        );
+        return;
+      }
+
+      setQuotationClientForm((currentForm) => ({
+        ...currentForm,
+        ...existingClient,
+        notes: currentForm.notes,
+        earlyDelivery: currentForm.earlyDelivery,
+      }));
+      setClientLookupMessage(
+        "Cliente existente importado al formulario de cotizacion.",
+      );
+    } catch (lookupError) {
+      console.error("Client lookup error:", lookupError);
+      setClientLookupMessage(
+        lookupError?.message ||
+          "No fue posible verificar la cedula juridica.",
+      );
+    } finally {
+      setClientLookupLoading(false);
+    }
   };
 
   const handleSaveCartQuotation = async (status) => {
@@ -776,17 +835,41 @@ export default function Catalog() {
       setQuotationError("");
       setQuotationSuccess("");
 
+      let clientForm = quotationClientForm;
+
+      if (clientForm.legalId.trim() && !clientForm.businessId) {
+        const existingClient = await getQuotationClientByLegalId(
+          clientForm.legalId,
+        );
+
+        if (existingClient) {
+          clientForm = {
+            ...clientForm,
+            ...existingClient,
+            notes: clientForm.notes,
+            earlyDelivery: clientForm.earlyDelivery,
+          };
+          setQuotationClientForm(clientForm);
+          setClientLookupMessage(
+            "Cliente existente importado al formulario de cotizacion.",
+          );
+        }
+      }
+
       const quotation = await createBusinessQuotation({
-        client: quotationClientForm,
+        client: clientForm,
         items: cartItems,
         status,
       });
 
       setQuotationSuccess(
-        `Cotizacion guardada: ${quotation.quotationNumber}`,
+        quotation.earlyDelivery
+          ? `Cotizacion guardada: ${quotation.quotationNumber}. Entrega anticipada registrada el ${quotation.earlyDeliveryDate}.`
+          : `Cotizacion guardada: ${quotation.quotationNumber}`,
       );
       setCartItems([]);
       setQuotationClientForm(EMPTY_QUOTATION_CLIENT_FORM);
+      setClientLookupMessage("");
     } catch (error) {
       console.error("Cart quotation error:", error);
       setQuotationError(
@@ -1128,9 +1211,17 @@ export default function Catalog() {
                               event.target.value,
                             )
                           }
+                          onBlur={handleLookupClientByLegalId}
                           className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
                           placeholder="Ej. 3-101-000000"
                         />
+                        {(clientLookupLoading || clientLookupMessage) && (
+                          <span className="mt-2 block text-xs text-[#9BB3D3]">
+                            {clientLookupLoading
+                              ? "Verificando cedula juridica..."
+                              : clientLookupMessage}
+                          </span>
+                        )}
                       </label>
 
                       <label>
@@ -1350,6 +1441,29 @@ export default function Catalog() {
                           className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
                           placeholder="Observaciones para la cotizacion"
                         />
+                      </label>
+
+                      <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={quotationClientForm.earlyDelivery}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "earlyDelivery",
+                              event.target.checked,
+                            )
+                          }
+                          className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
+                        />
+
+                        <span>
+                          <span className="block text-sm font-bold text-white">
+                            Entrega anticipada
+                          </span>
+                          <span className="mt-1 block text-xs leading-5 text-slate-400">
+                            Si se marca, la cotizacion guardara como fecha de entrega anticipada la fecha de creacion.
+                          </span>
+                        </span>
                       </label>
                     </div>
                   </div>
@@ -1604,9 +1718,17 @@ export default function Catalog() {
                               event.target.value,
                             )
                           }
+                          onBlur={handleLookupClientByLegalId}
                           className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
                           placeholder="Ej. 3-101-000000"
                         />
+                        {(clientLookupLoading || clientLookupMessage) && (
+                          <span className="mt-2 block text-xs text-[#9BB3D3]">
+                            {clientLookupLoading
+                              ? "Verificando cedula juridica..."
+                              : clientLookupMessage}
+                          </span>
+                        )}
                       </label>
 
                       <label>
@@ -1822,6 +1944,29 @@ export default function Catalog() {
                           className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
                           placeholder="Observaciones para la cotizacion"
                         />
+                      </label>
+
+                      <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={quotationClientForm.earlyDelivery}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "earlyDelivery",
+                              event.target.checked,
+                            )
+                          }
+                          className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
+                        />
+
+                        <span>
+                          <span className="block text-sm font-bold text-white">
+                            Entrega anticipada
+                          </span>
+                          <span className="mt-1 block text-xs leading-5 text-slate-400">
+                            Si se marca, la cotizacion guardara como fecha de entrega anticipada la fecha de creacion.
+                          </span>
+                        </span>
                       </label>
                     </div>
                   </div>
