@@ -290,23 +290,23 @@ function DashSideBar({
           <NavItem
             icon={<RiDashboardFill size={18} />}
             label="Mis pedidos"
-            to="/"
+            to="/mis-pedidos"
             collapsed={sidebarCollapsed}
           />
 
           <NavItem
             icon={<RiDashboardFill size={18} />}
             label="Mis cotizaciones"
-            to="/"
+            to="/mis-cotizaciones"
             collapsed={sidebarCollapsed}
           />
 
           <NavItem
-            icon={<RiDashboardFill size={18} />}
-            label="Catálogo"
-            to="/"
-            collapsed={sidebarCollapsed}
-          />
+  icon={<RiShoppingBagFill size={18} />}
+  label="Catálogo"
+  to="/cliente/catalogo"
+  collapsed={sidebarCollapsed}
+/>
 
           {canAccessUserAdministration && (
             <>
@@ -513,6 +513,28 @@ function DashSideBar({
               collapsed={false}
             />
 
+            {/* CLIENTE */}
+            <div className="px-4 pb-1 pt-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
+                Mi cuenta
+              </span>
+            </div>
+
+            <NavItem
+              icon={<RiDashboardFill size={18} />}
+              label="Mis pedidos"
+              to="/mis-pedidos"
+              collapsed={false}
+              onNavigate={handleCloseMobileSidebar}
+            />
+
+            <NavItem
+              icon={<RiDashboardFill size={18} />}
+              label="Mis cotizaciones"
+              to="/mis-cotizaciones"
+              collapsed={false}
+              onNavigate={handleCloseMobileSidebar}
+            />
             {canAccessUserAdministration && (
               <>
                 {/* SISTEMA */}
