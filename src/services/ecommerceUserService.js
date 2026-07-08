@@ -11,6 +11,8 @@ const AVATAR_COLORS = [
   "#a855f7",
 ];
 
+const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
+
 const ROLE_BADGES = {
   administrador: "bg-[#C9A227]/15 text-[#C9A227]",
   admin: "bg-[#C9A227]/15 text-[#C9A227]",
@@ -101,36 +103,13 @@ function formatActivityDate(dateValue) {
 }
 
 export async function getEcommerceUsers() {
-  const applicationsResponse = await supabase
-    .from("applications")
-    .select("application_id, application_code, name")
-    .or("application_code.ilike.%ecommerce%,application_code.ilike.%e-commerce%,name.ilike.%ecommerce%,name.ilike.%e-commerce%");
-
-  if (applicationsResponse.error) {
-    throw new Error(
-      `No fue posible cargar la aplicacion e-commerce: ${applicationsResponse.error.message}`,
-    );
-  }
-
-  const applicationIds = (applicationsResponse.data || []).map(
-    (application) => application.application_id,
-  );
-
-  let applicationUsersQuery = supabase
+  const applicationUsersResponse = await supabase
     .from("user_applications")
     .select(
       "user_application_id, user_id, application_id, is_active, start_date, end_date, created_at, updated_at",
     )
+    .eq("application_id", ECOMMERCE_APPLICATION_ID)
     .order("created_at", { ascending: false });
-
-  if (applicationIds.length > 0) {
-    applicationUsersQuery = applicationUsersQuery.in(
-      "application_id",
-      applicationIds,
-    );
-  }
-
-  const applicationUsersResponse = await applicationUsersQuery;
 
   if (applicationUsersResponse.error) {
     throw new Error(

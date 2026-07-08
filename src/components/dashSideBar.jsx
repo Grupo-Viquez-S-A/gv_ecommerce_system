@@ -363,10 +363,8 @@ function DashSideBar({
                   </div>
 
                   <div className="truncate text-xs text-gray-400">
-                    {user?.role?.name || "Usuario"}
-                    {user?.department?.name
-                      ? ` - ${user.department.name}`
-                      : ""}
+                    {user?.department?.name || "Sin departamento"}
+                    {user?.role?.name ? ` - ${user.role.name}` : ""}
                   </div>
                 </div>
               </div>
@@ -544,10 +542,8 @@ function DashSideBar({
                 </div>
 
                 <div className="truncate text-xs text-gray-400">
-                  {user?.role?.name || "Usuario"}
-                  {user?.department?.name
-                    ? ` - ${user.department.name}`
-                    : ""}
+                  {user?.department?.name || "Sin departamento"}
+                  {user?.role?.name ? ` - ${user.role.name}` : ""}
                 </div>
               </div>
             </div>

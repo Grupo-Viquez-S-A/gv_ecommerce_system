@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { getEcommerceUsers } from "../services/ecommerceUserService";
 import {
-  createAdminUser,
   createRole,
   deleteRole,
-  getAdminFormCatalogs,
   getRoles,
   updateRole,
 } from "../services/adminSettingsService";
+import {
+  createEcommerceUser,
+  getUserFormCatalogs,
+} from "../services/userServices";
 import {
   RiSettings4Fill,
   RiArrowDownSFill,
@@ -470,7 +472,7 @@ export default function AdminConfig() {
       setAdminCatalogsLoading(true);
       setAdminCatalogsError("");
 
-      const catalogs = await getAdminFormCatalogs();
+      const catalogs = await getUserFormCatalogs();
 
       setAdminCatalogs({
         companies: (catalogs.companies || []).map((company) => ({
@@ -806,7 +808,7 @@ export default function AdminConfig() {
         },
       };
 
-      await createAdminUser(payload);
+      await createEcommerceUser(payload);
 
       await loadUsers();
       closeDrawer();
