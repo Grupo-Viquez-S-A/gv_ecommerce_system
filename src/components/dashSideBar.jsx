@@ -15,7 +15,6 @@ import {
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import { canManageSystemUsers } from "../utils/adminAccess.js";
 
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
@@ -38,6 +37,75 @@ function getUserInitials(fullName) {
     .toUpperCase();
 }
 
+function isRouteActive(pathname, route) {
+  if (!route) {
+    return false;
+  }
+
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
+function NavItem({
+  icon,
+  label,
+  to,
+  active = false,
+  collapsed = false,
+  onNavigate,
+}) {
+  const location = useLocation();
+  const isActive = active || isRouteActive(location.pathname, to);
+
+  const itemContent = (
+    <div
+      title={collapsed ? label : undefined}
+      className={`flex items-center gap-3 py-2.5 text-sm transition-colors ${
+        collapsed ? "justify-center mx-2 rounded-lg px-0" : "px-4"
+      } ${
+        isActive
+          ? "border-r-2 border-[#C9A227] bg-[#C9A227]/15 text-white"
+          : `text-gray-300 hover:bg-[#1c2538] hover:text-white ${
+              collapsed ? "rounded-lg" : ""
+            }`
+      }`}
+    >
+      <span className={isActive ? "text-[#C9A227]" : ""}>
+        {icon}
+      </span>
+
+      {!collapsed && <span className="whitespace-nowrap">{label}</span>}
+    </div>
+  );
+
+  if (to) {
+    return (
+      <Link to={to} onClick={onNavigate} className="block">
+        {itemContent}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" className="block w-full text-left">
+      {itemContent}
+    </button>
+  );
+}
+
+function UserAvatar({ compact = false }) {
+  const { user } = useAuth();
+
+  return (
+    <div
+      className={`rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold text-[#0B1120] ${
+        compact ? "h-8 w-8" : "h-8 w-8"
+      }`}
+    >
+      {getUserInitials(user?.fullName)}
+    </div>
+  );
+}
+
 function DashSideBar({
   sidebarCollapsed,
   sidebarOpen,
@@ -47,92 +115,13 @@ function DashSideBar({
   setSidebarOpen,
 }) {
   const { user, signOut } = useAuth();
-  const location = useLocation();
 
   const activeCompany = currentCompany || DEFAULT_COMPANY;
-  const canAccessUserAdministration = canManageSystemUsers(user);
+  const canAccessUserAdministration = true;
 
   const handleCloseMobileSidebar = () => {
     setSidebarOpen?.(false);
   };
-
-  const isRouteActive = (route) => {
-    if (!route) {
-      return false;
-    }
-
-    return (
-      location.pathname === route ||
-      location.pathname.startsWith(`${route}/`)
-    );
-  };
-
-  const NavItem = ({
-    icon,
-    label,
-    to,
-    active = false,
-    collapsed = false,
-  }) => {
-    const isActive = active || isRouteActive(to);
-
-    const itemContent = (
-      <div
-        title={collapsed ? label : undefined}
-        className={`flex items-center gap-3 py-2.5 text-sm transition-colors ${
-          collapsed
-            ? "justify-center mx-2 rounded-lg px-0"
-            : "px-4"
-        } ${
-          isActive
-            ? "border-r-2 border-[#C9A227] bg-[#C9A227]/15 text-white"
-            : `text-gray-300 hover:bg-[#1c2538] hover:text-white ${
-                collapsed ? "rounded-lg" : ""
-              }`
-        }`}
-      >
-        <span className={isActive ? "text-[#C9A227]" : ""}>
-          {icon}
-        </span>
-
-        {!collapsed && (
-          <span className="whitespace-nowrap">{label}</span>
-        )}
-      </div>
-    );
-
-    if (to) {
-      return (
-        <Link
-          to={to}
-          onClick={handleCloseMobileSidebar}
-          className="block"
-        >
-          {itemContent}
-        </Link>
-      );
-    }
-
-    return (
-      <button
-        type="button"
-        className="block w-full text-left"
-        onClick={() => {}}
-      >
-        {itemContent}
-      </button>
-    );
-  };
-
-  const UserAvatar = ({ compact = false }) => (
-    <div
-      className={`rounded-full bg-[#C9A227] flex items-center justify-center text-xs font-bold text-[#0B1120] ${
-        compact ? "h-8 w-8" : "h-8 w-8"
-      }`}
-    >
-      {getUserInitials(user?.fullName)}
-    </div>
-  );
 
   return (
     <>
@@ -284,6 +273,38 @@ function DashSideBar({
             icon={<RiCalendarFill size={18} />}
             label="Agenda"
             to="/agenda"
+            collapsed={sidebarCollapsed}
+          />
+
+          {/* CLIENTE */}
+          {!sidebarCollapsed ? (
+            <div className="px-4 pb-1 pt-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
+                Mi cuenta
+              </span>
+            </div>
+          ) : (
+            <div className="mx-3 my-1 border-t border-[#2a3550]" />
+          )}
+
+          <NavItem
+            icon={<RiDashboardFill size={18} />}
+            label="Mis pedidos"
+            to="/"
+            collapsed={sidebarCollapsed}
+          />
+
+          <NavItem
+            icon={<RiDashboardFill size={18} />}
+            label="Mis cotizaciones"
+            to="/"
+            collapsed={sidebarCollapsed}
+          />
+
+          <NavItem
+            icon={<RiDashboardFill size={18} />}
+            label="Catálogo"
+            to="/"
             collapsed={sidebarCollapsed}
           />
 

@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { getEcommerceUsers } from "../services/ecommerceUserService";
 import {
   createAdminUser,
+  createRole,
+  deleteRole,
   getAdminFormCatalogs,
+  getRoles,
+  updateRole,
 } from "../services/adminSettingsService";
 import {
   RiSettings4Fill,
@@ -38,167 +42,10 @@ import {
 } from "react-icons/ri";
 
 /*
-  Las pestañas Roles y Permisos, Actividad y Seguridad conservan datos mock.
-  La pestaña Usuarios sí carga datos reales de Supabase mediante getEcommerceUsers.
+  Usuarios y Roles cargan datos reales de Supabase.
+  Actividad y Seguridad conservan datos mock de interfaz.
 */
-/* ─── MOCK DATA ─────────────────────────────────────────────── */
-const MOCK_USERS = [
-  {
-    id: 1,
-    initials: "JG",
-    color: "#C9A227",
-    name: "José González",
-    email: "jose@grupoviquez.com",
-    phone: "+506 8421 1234",
-    role: "Administrador",
-    roleColor: "bg-[#C9A227]/15 text-[#C9A227]",
-    companies: ["Grupo Víquez S.A", "Constructora Víquez"],
-    status: "Activo",
-    lastAccess: "Hace 2 horas",
-    created: "12 Ene 2024",
-    department: "Tecnología",
-    sales: 0,
-    quotes: 14,
-    clients: 8,
-    orders: 21,
-    has2fa: true,
-  },
-  {
-    id: 2,
-    initials: "MC",
-    color: "#ec4899",
-    name: "María Castillo",
-    email: "maria.castillo@grupoviquez.com",
-    phone: "+506 8815 6789",
-    role: "Supervisor",
-    roleColor: "bg-[#2d1b4e] text-[#c084fc]",
-    companies: ["Grupo Víquez S.A"],
-    status: "Activo",
-    lastAccess: "Hace 1 día",
-    created: "03 Mar 2024",
-    department: "Ventas",
-    sales: 45,
-    quotes: 62,
-    clients: 23,
-    orders: 58,
-    has2fa: true,
-  },
-  {
-    id: 3,
-    initials: "LP",
-    color: "#6366f1",
-    name: "Luis Pérez",
-    email: "luis.perez@grupoviquez.com",
-    phone: "+506 8350 2244",
-    role: "Vendedor",
-    roleColor: "bg-[#1a2e1a] text-[#4ade80]",
-    companies: ["Textiles de Occidente"],
-    status: "Activo",
-    lastAccess: "Hace 3 horas",
-    created: "18 Feb 2024",
-    department: "Ventas",
-    sales: 112,
-    quotes: 88,
-    clients: 41,
-    orders: 130,
-    has2fa: false,
-  },
-  {
-    id: 4,
-    initials: "AC",
-    color: "#f59e0b",
-    name: "Ana Córdoba",
-    email: "ana.cordoba@grupoviquez.com",
-    phone: "+506 8560 3311",
-    role: "Contabilidad",
-    roleColor: "bg-[#2d200a] text-[#fbbf24]",
-    companies: ["Grupo Víquez S.A", "Pacific Pet Food"],
-    status: "Activo",
-    lastAccess: "Hace 5 horas",
-    created: "07 Abr 2024",
-    department: "Finanzas",
-    sales: 0,
-    quotes: 0,
-    clients: 12,
-    orders: 0,
-    has2fa: true,
-  },
-  {
-    id: 5,
-    initials: "RS",
-    color: "#ef4444",
-    name: "Roberto Sánchez",
-    email: "roberto.sanchez@grupoviquez.com",
-    phone: "+506 8721 9900",
-    role: "Vendedor",
-    roleColor: "bg-[#1a2e1a] text-[#4ade80]",
-    companies: ["Pacific Pet Food"],
-    status: "Inactivo",
-    lastAccess: "Hace 15 días",
-    created: "22 May 2024",
-    department: "Ventas",
-    sales: 67,
-    quotes: 45,
-    clients: 29,
-    orders: 72,
-    has2fa: false,
-  },
-  {
-    id: 6,
-    initials: "DC",
-    color: "#22c55e",
-    name: "Daniela Cruz",
-    email: "daniela.cruz@grupoviquez.com",
-    phone: "+506 8492 5567",
-    role: "Supervisor",
-    roleColor: "bg-[#2d1b4e] text-[#c084fc]",
-    companies: ["Constructora Víquez"],
-    status: "Inactivo",
-    lastAccess: "Hace 20 días",
-    created: "01 Jun 2024",
-    department: "Operaciones",
-    sales: 0,
-    quotes: 30,
-    clients: 18,
-    orders: 44,
-    has2fa: false,
-  },
-];
-
-const MOCK_ROLES = [
-  {
-    id: 1,
-    name: "Administrador",
-    badge: "bg-[#C9A227]/15 text-[#C9A227]",
-    users: 2,
-    permissions: 16,
-    status: "Activo",
-  },
-  {
-    id: 2,
-    name: "Supervisor",
-    badge: "bg-[#2d1b4e] text-[#c084fc]",
-    users: 2,
-    permissions: 12,
-    status: "Activo",
-  },
-  {
-    id: 3,
-    name: "Vendedor",
-    badge: "bg-[#1a2e1a] text-[#4ade80]",
-    users: 2,
-    permissions: 8,
-    status: "Activo",
-  },
-  {
-    id: 4,
-    name: "Contabilidad",
-    badge: "bg-[#2d200a] text-[#fbbf24]",
-    users: 1,
-    permissions: 6,
-    status: "Activo",
-  },
-];
+/* MOCK DATA */
 
 const MOCK_ACTIVITY = [
   {
@@ -248,7 +95,7 @@ const MOCK_ACTIVITY = [
         initials: "AC",
         color: "#f59e0b",
         action: "modificó una venta",
-        time: "23 Jun · 4:15 PM",
+        time: "23 Jun - 4:15 PM",
         icon: "sale",
       },
       {
@@ -256,7 +103,7 @@ const MOCK_ACTIVITY = [
         initials: "RS",
         color: "#ef4444",
         action: "eliminó una cotización",
-        time: "23 Jun · 2:30 PM",
+        time: "23 Jun - 2:30 PM",
         icon: "delete",
       },
       {
@@ -264,7 +111,7 @@ const MOCK_ACTIVITY = [
         initials: "DC",
         color: "#22c55e",
         action: "exportó lista de clientes",
-        time: "23 Jun · 11:00 AM",
+        time: "23 Jun - 11:00 AM",
         icon: "export",
       },
     ],
@@ -278,7 +125,7 @@ const MOCK_ACTIVITY = [
         initials: "JG",
         color: "#C9A227",
         action: "creó un nuevo usuario",
-        time: "22 Jun · 9:45 AM",
+        time: "22 Jun - 9:45 AM",
         icon: "create",
       },
       {
@@ -286,7 +133,7 @@ const MOCK_ACTIVITY = [
         initials: "MC",
         color: "#ec4899",
         action: "aprobó una orden de compra",
-        time: "22 Jun · 8:20 AM",
+        time: "22 Jun - 8:20 AM",
         icon: "approve",
       },
     ],
@@ -382,7 +229,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
   },
 };
 
-/* ─── COMPONENTES AUXILIARES ───────────────────────────────── */
+/* COMPONENTES AUXILIARES */
 function FormField({
   label,
   placeholder,
@@ -484,7 +331,7 @@ function ActivityIcon({ type }) {
   );
 }
 
-/* ─── COMPONENTE PRINCIPAL ─────────────────────────────────── */
+/* COMPONENTE PRINCIPAL */
 function generateTemporaryPassword() {
   const randomText = Math.random().toString(36).slice(2, 10);
   const randomNumber = Math.floor(100 + Math.random() * 900);
@@ -515,6 +362,27 @@ function splitFullName(fullName) {
   };
 }
 
+const ROLE_BADGES = [
+  "bg-[#C9A227]/15 text-[#C9A227]",
+  "bg-[#2d1b4e] text-[#c084fc]",
+  "bg-[#1a2e1a] text-[#4ade80]",
+  "bg-[#2d200a] text-[#fbbf24]",
+  "bg-[#3b1a1a] text-[#f87171]",
+  "bg-[#0f2d3a] text-[#60a5fa]",
+];
+
+function mapRoleRow(role, index) {
+  return {
+    id: role.role_id,
+    name: role.role_name || "Sin nombre",
+    code: role.role_code || "",
+    description: role.description || "",
+    isActive: role.is_active !== false,
+    status: role.is_active === false ? "Inactivo" : "Activo",
+    badge: ROLE_BADGES[index % ROLE_BADGES.length],
+  };
+}
+
 export default function AdminConfig() {
   const [activeTab, setActiveTab] = useState("usuarios");
 
@@ -531,7 +399,9 @@ export default function AdminConfig() {
 
   const [roleForm, setRoleForm] = useState({
     name: "",
+    code: "",
     description: "",
+    isActive: true,
     color: "azul",
   });
 
@@ -567,6 +437,11 @@ export default function AdminConfig() {
   const [adminCatalogsError, setAdminCatalogsError] = useState("");
   const [savingUser, setSavingUser] = useState(false);
   const [saveUserError, setSaveUserError] = useState("");
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
+  const [rolesError, setRolesError] = useState("");
+  const [savingRole, setSavingRole] = useState(false);
+  const [roleFormError, setRoleFormError] = useState("");
 
   const loadUsers = useCallback(async () => {
     try {
@@ -625,6 +500,24 @@ export default function AdminConfig() {
     }
   }, []);
 
+  const loadRoles = useCallback(async () => {
+    try {
+      setRolesLoading(true);
+      setRolesError("");
+
+      const roleRows = await getRoles();
+
+      setRoles(roleRows.map(mapRoleRow));
+    } catch (error) {
+      console.error("Error cargando roles:", error);
+
+      setRoles([]);
+      setRolesError(error.message || "No fue posible cargar los roles.");
+    } finally {
+      setRolesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -635,12 +528,13 @@ export default function AdminConfig() {
 
       loadUsers();
       loadAdminCatalogs();
+      loadRoles();
     });
 
     return () => {
       isMounted = false;
     };
-  }, [loadAdminCatalogs, loadUsers]);
+  }, [loadAdminCatalogs, loadRoles, loadUsers]);
 
   const openCreateDrawer = () => {
     setDrawerMode("create");
@@ -670,10 +564,14 @@ export default function AdminConfig() {
 
   const openRoleDrawer = () => {
     setDrawerMode("role");
+    setEditRole(null);
+    setRoleFormError("");
 
     setRoleForm({
       name: "",
+      code: "",
       description: "",
+      isActive: true,
       color: "azul",
     });
 
@@ -683,6 +581,15 @@ export default function AdminConfig() {
   const openEditRoleDrawer = (role) => {
     setDrawerMode("editRole");
     setEditRole(role);
+    setRoleFormError("");
+    setRoleForm({
+      name: role.name,
+      code: role.code,
+      description: role.description,
+      isActive: role.isActive,
+      color: "azul",
+    });
+
     setDrawerOpen(true);
   };
 
@@ -698,6 +605,7 @@ export default function AdminConfig() {
     window.setTimeout(() => {
       setDrawerMode("create");
       setEditRole(null);
+      setRoleFormError("");
       setProfileUser(null);
     }, 300);
   };
@@ -775,7 +683,69 @@ export default function AdminConfig() {
     });
   };
 
+  const handleSaveRole = async () => {
+    const payload = {
+      name: roleForm.name,
+      code: roleForm.code,
+      description: roleForm.description,
+      isActive: roleForm.isActive,
+    };
+
+    if (!payload.name.trim()) {
+      setRoleFormError("Ingresa el nombre del rol.");
+      return;
+    }
+
+    try {
+      setSavingRole(true);
+      setRolesError("");
+      setRoleFormError("");
+
+      if (drawerMode === "editRole") {
+        await updateRole(editRole?.id, payload);
+      } else {
+        await createRole(payload);
+      }
+
+      await loadRoles();
+      await loadAdminCatalogs();
+      closeDrawer();
+    } catch (error) {
+      console.error("Error guardando rol:", error);
+
+      setRoleFormError(error.message || "No fue posible guardar el rol.");
+    } finally {
+      setSavingRole(false);
+    }
+  };
+
+  const handleDeleteRole = async (role) => {
+    if (!window.confirm(`Deseas eliminar el rol "${role.name}"?`)) {
+      return;
+    }
+
+    try {
+      setSavingRole(true);
+      setRolesError("");
+
+      await deleteRole(role.id);
+      await loadRoles();
+      await loadAdminCatalogs();
+    } catch (error) {
+      console.error("Error eliminando rol:", error);
+
+      setRolesError(error.message || "No fue posible eliminar el rol.");
+    } finally {
+      setSavingRole(false);
+    }
+  };
+
   const handleSaveDrawer = async () => {
+    if (drawerMode === "role" || drawerMode === "editRole") {
+      await handleSaveRole();
+      return;
+    }
+
     if (drawerMode !== "create") {
       closeDrawer();
       return;
@@ -859,11 +829,17 @@ export default function AdminConfig() {
     (user) => user.status === "Inactivo",
   ).length;
 
-  const registeredRolesCount = new Set(
-    users
-      .map((user) => user.role)
-      .filter((role) => role !== "Sin rol asignado"),
-  ).size;
+  const roleRows = roles.map((role) => {
+    const assignedUsers = users.filter((user) => user.role === role.name);
+
+    return {
+      ...role,
+      assignedUsers,
+      users: assignedUsers.length,
+    };
+  });
+
+  const registeredRolesCount = roles.filter((role) => role.isActive).length;
 
   const metrics = [
     {
@@ -1150,11 +1126,11 @@ export default function AdminConfig() {
                     {[
                       "USUARIO",
                       "CORREO",
-                      "TELÉFONO",
+                      "TELEFONO",
                       "ROL",
                       "EMPRESA",
                       "ESTADO",
-                      "ÚLTIMA ACTIVIDAD",
+                      "ULTIMA ACTIVIDAD",
                       "ACCIONES",
                     ].map((column) => (
                       <th
@@ -1437,6 +1413,12 @@ export default function AdminConfig() {
                 </h3>
               </div>
 
+              {rolesError && (
+                <div className="mx-5 mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {rolesError}
+                </div>
+              )}
+
               <div className="hidden md:block">
                 <table className="w-full text-sm">
                   <thead>
@@ -1444,7 +1426,7 @@ export default function AdminConfig() {
                       {[
                         "ROL",
                         "USUARIOS ASIGNADOS",
-                        "PERMISOS",
+                        "CODIGO",
                         "ESTADO",
                         "ACCIONES",
                       ].map((column) => (
@@ -1459,37 +1441,63 @@ export default function AdminConfig() {
                   </thead>
 
                   <tbody>
-                    {MOCK_ROLES.map((role) => (
+                    {rolesLoading && (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-5 py-8 text-center text-sm text-gray-400"
+                        >
+                          Cargando roles...
+                        </td>
+                      </tr>
+                    )}
+
+                    {!rolesLoading && roleRows.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="px-5 py-8 text-center text-sm text-gray-400"
+                        >
+                          No se encontraron roles registrados.
+                        </td>
+                      </tr>
+                    )}
+
+                    {!rolesLoading && roleRows.map((role) => (
                       <tr
                         key={role.id}
                         className="border-b border-[#2a3550] last:border-0 hover:bg-[#1c2538] transition-colors"
                       >
                         <td className="px-5 py-4">
-                          <span
-                            className={`text-xs font-semibold px-3 py-1.5 rounded-full ${role.badge}`}
-                          >
-                            {role.name}
-                          </span>
+                          <div className="space-y-1.5">
+                            <span
+                              className={`text-xs font-semibold px-3 py-1.5 rounded-full ${role.badge}`}
+                            >
+                              {role.name}
+                            </span>
+
+                            {role.description && (
+                              <p className="text-xs text-gray-500 line-clamp-1">
+                                {role.description}
+                              </p>
+                            )}
+                          </div>
                         </td>
 
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
                             <div className="flex -space-x-1.5">
-                              {MOCK_USERS.filter(
-                                (user) => user.role === role.name,
-                              )
-                                .slice(0, 3)
-                                .map((user) => (
-                                  <div
-                                    key={user.id}
-                                    className="w-6 h-6 rounded-full border-2 border-[#141d2e] flex items-center justify-center text-[9px] font-bold text-white"
-                                    style={{
-                                      backgroundColor: user.color,
-                                    }}
-                                  >
-                                    {user.initials}
-                                  </div>
-                                ))}
+                              {role.assignedUsers.slice(0, 3).map((user) => (
+                                <div
+                                  key={user.id}
+                                  className="w-6 h-6 rounded-full border-2 border-[#141d2e] flex items-center justify-center text-[9px] font-bold text-white"
+                                  style={{
+                                    backgroundColor: user.color,
+                                  }}
+                                >
+                                  {user.initials}
+                                </div>
+                              ))}
                             </div>
 
                             <span className="text-gray-400 text-sm">
@@ -1499,39 +1507,48 @@ export default function AdminConfig() {
                         </td>
 
                         <td className="px-5 py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="h-1.5 bg-[#2a3550] rounded-full w-20">
-                              <div
-                                className="h-1.5 bg-[#C9A227] rounded-full"
-                                style={{
-                                  width: `${(role.permissions / 16) * 100
-                                    }%`,
-                                }}
-                              />
-                            </div>
-
-                            <span className="text-gray-400 text-xs">
-                              {role.permissions}
-                            </span>
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <span className="flex items-center gap-1.5 text-xs font-medium text-green-400 bg-green-400/10 px-2.5 py-1 rounded-full w-fit">
-                            <RiCheckboxCircleFill size={11} />
-                            Activo
+                          <span className="text-gray-400 text-xs font-mono">
+                            {role.code || "sin_codigo"}
                           </span>
                         </td>
 
                         <td className="px-5 py-4">
-                          <button
-                            type="button"
-                            onClick={() => openEditRoleDrawer(role)}
-                            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white bg-[#1c2538] hover:bg-[#C9A227]/15 border border-[#2a3550] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                          <span
+                            className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full w-fit ${role.isActive
+                              ? "text-green-400 bg-green-400/10"
+                              : "text-red-400 bg-red-400/10"
+                              }`}
                           >
-                            <RiEditFill size={12} />
-                            Editar Rol
-                          </button>
+                            {role.isActive ? (
+                              <RiCheckboxCircleFill size={11} />
+                            ) : (
+                              <RiCloseCircleFill size={11} />
+                            )}
+                            {role.status}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditRoleDrawer(role)}
+                              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white bg-[#1c2538] hover:bg-[#C9A227]/15 border border-[#2a3550] px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                            >
+                              <RiEditFill size={12} />
+                              Editar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRole(role)}
+                              disabled={savingRole}
+                              className="flex items-center gap-1.5 text-xs text-red-300 hover:text-white bg-[#1c2538] hover:bg-red-500/20 border border-[#2a3550] px-3 py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-60"
+                            >
+                              <RiDeleteBinFill size={12} />
+                              Eliminar
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1540,10 +1557,22 @@ export default function AdminConfig() {
               </div>
 
               <div className="md:hidden divide-y divide-[#2a3550]">
-                {MOCK_ROLES.map((role) => (
+                {rolesLoading && (
+                  <div className="p-4 text-sm text-gray-400">
+                    Cargando roles...
+                  </div>
+                )}
+
+                {!rolesLoading && roleRows.length === 0 && (
+                  <div className="p-4 text-sm text-gray-400">
+                    No se encontraron roles registrados.
+                  </div>
+                )}
+
+                {!rolesLoading && roleRows.map((role) => (
                   <div
                     key={role.id}
-                    className="p-4 flex items-center justify-between"
+                    className="p-4 flex items-center justify-between gap-3"
                   >
                     <div>
                       <span
@@ -1553,18 +1582,30 @@ export default function AdminConfig() {
                       </span>
 
                       <div className="text-xs text-gray-500 mt-2">
-                        {role.users} usuarios · {role.permissions} permisos
+                        {role.users} usuarios - {role.code || "sin_codigo"}
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => openEditRoleDrawer(role)}
-                      className="text-xs text-[#C9A227] hover:underline flex items-center gap-1 cursor-pointer"
-                    >
-                      <RiEditFill size={12} />
-                      Editar
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openEditRoleDrawer(role)}
+                        className="text-xs text-[#C9A227] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <RiEditFill size={12} />
+                        Editar
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRole(role)}
+                        disabled={savingRole}
+                        className="text-xs text-red-300 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-60"
+                      >
+                        <RiDeleteBinFill size={12} />
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1923,7 +1964,7 @@ export default function AdminConfig() {
               {drawerMode === "editRole" && (
                 <>
                   <RiEditFill size={20} className="text-[#c084fc]" />
-                  Editar Rol — {editRole?.name}
+                  Editar Rol - {editRole?.name}
                 </>
               )}
 
@@ -1943,7 +1984,7 @@ export default function AdminConfig() {
               {drawerMode === "role" &&
                 "Define un nuevo rol de acceso para el sistema."}
               {drawerMode === "editRole" &&
-                "Configura los permisos y accesos del rol seleccionado."}
+                "Modifica la informacion del rol seleccionado."}
               {drawerMode === "profile" &&
                 "Información completa del usuario."}
             </p>
@@ -1955,7 +1996,7 @@ export default function AdminConfig() {
             className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1c2538] transition-colors"
             aria-label="Cerrar"
           >
-            ×
+            x
           </button>
         </div>
 
@@ -1972,7 +2013,7 @@ export default function AdminConfig() {
                     name: value,
                   })
                 }
-                icon="👤"
+                icon="U"
               />
 
               <FormField
@@ -1986,7 +2027,7 @@ export default function AdminConfig() {
                   })
                 }
                 type="email"
-                icon="✉️"
+                icon="@"
               />
 
               <FormField
@@ -2000,7 +2041,7 @@ export default function AdminConfig() {
                   })
                 }
                 type="tel"
-                icon="📞"
+                icon="T"
               />
 
               {drawerMode === "create" && (
@@ -2015,7 +2056,7 @@ export default function AdminConfig() {
                     })
                   }
                   type="text"
-                  icon="🔐"
+                  icon="*"
                 />
               )}
 
@@ -2194,8 +2235,14 @@ export default function AdminConfig() {
             </div>
           )}
 
-          {drawerMode === "role" && (
+          {(drawerMode === "role" || drawerMode === "editRole") && (
             <div className="space-y-5">
+              {roleFormError && (
+                <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  {roleFormError}
+                </div>
+              )}
+
               <FormField
                 label="Nombre del Rol"
                 placeholder="Ej. Gerente de Ventas"
@@ -2206,7 +2253,19 @@ export default function AdminConfig() {
                     name: value,
                   })
                 }
-                icon="🎯"
+                icon="#"
+              />
+
+              <FormField
+                label="Codigo del Rol"
+                placeholder="Ej. sales_manager"
+                value={roleForm.code}
+                onChange={(value) =>
+                  setRoleForm({
+                    ...roleForm,
+                    code: value,
+                  })
+                }
               />
 
               <div>
@@ -2226,6 +2285,51 @@ export default function AdminConfig() {
                   rows={3}
                   className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors resize-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                  Estado
+                </label>
+
+                <div className="flex gap-5">
+                  {[
+                    { value: true, label: "Activo", color: "border-green-400", dot: "bg-green-400" },
+                    { value: false, label: "Inactivo", color: "border-red-400", dot: "bg-red-400" },
+                  ].map((status) => (
+                    <button
+                      key={status.label}
+                      type="button"
+                      onClick={() =>
+                        setRoleForm({
+                          ...roleForm,
+                          isActive: status.value,
+                        })
+                      }
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <span
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${roleForm.isActive === status.value
+                          ? status.color
+                          : "border-gray-600"
+                          }`}
+                      >
+                        {roleForm.isActive === status.value && (
+                          <span className={`w-2 h-2 rounded-full ${status.dot}`} />
+                        )}
+                      </span>
+
+                      <span
+                        className={`text-sm ${roleForm.isActive === status.value
+                          ? "text-white"
+                          : "text-gray-400"
+                          }`}
+                      >
+                        {status.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -2286,7 +2390,7 @@ export default function AdminConfig() {
             </div>
           )}
 
-          {drawerMode === "editRole" && editRole && (
+          {drawerMode === "permissions" && editRole && (
             <div className="space-y-5">
               {PERMISSION_SECTIONS.map((section) => {
                 const activePermissions =
@@ -2501,7 +2605,7 @@ export default function AdminConfig() {
                       value: profileUser.created,
                     },
                     {
-                      label: "ÚLTIMA ACTIVIDAD",
+                      label: "ULTIMA ACTIVIDAD",
                       value: profileUser.lastActivity,
                     },
                     {
@@ -2556,17 +2660,17 @@ export default function AdminConfig() {
             <button
               type="button"
               onClick={handleSaveDrawer}
-              disabled={savingUser}
+              disabled={savingUser || savingRole}
               className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {savingUser
+              {savingUser || savingRole
                 ? "Guardando..."
                 : drawerMode === "create"
                 ? "Guardar Usuario"
                 : drawerMode === "edit"
                   ? "Guardar Cambios"
                   : drawerMode === "editRole"
-                    ? "Guardar Permisos"
+                    ? "Guardar Rol"
                     : "Guardar Rol"}
             </button>
           </div>
@@ -2627,7 +2731,7 @@ export default function AdminConfig() {
               </h3>
 
               <p className="text-center text-sm text-gray-400 mb-5">
-                ¿Estás seguro de que deseas eliminar a{" "}
+                Estas seguro de que deseas eliminar a{" "}
                 <span className="text-white font-medium">
                   {deleteModal.name}
                 </span>
@@ -2679,7 +2783,7 @@ export default function AdminConfig() {
               </h3>
 
               <p className="text-center text-sm text-gray-400 mb-5">
-                ¿Desactivar a{" "}
+                Desactivar a{" "}
                 <span className="text-white font-medium">
                   {deactivateModal.name}
                 </span>

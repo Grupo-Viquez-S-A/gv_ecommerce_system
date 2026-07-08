@@ -60,28 +60,6 @@ function getRelationValue(value) {
   return value || null;
 }
 
-function normalizeAccessValue(value) {
-  return String(value || "")
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toUpperCase();
-}
-
-function isUserAdministrationMembership(membership) {
-  const role = getRelationValue(membership?.roles);
-  const department = getRelationValue(membership?.departments);
-
-  const departmentName = normalizeAccessValue(department?.name);
-  const roleName = normalizeAccessValue(role?.role_name);
-  const roleCode = normalizeAccessValue(role?.role_code);
-
-  return (
-    departmentName === "INFORMATICA" &&
-    (roleName === "ENCARGADO" || roleCode === "ENCARGADO")
-  );
-}
-
 export async function getCorporateUserData(userId, authEmail) {
   // Perfil base
   const { data: profile, error: profileError } = await supabase
@@ -130,10 +108,7 @@ export async function getCorporateUserData(userId, authEmail) {
   let role = null;
   let companies = [];
   let department = null;
-  const primaryMembership =
-    memberships?.find(isUserAdministrationMembership) ||
-    memberships?.[0] ||
-    null;
+  const primaryMembership = memberships?.[0] || null;
 
   // Obtener roles
   if (primaryMembership) {

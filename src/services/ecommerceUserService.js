@@ -101,63 +101,180 @@ function formatActivityDate(dateValue) {
 }
 
 export async function getEcommerceUsers() {
-  const { data, error } = await supabase.rpc(
-    "get_ecommerce_users_for_admin",
-  );
+  const applicationsResponse = await supabase
+    .from("applications")
+    .select("application_id, application_code, name")
+    .or("application_code.ilike.%ecommerce%,application_code.ilike.%e-commerce%,name.ilike.%ecommerce%,name.ilike.%e-commerce%");
 
-  if (error) {
+  if (applicationsResponse.error) {
     throw new Error(
-      `No fue posible cargar los usuarios del e-commerce: ${error.message}`,
+      `No fue posible cargar la aplicacion e-commerce: ${applicationsResponse.error.message}`,
     );
   }
 
-  return (data || []).map((user) => {
-    const fullName = `${user.name || ""} ${user.surname || ""}`.trim();
+  const applicationIds = (applicationsResponse.data || []).map(
+    (application) => application.application_id,
+  );
+
+  let applicationUsersQuery = supabase
+    .from("user_applications")
+    .select(
+      "user_application_id, user_id, application_id, is_active, start_date, end_date, created_at, updated_at",
+    )
+    .order("created_at", { ascending: false });
+
+  if (applicationIds.length > 0) {
+    applicationUsersQuery = applicationUsersQuery.in(
+      "application_id",
+      applicationIds,
+    );
+  }
+
+  const applicationUsersResponse = await applicationUsersQuery;
+
+  if (applicationUsersResponse.error) {
+    throw new Error(
+      `No fue posible cargar los usuarios del e-commerce: ${applicationUsersResponse.error.message}`,
+    );
+  }
+
+  const applicationUsers = applicationUsersResponse.data || [];
+  const userIds = [
+    ...new Set(applicationUsers.map((user) => user.user_id).filter(Boolean)),
+  ];
+
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const [
+    profilesResponse,
+    membershipsResponse,
+    companiesResponse,
+    rolesResponse,
+    departmentsResponse,
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "user_id, name, surname, email, identification, phone, is_active, created_at, updated_at",
+      )
+      .in("user_id", userIds),
+    supabase
+      .from("user_memberships")
+      .select(
+        "membership_id, user_id, company_id, department_id, role_id, is_active, start_date, end_date, created_at, updated_at",
+      )
+      .in("user_id", userIds),
+    supabase.from("companies").select("company_id, company_name"),
+    supabase.from("roles").select("role_id, role_name, role_code"),
+    supabase.from("departments").select("department_id, name"),
+  ]);
+
+  const firstError = [
+    profilesResponse.error,
+    membershipsResponse.error,
+    companiesResponse.error,
+    rolesResponse.error,
+    departmentsResponse.error,
+  ].find(Boolean);
+
+  if (firstError) {
+    throw new Error(
+      `No fue posible cargar los usuarios del e-commerce: ${firstError.message}`,
+    );
+  }
+
+  const profilesByUserId = new Map(
+    (profilesResponse.data || []).map((profile) => [profile.user_id, profile]),
+  );
+  const companiesById = new Map(
+    (companiesResponse.data || []).map((company) => [
+      company.company_id,
+      company,
+    ]),
+  );
+  const rolesById = new Map(
+    (rolesResponse.data || []).map((role) => [role.role_id, role]),
+  );
+  const departmentsById = new Map(
+    (departmentsResponse.data || []).map((department) => [
+      department.department_id,
+      department,
+    ]),
+  );
+
+  const membershipsByUserId = (membershipsResponse.data || []).reduce(
+    (map, membership) => {
+      const userMemberships = map.get(membership.user_id) || [];
+
+      userMemberships.push(membership);
+      map.set(membership.user_id, userMemberships);
+
+      return map;
+    },
+    new Map(),
+  );
+
+  return applicationUsers.map((applicationUser) => {
+    const profile = profilesByUserId.get(applicationUser.user_id) || {};
+    const memberships = membershipsByUserId.get(applicationUser.user_id) || [];
+    const primaryMembership =
+      memberships.find((membership) => membership.is_active !== false) ||
+      memberships[0] ||
+      {};
+
+    const role = rolesById.get(primaryMembership.role_id) || {};
+    const department = departmentsById.get(primaryMembership.department_id) || {};
+    const membershipCompanies = memberships
+      .map((membership) => companiesById.get(membership.company_id))
+      .filter(Boolean)
+      .map((company) => company.company_name)
+      .filter(Boolean);
+
+    const fullName = `${profile.name || ""} ${profile.surname || ""}`.trim();
 
     const accessIsActive =
-      user.application_active &&
-      user.application_access_active &&
-      user.profile_active &&
-      isDateRangeActive(
-        user.application_start_date,
-        user.application_end_date,
-      );
+      applicationUser.is_active &&
+      profile.is_active !== false &&
+      primaryMembership.is_active !== false &&
+      isDateRangeActive(applicationUser.start_date, applicationUser.end_date);
 
     const companies =
-      Array.isArray(user.companies) && user.companies.length > 0
-        ? user.companies
+      membershipCompanies.length > 0
+        ? [...new Set(membershipCompanies)]
         : ["Sin empresa asignada"];
 
-    const roleName = user.role_name || "Sin rol asignado";
-    const roleCode = user.role_code || "";
+    const roleName = role.role_name || "Sin rol asignado";
+    const roleCode = role.role_code || "";
 
     return {
-      id: user.user_application_id,
-      profileId: user.profile_id,
-      userApplicationId: user.user_application_id,
+      id: applicationUser.user_application_id,
+      profileId: profile.user_id,
+      userApplicationId: applicationUser.user_application_id,
 
-      initials: getInitials(user.name, user.surname),
-      color: getAvatarColor(user.profile_id),
+      initials: getInitials(profile.name, profile.surname),
+      color: getAvatarColor(profile.user_id || applicationUser.user_id),
 
       name: fullName || "Usuario sin nombre",
-      email: user.email || "Sin correo",
-      phone: user.phone || "Sin teléfono",
+      email: profile.email || "Sin correo",
+      phone: profile.phone || "Sin telefono",
 
       role: roleName,
       roleCode,
       roleColor: getRoleBadge(roleName, roleCode),
 
       companies,
-      department: user.department_name || "Sin departamento asignado",
+      department: department.name || "Sin departamento asignado",
 
       status: accessIsActive ? "Activo" : "Inactivo",
       isActive: accessIsActive,
 
-      created: formatDate(user.profile_created_at),
-      lastActivity: formatActivityDate(user.last_activity),
+      created: formatDate(profile.created_at),
+      lastActivity: formatActivityDate(applicationUser.updated_at),
 
-      applicationStartDate: user.application_start_date,
-      applicationEndDate: user.application_end_date,
+      applicationStartDate: applicationUser.start_date,
+      applicationEndDate: applicationUser.end_date,
 
       has2fa: null,
     };
