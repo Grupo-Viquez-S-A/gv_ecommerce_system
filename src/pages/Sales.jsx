@@ -1,19 +1,12 @@
-﻿import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
-  RiAddFill,
   RiArrowDownSFill,
-  RiArrowLeftSLine,
-  RiArrowRightSFill,
   RiCalendarLine,
-  RiDownloadFill,
-  RiEditFill,
-  RiExportFill,
   RiEyeFill,
-  RiMoneyDollarCircleFill,
+  RiExportFill,
+  RiRefreshLine,
   RiSearchLine,
-  RiStoreFill,
-  RiUserFill,
 } from "react-icons/ri";
 
 import {
@@ -26,324 +19,240 @@ import {
   YAxis,
 } from "recharts";
 
-/* --- MOCK DATA: VENTAS --- */
-const MOCK_SALES = [
-  {
-    id: 1,
-    number: "VEN-000247",
-    client: "María Fernández",
-    date: "30/06/2024 14:30",
-    products: 3,
-    total: "₡45.200.000",
-    status: "Completada",
-    agent: "Ana Gómez",
-    avatar: "AG",
-  },
-  {
-    id: 2,
-    number: "VEN-000246",
-    client: "Constructora Solís",
-    date: "30/06/2024 11:12",
-    products: 7,
-    total: "₡28.750.000",
-    status: "Completada",
-    agent: "Manuel Rojas",
-    avatar: "MR",
-  },
-  {
-    id: 3,
-    number: "VEN-000245",
-    client: "Hotel Los Laureles",
-    date: "29/06/2024 16:45",
-    products: 2,
-    total: "₡15.600.000",
-    status: "En proceso",
-    agent: "Laura Gómez",
-    avatar: "LG",
-  },
-  {
-    id: 4,
-    number: "VEN-000244",
-    client: "Pacific Pet Food",
-    date: "27/06/2024 09:20",
-    products: 5,
-    total: "₡9.850.000",
-    status: "Completada",
-    agent: "Ana Gómez",
-    avatar: "AG",
-  },
-  {
-    id: 5,
-    number: "VEN-000243",
-    client: "Distribuidora del Norte",
-    date: "28/06/2024 10:35",
-    products: 4,
-    total: "₡6.450.000",
-    status: "Completada",
-    agent: "Manuel Rojas",
-    avatar: "MR",
-  },
-  {
-    id: 6,
-    number: "VEN-000242",
-    client: "Farmacia La Salud",
-    date: "27/06/2024 15:18",
-    products: 2,
-    total: "₡3.200.000",
-    status: "Cancelada",
-    agent: "Laura Gómez",
-    avatar: "LG",
-  },
-  {
-    id: 7,
-    number: "VEN-000241",
-    client: "Grupo Alimenticio S.A.",
-    date: "27/06/2024 12:54",
-    products: 6,
-    total: "₡18.500.000",
-    status: "Completada",
-    agent: "Ana Gómez",
-    avatar: "AG",
-  },
-];
+import { getPaidSales } from "../services/salesService.js";
 
-/* --- CONFIGURACIÓN DE ESTADOS --- */
 const STATUS_CONFIG = {
-  Completada: {
-    bg: "bg-green-500/10",
-    text: "text-green-400",
-    border: "border-green-500/20",
-  },
-  "En proceso": {
+  pendiente: {
     bg: "bg-yellow-500/10",
     text: "text-yellow-400",
     border: "border-yellow-500/20",
   },
-  Cancelada: {
-    bg: "bg-red-500/10",
-    text: "text-red-400",
-    border: "border-red-500/20",
+  en_proceso: {
+    bg: "bg-[#C9A227]/10",
+    text: "text-[#C9A227]",
+    border: "border-[#C9A227]/20",
+  },
+  pausada: {
+    bg: "bg-orange-500/10",
+    text: "text-orange-400",
+    border: "border-orange-500/20",
+  },
+  finalizada: {
+    bg: "bg-green-500/10",
+    text: "text-green-400",
+    border: "border-green-500/20",
+  },
+  cancelada: {
+    bg: "bg-gray-500/10",
+    text: "text-gray-400",
+    border: "border-gray-500/20",
   },
 };
 
-/* --- DATOS DEL GRÁFICO --- */
-const dailySalesData = [
-  { name: "01 Jun", value: 4.2 },
-  { name: "03 Jun", value: 5.1 },
-  { name: "05 Jun", value: 7.8 },
-  { name: "07 Jun", value: 5.5 },
-  { name: "09 Jun", value: 6.0 },
-  { name: "11 Jun", value: 8.2 },
-  { name: "13 Jun", value: 5.8 },
-  { name: "15 Jun", value: 7.0 },
-  { name: "17 Jun", value: 9.5 },
-  { name: "19 Jun", value: 12.0 },
-  { name: "21 Jun", value: 14.5 },
-  { name: "23 Jun", value: 10.0 },
-  { name: "25 Jun", value: 8.5 },
-  { name: "27 Jun", value: 6.2 },
-  { name: "29 Jun", value: 5.0 },
-  { name: "30 Jun", value: 4.5 },
-];
+const PAYMENT_CONFIG = {
+  pagado: {
+    bg: "bg-green-500/10",
+    text: "text-green-400",
+    border: "border-green-500/20",
+  },
+};
 
-/* --- COMPONENTES AUXILIARES --- */
-function PagBtn({ icon, label, active = false }) {
-  return (
-    <button
-      type="button"
-      className={`w-7 h-7 rounded text-xs flex items-center justify-center transition-colors cursor-pointer ${
-        active
-          ? "bg-[#C9A227] text-white"
-          : "text-gray-500 hover:text-white hover:bg-[#C9A227]/15"
-      }`}
-    >
-      {icon || label}
-    </button>
-  );
-}
-
-function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] || STATUS_CONFIG["En proceso"];
+function StatusBadge({ status, label, config }) {
+  const resolvedConfig = config[status] || {
+    bg: "bg-gray-500/10",
+    text: "text-gray-400",
+    border: "border-gray-500/20",
+  };
 
   return (
     <span
-      className={`inline-block text-xs font-medium px-2.5 py-1 rounded-md border ${config.bg} ${config.text} ${config.border}`}
+      className={`inline-block text-xs font-medium px-2.5 py-1 rounded-md border ${resolvedConfig.bg} ${resolvedConfig.text} ${resolvedConfig.border}`}
     >
-      {status}
+      {label}
     </span>
   );
 }
 
-function Field({
-  icon,
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-        {label}
-      </label>
+function formatCurrency(amount) {
+  const numericAmount = Number(amount) || 0;
 
-      <div className="relative">
-        {icon && (
-          <span className="absolute left-3 top-3 text-gray-500">
-            {icon}
-          </span>
-        )}
+  return `₡${numericAmount.toLocaleString("es-CR", {
+    maximumFractionDigits: 0,
+  })}`;
+}
 
-        <input
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          className={`w-full bg-[#222e44] border border-[#2a3550] rounded-lg ${
-            icon ? "pl-9" : "pl-3"
-          } pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors`}
-        />
-      </div>
-    </div>
-  );
+function formatDate(value) {
+  if (!value) {
+    return "Sin fecha";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
+  }
+
+  return date.toLocaleString("es-CR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function buildDailySalesData(sales) {
+  const totalsByDay = sales.reduce((totals, sale) => {
+    const date = sale.saleDate ? new Date(sale.saleDate) : null;
+
+    if (!date || Number.isNaN(date.getTime())) {
+      return totals;
+    }
+
+    const label = date.toLocaleDateString("es-CR", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    totals[label] = (totals[label] || 0) + sale.total;
+
+    return totals;
+  }, {});
+
+  return Object.entries(totalsByDay)
+    .map(([name, value]) => ({ name, value }))
+    .slice(-16);
 }
 
 /* --- PÁGINA PRINCIPAL --- */
 export default function Sales() {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
-  const [agentFilter, setAgentFilter] = useState("Todos");
-  const [dateFrom, setDateFrom] = useState("01/06/2024");
-  const [dateTo, setDateTo] = useState("30/06/2024");
+  const [representativeFilter, setRepresentativeFilter] = useState("Todos");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState("create");
   const [viewSale, setViewSale] = useState(null);
-  const [editSale, setEditSale] = useState(null);
 
-  const [sales, setSales] = useState(MOCK_SALES);
-  const [nextId, setNextId] = useState(248);
+  const [sales, setSales] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const [form, setForm] = useState({
-    client: "",
-    date: "",
-    products: "",
-    total: "",
-    status: "Completada",
-    agent: "",
-  });
+  const loadSales = async () => {
+    setLoading(true);
+    setLoadError(null);
 
-  const agents = [
-    "Todos",
-    "Ana Gómez",
-    "Manuel Rojas",
-    "Laura Gómez",
-  ];
+    try {
+      const paidSales = await getPaidSales();
+      setSales(paidSales);
+    } catch (error) {
+      setLoadError(
+        error?.message || "No fue posible cargar las ventas pagadas.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const metrics = [
-    {
-      label: "VENTAS TOTALES",
-      value: "₡185 M",
-      growth: "+14%",
-      growthColor: "text-green-400",
-      color: "#C9A227",
-      iconColor: "text-[#C9A227]",
-      bg: "bg-[#C9A227]/10",
-    },
-    {
-      label: "ÓRDENES REALIZADAS",
-      value: "247",
-      growth: "+12%",
-      growthColor: "text-green-400",
-      color: "#22c55e",
-      iconColor: "text-[#22c55e]",
-      bg: "bg-[#22c55e]/10",
-    },
-    {
-      label: "TICKET PROMEDIO",
-      value: "₡748.000",
-      growth: "+7%",
-      growthColor: "text-green-400",
-      color: "#8b5cf6",
-      iconColor: "text-[#8b5cf6]",
-      bg: "bg-[#8b5cf6]/10",
-    },
-    {
-      label: "PRODUCTOS VENDIDOS",
-      value: "1.532",
-      growth: "+5%",
-      growthColor: "text-green-400",
-      color: "#f59e0b",
-      iconColor: "text-[#f59e0b]",
-      bg: "bg-[#f59e0b]/10",
-    },
-    {
-      label: "DEVOLUCIONES",
-      value: "₡3.2 M",
-      growth: "-8%",
-      growthColor: "text-red-400",
-      color: "#ef4444",
-      iconColor: "text-[#ef4444]",
-      bg: "bg-[#ef4444]/10",
-    },
-  ];
+  useEffect(() => {
+    loadSales();
+  }, []);
+
+  const representatives = useMemo(() => {
+    const uniqueRepresentatives = [
+      ...new Set(sales.map((sale) => sale.representative).filter(Boolean)),
+    ];
+
+    return ["Todos", ...uniqueRepresentatives];
+  }, [sales]);
+
+  const dailySalesData = useMemo(() => buildDailySalesData(sales), [sales]);
+
+  const metrics = useMemo(() => {
+    const totalVentas = sales.reduce((sum, sale) => sum + sale.total, 0);
+    const cantidadVentas = sales.length;
+    const ticketPromedio = cantidadVentas ? totalVentas / cantidadVentas : 0;
+
+    const ultimaVenta = sales.reduce((latest, sale) => {
+      if (!sale.saleDate) {
+        return latest;
+      }
+
+      if (!latest) {
+        return sale;
+      }
+
+      return new Date(sale.saleDate) > new Date(latest.saleDate)
+        ? sale
+        : latest;
+    }, null);
+
+    return [
+      {
+        label: "TOTAL VENDIDO",
+        value: formatCurrency(totalVentas),
+        color: "#C9A227",
+        bg: "bg-[#C9A227]/10",
+        iconColor: "text-[#C9A227]",
+      },
+      {
+        label: "CANTIDAD DE VENTAS",
+        value: String(cantidadVentas),
+        color: "#22c55e",
+        bg: "bg-[#22c55e]/10",
+        iconColor: "text-[#22c55e]",
+      },
+      {
+        label: "TICKET PROMEDIO",
+        value: formatCurrency(ticketPromedio),
+        color: "#8b5cf6",
+        bg: "bg-[#8b5cf6]/10",
+        iconColor: "text-[#8b5cf6]",
+      },
+      {
+        label: "ULTIMA VENTA PAGADA",
+        value: ultimaVenta ? formatDate(ultimaVenta.saleDate) : "Sin ventas",
+        color: "#f59e0b",
+        bg: "bg-[#f59e0b]/10",
+        iconColor: "text-[#f59e0b]",
+      },
+    ];
+  }, [sales]);
 
   const filteredSales = sales.filter((sale) => {
     const normalizedSearch = search.trim().toLowerCase();
 
     const matchesSearch =
       !normalizedSearch ||
-      sale.number.toLowerCase().includes(normalizedSearch) ||
+      sale.code.toLowerCase().includes(normalizedSearch) ||
+      sale.quotationNumber.toLowerCase().includes(normalizedSearch) ||
       sale.client.toLowerCase().includes(normalizedSearch);
 
-    const matchesStatus =
-      statusFilter === "Todos" || sale.status === statusFilter;
+    const matchesRepresentative =
+      representativeFilter === "Todos" ||
+      sale.representative === representativeFilter;
 
-    const matchesAgent =
-      agentFilter === "Todos" || sale.agent === agentFilter;
+    const saleTime = sale.saleDate ? new Date(sale.saleDate).getTime() : null;
 
-    return matchesSearch && matchesStatus && matchesAgent;
+    const matchesDateFrom =
+      !dateFrom ||
+      (saleTime !== null &&
+        !Number.isNaN(saleTime) &&
+        saleTime >= new Date(`${dateFrom}T00:00:00`).getTime());
+
+    const matchesDateTo =
+      !dateTo ||
+      (saleTime !== null &&
+        !Number.isNaN(saleTime) &&
+        saleTime <= new Date(`${dateTo}T23:59:59`).getTime());
+
+    return (
+      matchesSearch && matchesRepresentative && matchesDateFrom && matchesDateTo
+    );
   });
 
-  const openCreateDrawer = () => {
-    setDrawerMode("create");
-    setViewSale(null);
-    setEditSale(null);
-
-    setForm({
-      client: "",
-      date: "",
-      products: "",
-      total: "",
-      status: "Completada",
-      agent: "",
-    });
-
-    setDrawerOpen(true);
-  };
-
-  const openEditDrawer = (sale) => {
-    setDrawerMode("edit");
-    setEditSale(sale);
-    setViewSale(null);
-
-    setForm({
-      client: sale.client,
-      date: sale.date,
-      products: sale.products,
-      total: sale.total,
-      status: sale.status,
-      agent: sale.agent,
-    });
-
-    setDrawerOpen(true);
-  };
-
   const openViewDrawer = (sale) => {
-    setDrawerMode("view");
     setViewSale(sale);
-    setEditSale(null);
     setDrawerOpen(true);
   };
 
@@ -351,76 +260,15 @@ export default function Sales() {
     setDrawerOpen(false);
 
     window.setTimeout(() => {
-      setDrawerMode("create");
       setViewSale(null);
-      setEditSale(null);
     }, 300);
-  };
-
-  const handleSaveSale = () => {
-    if (!form.client.trim()) {
-      window.alert("Ingresa el nombre del cliente.");
-      return;
-    }
-
-    if (!form.agent.trim()) {
-      window.alert("Selecciona un vendedor.");
-      return;
-    }
-
-    const avatar =
-      form.agent
-        .split(" ")
-        .filter(Boolean)
-        .map((name) => name[0])
-        .join("")
-        .toUpperCase() || "NA";
-
-    if (drawerMode === "create") {
-      const newSale = {
-        id: nextId,
-        number: `VEN-${String(nextId).padStart(6, "0")}`,
-        client: form.client.trim(),
-        date: form.date.trim(),
-        products: Number(form.products) || 0,
-        total: form.total.trim(),
-        status: form.status,
-        agent: form.agent,
-        avatar,
-      };
-
-      setSales((previousSales) => [newSale, ...previousSales]);
-      setNextId((previousId) => previousId + 1);
-    }
-
-    if (drawerMode === "edit" && editSale) {
-      setSales((previousSales) =>
-        previousSales.map((sale) =>
-          sale.id === editSale.id
-            ? {
-                ...sale,
-                client: form.client.trim(),
-                date: form.date.trim(),
-                products: Number(form.products) || 0,
-                total: form.total.trim(),
-                status: form.status,
-                agent: form.agent,
-                avatar,
-              }
-            : sale,
-        ),
-      );
-    }
-
-    closeDrawer();
   };
 
   const clearFilters = () => {
     setSearch("");
-    setStatusFilter("Todos");
-    setAgentFilter("Todos");
-    setDateFrom("01/06/2024");
-    setDateTo("30/06/2024");
+    setRepresentativeFilter("Todos");
+    setDateFrom("");
+    setDateTo("");
   };
 
   return (
@@ -438,33 +286,39 @@ export default function Sales() {
             <h1 className="text-xl font-bold text-white">Ventas</h1>
 
             <p className="text-sm text-gray-400 mt-0.5">
-              Consulta y gestiona todas las ventas realizadas en el grupo.
+              Ordenes de produccion pagadas al 100%.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={loadSales}
               className="flex items-center gap-2 bg-[#1c2538] border border-[#2a3550] hover:bg-[#C9A227]/15 text-gray-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors cursor-pointer"
             >
-              <RiExportFill size={15} />
-              Exportar
+              <RiRefreshLine size={15} />
+              Actualizar
             </button>
 
             <button
               type="button"
-              onClick={openCreateDrawer}
               className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20 cursor-pointer"
             >
-              <RiAddFill size={16} />
-              Nueva Venta
+              <RiExportFill size={16} />
+              Exportar
             </button>
           </div>
         </div>
 
+        {loadError && (
+          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {loadError}
+          </div>
+        )}
+
         {/* Métricas */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-          {metrics.map((metric, index) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {metrics.map((metric) => (
             <div
               key={metric.label}
               className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/20 transition-colors"
@@ -473,28 +327,10 @@ export default function Sales() {
                 <div
                   className={`w-8 h-8 rounded-lg ${metric.bg} flex items-center justify-center ${metric.iconColor}`}
                 >
-                  {index === 1 ? (
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M2 12 L6 8 L9 11 L14 4"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  ) : (
-                    <div
-                      className="w-4 h-4 rounded-sm"
-                      style={{ backgroundColor: metric.color }}
-                    />
-                  )}
+                  <div
+                    className="w-4 h-4 rounded-sm"
+                    style={{ backgroundColor: metric.color }}
+                  />
                 </div>
               </div>
 
@@ -505,12 +341,6 @@ export default function Sales() {
               <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mt-1">
                 {metric.label}
               </div>
-
-              <div
-                className={`text-xs font-medium mt-1 ${metric.growthColor}`}
-              >
-                {metric.growth} vs. mes anterior
-              </div>
             </div>
           ))}
         </div>
@@ -519,16 +349,8 @@ export default function Sales() {
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-white">
-              Ventas por día
+              Ventas pagadas por dia
             </h3>
-
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
-            >
-              Este mes
-              <RiArrowDownSFill size={12} />
-            </button>
           </div>
 
           <div className="h-40">
@@ -572,7 +394,7 @@ export default function Sales() {
                   tick={{ fontSize: 10, fill: "#6b7280" }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(value) => `₡${value} M`}
+                  allowDecimals={false}
                 />
 
                 <Tooltip
@@ -584,7 +406,7 @@ export default function Sales() {
                     color: "#fff",
                   }}
                   itemStyle={{ color: "#fff" }}
-                  formatter={(value) => [`₡${value} M`, "Ventas"]}
+                  formatter={(value) => [formatCurrency(value), "Ventas"]}
                 />
 
                 <Area
@@ -610,7 +432,7 @@ export default function Sales() {
 
               <input
                 type="text"
-                placeholder="Buscar por número o cliente..."
+                placeholder="Buscar por codigo, cotizacion o cliente..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
@@ -618,6 +440,9 @@ export default function Sales() {
             </div>
 
             <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                Fecha de venta (desde)
+              </label>
               <div className="relative">
                 <RiCalendarLine
                   size={14}
@@ -625,15 +450,18 @@ export default function Sales() {
                 />
 
                 <input
-                  type="text"
+                  type="date"
                   value={dateFrom}
                   onChange={(event) => setDateFrom(event.target.value)}
-                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors"
+                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors [color-scheme:dark]"
                 />
               </div>
             </div>
 
             <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                Fecha de venta (hasta)
+              </label>
               <div className="relative">
                 <RiCalendarLine
                   size={14}
@@ -641,10 +469,10 @@ export default function Sales() {
                 />
 
                 <input
-                  type="text"
+                  type="date"
                   value={dateTo}
                   onChange={(event) => setDateTo(event.target.value)}
-                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors"
+                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors [color-scheme:dark]"
                 />
               </div>
             </div>
@@ -652,32 +480,14 @@ export default function Sales() {
             <div>
               <div className="relative">
                 <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
+                  value={representativeFilter}
+                  onChange={(event) =>
+                    setRepresentativeFilter(event.target.value)
+                  }
                   className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
                 >
-                  <option value="Todos">Todos los estados</option>
-                  <option value="Completada">Completada</option>
-                  <option value="En proceso">En proceso</option>
-                  <option value="Cancelada">Cancelada</option>
-                </select>
-
-                <RiArrowDownSFill
-                  size={14}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="relative">
-                <select
-                  value={agentFilter}
-                  onChange={(event) => setAgentFilter(event.target.value)}
-                  className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                >
-                  {agents.map((agent) => (
-                    <option key={agent}>{agent}</option>
+                  {representatives.map((representative) => (
+                    <option key={representative}>{representative}</option>
                   ))}
                 </select>
 
@@ -688,20 +498,13 @@ export default function Sales() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 lg:col-span-2 lg:col-start-5">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={clearFilters}
                 className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors cursor-pointer"
               >
                 Limpiar filtros
-              </button>
-
-              <button
-                type="button"
-                className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2 rounded-lg transition-colors cursor-pointer"
-              >
-                Buscar
               </button>
             </div>
           </div>
@@ -728,25 +531,28 @@ export default function Sales() {
             <thead>
               <tr className="border-b border-[#2a3550]">
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  #
+                  Orden
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                   Cliente
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Productos
+                  Fecha de venta
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                   Total
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Estado
+                  Metodo de pago
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Vendedor
+                  Produccion
+                </th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                  Pago
+                </th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                  Representante
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">
                   Acciones
@@ -761,7 +567,7 @@ export default function Sales() {
                   className="hover:bg-[#1c2538]/50 transition-colors"
                 >
                   <td className="px-4 py-3 text-sm text-gray-300 font-mono">
-                    {sale.number}
+                    {sale.code}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-white">
@@ -769,19 +575,31 @@ export default function Sales() {
                   </td>
 
                   <td className="px-4 py-3 text-sm text-gray-400">
-                    {sale.date}
-                  </td>
-
-                  <td className="px-4 py-3 text-sm text-white font-semibold text-center">
-                    {sale.products}
+                    {formatDate(sale.saleDate)}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-white font-semibold">
-                    {sale.total}
+                    {formatCurrency(sale.total)}
+                  </td>
+
+                  <td className="px-4 py-3 text-sm text-gray-300">
+                    {sale.paymentMethod}
                   </td>
 
                   <td className="px-4 py-3">
-                    <StatusBadge status={sale.status} />
+                    <StatusBadge
+                      status={sale.productionStatus}
+                      label={sale.productionStatusLabel}
+                      config={STATUS_CONFIG}
+                    />
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <StatusBadge
+                      status={sale.paymentStatus}
+                      label={sale.paymentStatusLabel}
+                      config={PAYMENT_CONFIG}
+                    />
                   </td>
 
                   <td className="px-4 py-3">
@@ -791,7 +609,7 @@ export default function Sales() {
                       </div>
 
                       <span className="text-sm text-gray-300">
-                        {sale.agent}
+                        {sale.representative}
                       </span>
                     </div>
                   </td>
@@ -806,23 +624,6 @@ export default function Sales() {
                       >
                         <RiEyeFill size={13} />
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => openEditDrawer(sale)}
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Editar"
-                      >
-                        <RiEditFill size={13} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Descargar"
-                      >
-                        <RiDownloadFill size={13} />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -830,12 +631,18 @@ export default function Sales() {
             </tbody>
           </table>
 
-          {filteredSales.length === 0 && (
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <p className="text-sm text-gray-500">Cargando ventas...</p>
+            </div>
+          )}
+
+          {!loading && filteredSales.length === 0 && (
             <div className="flex flex-col items-center justify-center py-14 gap-3">
               <RiSearchLine size={28} className="text-gray-600" />
 
               <p className="text-sm text-gray-500">
-                No se encontraron ventas
+                No se encontraron ventas pagadas al 100%.
               </p>
 
               <button
@@ -850,26 +657,8 @@ export default function Sales() {
 
           <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
             <span className="text-xs text-gray-500">
-              Mostrando 1 a {filteredSales.length} de 247 ventas
+              Mostrando {filteredSales.length} de {sales.length} ventas
             </span>
-
-            <div className="flex items-center gap-1">
-              <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-
-              {[1, 2, 3].map((page) => (
-                <PagBtn
-                  key={page}
-                  label={page}
-                  active={page === 1}
-                />
-              ))}
-
-              <span className="text-gray-600 px-1">...</span>
-
-              <PagBtn label={25} />
-
-              <PagBtn icon={<RiArrowRightSFill size={14} />} />
-            </div>
           </div>
         </div>
       </div>
@@ -893,34 +682,12 @@ export default function Sales() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" && (
-                <>
-                  <RiAddFill size={20} className="text-[#C9A227]" />
-                  Nueva Venta
-                </>
-              )}
-
-              {drawerMode === "edit" && (
-                <>
-                  <RiEditFill size={20} className="text-[#C9A227]" />
-                  Editar Venta
-                </>
-              )}
-
-              {drawerMode === "view" && (
-                <>
-                  <RiEyeFill size={20} className="text-[#C9A227]" />
-                  Detalle de Venta
-                </>
-              )}
+              <RiEyeFill size={20} className="text-[#C9A227]" />
+              Detalle de Venta
             </h2>
 
             <p className="text-sm text-gray-400 mt-0.5">
-              {drawerMode === "create"
-                ? "Registra una nueva venta."
-                : drawerMode === "edit"
-                  ? "Modifica los datos de la venta."
-                  : "Información completa de la venta."}
+              Informacion completa de la venta.
             </p>
           </div>
 
@@ -935,156 +702,48 @@ export default function Sales() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {(drawerMode === "create" || drawerMode === "edit") && (
-            <div className="space-y-4">
-              <Field
-                icon={<RiUserFill size={14} />}
-                label="Cliente"
-                placeholder="Nombre del cliente"
-                value={form.client}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    client: event.target.value,
-                  })
-                }
-              />
-
-              <Field
-                icon={<RiCalendarLine size={14} />}
-                label="Fecha"
-                placeholder="DD/MM/YYYY HH:mm"
-                value={form.date}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    date: event.target.value,
-                  })
-                }
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  icon={<RiStoreFill size={14} />}
-                  label="Productos"
-                  placeholder="Cantidad"
-                  type="number"
-                  value={form.products}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      products: event.target.value,
-                    })
-                  }
-                />
-
-                <Field
-                  icon={<RiMoneyDollarCircleFill size={14} />}
-                  label="Total"
-                  placeholder="₡0.000.000"
-                  value={form.total}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      total: event.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                  Estado
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={form.status}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        status: event.target.value,
-                      })
-                    }
-                    className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                  >
-                    <option>Completada</option>
-                    <option>En proceso</option>
-                    <option>Cancelada</option>
-                  </select>
-
-                  <RiArrowDownSFill
-                    size={16}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                  Vendedor
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={form.agent}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        agent: event.target.value,
-                      })
-                    }
-                    className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                  >
-                    <option value="">Seleccionar vendedor</option>
-
-                    {agents
-                      .filter((agent) => agent !== "Todos")
-                      .map((agent) => (
-                        <option key={agent}>{agent}</option>
-                      ))}
-                  </select>
-
-                  <RiArrowDownSFill
-                    size={16}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {drawerMode === "view" && viewSale && (
+          {viewSale && (
             <div className="space-y-5">
               <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
                 <div className="w-14 h-14 rounded-xl bg-[#C9A227]/15 flex items-center justify-center text-lg font-bold text-[#C9A227]">
-                  {viewSale.number.slice(-3)}
+                  {viewSale.code.slice(-3)}
                 </div>
 
                 <div>
                   <h3 className="text-lg font-bold text-white">
-                    {viewSale.number}
+                    {viewSale.code}
                   </h3>
 
-                  <StatusBadge status={viewSale.status} />
+                  <StatusBadge
+                    status={viewSale.paymentStatus}
+                    label={viewSale.paymentStatusLabel}
+                    config={PAYMENT_CONFIG}
+                  />
                 </div>
               </div>
 
               <div className="space-y-3">
                 {[
                   { label: "Cliente", value: viewSale.client },
-                  { label: "Fecha", value: viewSale.date },
-                  { label: "Productos", value: viewSale.products },
-                  { label: "Total", value: viewSale.total },
-                  { label: "Vendedor", value: viewSale.agent },
+                  { label: "Cedula juridica", value: viewSale.legalId || "N/D" },
+                  { label: "Sucursal", value: viewSale.branchLabel || "N/D" },
+                  { label: "Cotizacion", value: viewSale.quotationNumber },
+                  { label: "Fecha de venta", value: formatDate(viewSale.saleDate) },
+                  { label: "Total vendido", value: formatCurrency(viewSale.total) },
+                  { label: "Monto pagado", value: formatCurrency(viewSale.amountPaid) },
+                  { label: "Saldo", value: formatCurrency(viewSale.balance) },
+                  { label: "Metodo de pago", value: viewSale.paymentMethod },
+                  {
+                    label: "Estado de produccion",
+                    value: viewSale.productionStatusLabel,
+                  },
+                  { label: "Representante", value: viewSale.representative },
                 ].map(({ label, value }) => (
                   <div
                     key={label}
                     className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]"
                   >
-                    <span className="text-xs text-gray-500">
-                      {label}
-                    </span>
+                    <span className="text-xs text-gray-500">{label}</span>
 
                     <span className="text-sm text-white font-medium text-right">
                       {value}
@@ -1096,58 +755,15 @@ export default function Sales() {
           )}
         </div>
 
-        {(drawerMode === "create" || drawerMode === "edit") && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSaveSale}
-              className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              {drawerMode === "create"
-                ? "Guardar Venta"
-                : "Guardar Cambios"}
-            </button>
-          </div>
-        )}
-
-        {drawerMode === "view" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                const saleToEdit = viewSale;
-
-                closeDrawer();
-
-                window.setTimeout(() => {
-                  if (saleToEdit) {
-                    openEditDrawer(saleToEdit);
-                  }
-                }, 350);
-              }}
-              className="flex-1 flex items-center justify-center gap-2 bg-[#C9A227]/15 text-[#C9A227] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              <RiEditFill size={15} />
-              Editar Venta
-            </button>
-
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Cerrar
-            </button>
-          </div>
-        )}
+        <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+          <button
+            type="button"
+            onClick={closeDrawer}
+            className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
     </>
   );

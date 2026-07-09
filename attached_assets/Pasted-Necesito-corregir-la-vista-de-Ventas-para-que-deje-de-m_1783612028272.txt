@@ -1,0 +1,295 @@
+Necesito corregir la vista de “Ventas” para que deje de mostrar datos ficticios/mock y ahora muestre datos reales desde Supabase.
+
+Contexto del proyecto:
+- El proyecto usa React + Vite + JavaScript + TailwindCSS + Supabase.
+- Replit tiene acceso al proyecto, pero no debe asumir que tiene acceso directo al dashboard de Supabase.
+- Usa únicamente el cliente de Supabase que ya existe en el proyecto. No crees otro cliente duplicado.
+- No modifiques el layout principal, sidebar, topbar ni estilos globales.
+- No rompas rutas existentes.
+- No cambies la base de datos.
+- No agregues datos mock.
+- No elimines código importante fuera de la vista/servicio de ventas.
+- Mantén la estructura del proyecto ordenada.
+
+Objetivo:
+La página de “Ventas” debe mostrar únicamente ventas reales que ya estén pagadas al 100%.
+
+Una venta debe salir en la vista únicamente si la orden de producción relacionada ya fue pagada completamente.
+
+Muy importante:
+- Si una orden tiene solo un adelanto, NO debe mostrarse en ventas.
+- Si una orden no ha pagado el 100%, NO debe mostrarse.
+- Si una orden está pendiente, parcial, vencida o cancelada, NO debe mostrarse.
+- Solo deben mostrarse las órdenes que ya estén completamente pagadas.
+
+Tablas de Supabase necesarias:
+
+1. production_orders
+Campos relevantes:
+- production_order_id
+- quotation_id
+- production_order_code
+- production_order_status
+- payment_status
+- balance
+- committed_delivery_date
+- unexpected_delivery_date
+- is_active
+- created_at
+- updated_at
+
+Relación:
+- production_orders.quotation_id se relaciona con quotations.quotation_id
+
+2. quotations
+Campos relevantes:
+- quotation_id
+- quotation_number
+- business_id
+- branch_id
+- representative_id
+- subtotal
+- iva_amount
+- total
+- advance_payment
+- method_id
+- state
+- status
+- created_at
+- updated_at
+
+Relaciones:
+- quotations.business_id se relaciona con businesses.business_id
+- quotations.branch_id se relaciona con branches.branch_id
+- quotations.representative_id se relaciona con representatives.representative_id
+- quotations.method_id se relaciona con payment_methods.method_id
+
+3. payments
+Campos relevantes:
+- payment_id
+- production_order_id
+- method_id
+- amount
+- payment_date
+- reference_number
+- notes
+- is_active
+- created_at
+
+Relación:
+- payments.production_order_id se relaciona con production_orders.production_order_id
+- payments.method_id se relaciona con payment_methods.method_id
+
+4. payment_methods
+Campos relevantes:
+- method_id
+- method_name
+
+5. businesses
+Campos relevantes:
+- business_id
+- legal_name
+- business_name
+- legal_id
+
+6. branches
+Campos relevantes:
+- branch_id
+- province
+- district
+- address
+
+7. representatives
+Campos relevantes:
+- representative_id
+- name
+- email
+
+Regla para considerar una venta como pagada al 100%:
+Usar esta lógica:
+
+1. Obtener órdenes desde production_orders.
+2. Obtener su cotización relacionada desde quotations.
+3. Obtener los pagos relacionados desde payments.
+4. Calcular:
+   amountPaid = suma de payments.amount donde payments.is_active = true
+   totalSale = quotations.total
+   balance = production_orders.balance
+
+5. Mostrar la venta solamente si cumple una de estas condiciones seguras:
+   - amountPaid >= totalSale
+   O
+   - production_orders.payment_status === "pagado" y production_orders.balance <= 0
+
+6. No mostrar la venta si:
+   - production_orders.payment_status es "pendiente"
+   - production_orders.payment_status es "parcial"
+   - production_orders.payment_status es "vencido"
+   - production_orders.payment_status es "cancelado"
+   - production_orders.balance > 0
+   - amountPaid < quotations.total
+
+Importante:
+Si existe una inconsistencia, por ejemplo payment_status = "pagado" pero balance > 0 y amountPaid < total, NO mostrarla. Es mejor no mostrar una venta dudosa antes que mostrar una venta no pagada.
+
+Implementación esperada:
+- Buscar la página actual de ventas. Probablemente está en algo como:
+  - src/pages/Sales.jsx
+  - src/pages/Ventas.jsx
+  - o una ruta similar.
+- Buscar si ya existe un servicio de ventas.
+- Si ya existe, reutilizarlo.
+- Si no existe, crear un servicio ordenado en:
+  - src/services/salesService.js
+
+No guardar lógica pesada directamente dentro del componente si se puede separar en servicio.
+
+Consulta sugerida:
+Primero obtener production_orders con su quotation relacionada.
+
+Usar algo similar a esto, adaptándolo a la estructura real del proyecto:
+
+supabase
+  .from("production_orders")
+  .select(`
+    production_order_id,
+    quotation_id,
+    production_order_code,
+    production_order_status,
+    payment_status,
+    balance,
+    committed_delivery_date,
+    unexpected_delivery_date,
+    is_active,
+    created_at,
+    updated_at,
+    quotations (
+      quotation_id,
+      quotation_number,
+      business_id,
+      branch_id,
+      representative_id,
+      subtotal,
+      iva_amount,
+      total,
+      advance_payment,
+      method_id,
+      state,
+      status,
+      created_at,
+      businesses (
+        business_id,
+        legal_name,
+        business_name,
+        legal_id
+      ),
+      branches (
+        branch_id,
+        province,
+        district,
+        address
+      ),
+      representatives (
+        representative_id,
+        name,
+        email
+      ),
+      payment_methods (
+        method_id,
+        method_name
+      )
+    )
+  `)
+  .eq("is_active", true)
+  .eq("payment_status", "pagado")
+  .lte("balance", 0)
+  .order("updated_at", { ascending: false });
+
+Luego obtener payments de esas órdenes:
+- Tomar los production_order_id encontrados.
+- Consultar payments donde production_order_id esté dentro de esos IDs.
+- Filtrar payments.is_active = true.
+- Sumar los pagos por production_order_id.
+- Validar que el monto pagado sea >= quotations.total.
+- Si una orden no tiene pagos registrados pero tiene payment_status = "pagado" y balance <= 0, puede mostrarse como fallback.
+
+Si Supabase no permite alguna relación anidada por nombre exacto, usar consultas separadas:
+1. production_orders
+2. quotations
+3. businesses
+4. branches
+5. representatives
+6. payment_methods
+7. payments
+
+Pero no usar datos ficticios.
+
+Datos que debe mostrar la vista de Ventas:
+- Código de orden de producción: production_orders.production_order_code
+- Número de cotización: quotations.quotation_number
+- Cliente: businesses.business_name o businesses.legal_name
+- Cédula jurídica: businesses.legal_id si existe
+- Representante: representatives.name
+- Fecha de venta:
+  - usar la última fecha de pago de payments.payment_date si existe
+  - si no existe, usar production_orders.updated_at
+- Total vendido: quotations.total
+- Monto pagado: suma de payments.amount
+- Saldo: production_orders.balance
+- Método de pago:
+  - preferir el método del último pago registrado desde payments.method_id → payment_methods.method_name
+  - si no hay pago, usar quotations.method_id → payment_methods.method_name
+- Estado de pago: production_orders.payment_status
+- Estado de producción: production_orders.production_order_status
+
+Diseño:
+- Mantener el estilo visual actual del dashboard.
+- Eliminar datos ficticios/mock de ventas.
+- Agregar loading state mientras carga.
+- Agregar error state si falla Supabase.
+- Agregar empty state si no hay ventas pagadas al 100%.
+- Usar cards/resumen superior si la vista ya los tiene.
+- Los resúmenes deben calcularse con datos reales:
+  - Total vendido
+  - Cantidad de ventas
+  - Ticket promedio
+  - Última venta pagada
+- Usar formato de moneda en colones costarricenses.
+- Usar formato de fecha legible.
+
+Reglas visuales:
+- No mostrar botones de crear venta manual.
+- No permitir editar ni eliminar desde ventas.
+- La vista es solo de consulta.
+- Usar badges para estado de pago y estado de producción.
+- Si se muestran tablas, que sean responsive y ordenadas.
+- Si se usan cards, que sean limpias y profesionales.
+
+Validaciones importantes:
+- Nunca mostrar órdenes con payment_status = "parcial".
+- Nunca mostrar órdenes con payment_status = "pendiente".
+- Nunca mostrar órdenes con payment_status = "vencido".
+- Nunca mostrar órdenes con payment_status = "cancelado".
+- Nunca mostrar órdenes con balance mayor a 0.
+- Nunca mostrar cotizaciones que no tengan orden de producción.
+- Nunca mostrar cotizaciones con solo advance_payment si no están pagadas al 100%.
+
+Archivos esperados:
+- Modificar la página actual de ventas.
+- Crear o modificar un servicio:
+  - src/services/salesService.js
+- Si se crean componentes nuevos, guardarlos únicamente dentro de:
+  - src/components
+- No guardar componentes dentro de pages.
+- No modificar layout.
+
+Resultado esperado:
+Cuando entre a “Ventas”, debo ver únicamente ventas reales desde Supabase que estén pagadas al 100%.
+Si un cliente solo dio adelanto o todavía debe saldo, esa orden no debe aparecer en ventas.
+
+Al finalizar, dame un resumen claro de:
+- Archivos modificados.
+- Archivos creados.
+- Qué consulta de Supabase se usó.
+- Cómo se valida que una venta esté pagada al 100%.
+- Cómo probarlo en la aplicación.
