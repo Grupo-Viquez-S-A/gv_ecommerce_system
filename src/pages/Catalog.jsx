@@ -148,6 +148,8 @@ export default function Catalog() {
   const [quotationSubmitting, setQuotationSubmitting] = useState(false);
   const [clientLookupLoading, setClientLookupLoading] = useState(false);
   const [clientLookupMessage, setClientLookupMessage] = useState("");
+  const [clientBranches, setClientBranches] = useState([]);
+  const [showNewBranchForm, setShowNewBranchForm] = useState(false);
 
   const isTextileProductsCatalog =
     activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
@@ -785,6 +787,8 @@ export default function Catalog() {
 
     if (fieldName === "legalId") {
       setClientLookupMessage("");
+      setClientBranches([]);
+      setShowNewBranchForm(false);
     }
   };
 
@@ -809,12 +813,21 @@ export default function Catalog() {
         return;
       }
 
+      const { allBranches: branches = [], ...clientFields } = existingClient;
+
       setQuotationClientForm((currentForm) => ({
         ...currentForm,
-        ...existingClient,
+        ...clientFields,
         notes: currentForm.notes,
         earlyDelivery: currentForm.earlyDelivery,
       }));
+
+      setClientBranches(branches);
+
+      if (branches.length > 0) {
+        setShowNewBranchForm(false);
+      }
+
       setClientLookupMessage(
         "Cliente existente importado al formulario de cotizacion.",
       );
@@ -827,6 +840,36 @@ export default function Catalog() {
     } finally {
       setClientLookupLoading(false);
     }
+  };
+
+  const handleSelectBranch = (branch) => {
+    setShowNewBranchForm(false);
+    setQuotationClientForm((currentForm) => ({
+      ...currentForm,
+      branchId: branch.branch_id,
+      branchProvince: branch.province,
+      branchDistrict: branch.district,
+      branchAddress: branch.address,
+      branchPhone: branch.branchPhone || "",
+      representativeId: branch.representative?.representative_id || "",
+      representativeName: branch.representative?.name || "",
+      representativeEmail: branch.representative?.email || "",
+    }));
+  };
+
+  const handleSelectNewBranch = () => {
+    setShowNewBranchForm(true);
+    setQuotationClientForm((currentForm) => ({
+      ...currentForm,
+      branchId: "",
+      branchProvince: "",
+      branchDistrict: "",
+      branchAddress: "",
+      branchPhone: "",
+      representativeId: "",
+      representativeName: "",
+      representativeEmail: "",
+    }));
   };
 
   const handleSaveCartQuotation = async (status) => {
@@ -870,6 +913,8 @@ export default function Catalog() {
       setCartItems([]);
       setQuotationClientForm(EMPTY_QUOTATION_CLIENT_FORM);
       setClientLookupMessage("");
+      setClientBranches([]);
+      setShowNewBranchForm(false);
     } catch (error) {
       console.error("Cart quotation error:", error);
       setQuotationError(
@@ -1311,78 +1356,147 @@ export default function Catalog() {
                       </label>
 
                       <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">
-                          Sucursal
-                        </p>
+                        <p className="text-sm font-extrabold text-white">Sucursal</p>
+                        {clientBranches.length > 0 && (
+                          <p className="mt-1 text-xs text-slate-400">
+                            Selecciona una sucursal registrada o agrega una nueva.
+                          </p>
+                        )}
                       </div>
 
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Provincia
-                        </span>
-                        <input
-                          value={quotationClientForm.branchProvince}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchProvince",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. San Jose"
-                        />
-                      </label>
+                      {clientBranches.length > 0 && (
+                        <div className="md:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {clientBranches.map((branch) => {
+                            const isSelected =
+                              quotationClientForm.branchId === branch.branch_id;
+                            return (
+                              <label
+                                key={branch.branch_id}
+                                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${
+                                  isSelected
+                                    ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                                    : "border-[#35547E] bg-[#102441] hover:border-[#5a8abf]"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="branch-select-panel"
+                                  value={branch.branch_id}
+                                  checked={isSelected}
+                                  onChange={() => handleSelectBranch(branch)}
+                                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#D7A91D]"
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-white">
+                                    {[branch.province, branch.district]
+                                      .filter(Boolean)
+                                      .join(", ") || "Sucursal"}
+                                  </p>
+                                  {branch.address && (
+                                    <p className="mt-0.5 truncate text-xs text-slate-400">
+                                      {branch.address}
+                                    </p>
+                                  )}
+                                  {branch.branchPhone && (
+                                    <p className="mt-0.5 text-xs text-[#9BB3D3]">
+                                      {branch.branchPhone}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+                          <label
+                            className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-3 transition ${
+                              showNewBranchForm
+                                ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                                : "border-[#35547E] hover:border-[#5a8abf]"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="branch-select-panel"
+                              value="new"
+                              checked={showNewBranchForm}
+                              onChange={handleSelectNewBranch}
+                              className="sr-only"
+                            />
+                            <Plus className="h-5 w-5 text-[#D7A91D]" />
+                            <span className="text-sm font-semibold text-[#9BB3D3]">
+                              Nueva sucursal
+                            </span>
+                          </label>
+                        </div>
+                      )}
 
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Distrito
-                        </span>
-                        <input
-                          value={quotationClientForm.branchDistrict}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchDistrict",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. Catedral"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Telefono sucursal
-                        </span>
-                        <input
-                          value={quotationClientForm.branchPhone}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchPhone",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 2222-3333"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Direccion
-                        </span>
-                        <input
-                          value={quotationClientForm.branchAddress}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchAddress",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Direccion exacta"
-                        />
-                      </label>
+                      {(clientBranches.length === 0 || showNewBranchForm) && (
+                        <>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Provincia
+                            </span>
+                            <input
+                              value={quotationClientForm.branchProvince}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchProvince",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. San Jose"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Distrito
+                            </span>
+                            <input
+                              value={quotationClientForm.branchDistrict}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchDistrict",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. Catedral"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Telefono sucursal
+                            </span>
+                            <input
+                              value={quotationClientForm.branchPhone}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchPhone",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. 2222-3333"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Direccion
+                            </span>
+                            <input
+                              value={quotationClientForm.branchAddress}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchAddress",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Direccion exacta"
+                            />
+                          </label>
+                        </>
+                      )}
 
                       <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
                         <p className="text-sm font-extrabold text-white">
@@ -1817,77 +1931,148 @@ export default function Catalog() {
                         />
                       </label>
 
-                      <div className="md:col-span-2 border-t border-[#29466F] pt-4 text-sm font-extrabold text-white">
-                        Sucursal
+                      <div className="md:col-span-2 border-t border-[#29466F] pt-4">
+                        <p className="text-sm font-extrabold text-white">Sucursal</p>
+                        {clientBranches.length > 0 && (
+                          <p className="mt-1 text-xs text-slate-400">
+                            Selecciona una sucursal registrada o agrega una nueva.
+                          </p>
+                        )}
                       </div>
 
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Provincia
-                        </span>
-                        <input
-                          value={quotationClientForm.branchProvince}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchProvince",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. San Jose"
-                        />
-                      </label>
+                      {clientBranches.length > 0 && (
+                        <div className="md:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {clientBranches.map((branch) => {
+                            const isSelected =
+                              quotationClientForm.branchId === branch.branch_id;
+                            return (
+                              <label
+                                key={branch.branch_id}
+                                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${
+                                  isSelected
+                                    ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                                    : "border-[#35547E] bg-[#102441] hover:border-[#5a8abf]"
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="branch-select-modal"
+                                  value={branch.branch_id}
+                                  checked={isSelected}
+                                  onChange={() => handleSelectBranch(branch)}
+                                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#D7A91D]"
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-white">
+                                    {[branch.province, branch.district]
+                                      .filter(Boolean)
+                                      .join(", ") || "Sucursal"}
+                                  </p>
+                                  {branch.address && (
+                                    <p className="mt-0.5 truncate text-xs text-slate-400">
+                                      {branch.address}
+                                    </p>
+                                  )}
+                                  {branch.branchPhone && (
+                                    <p className="mt-0.5 text-xs text-[#9BB3D3]">
+                                      {branch.branchPhone}
+                                    </p>
+                                  )}
+                                </div>
+                              </label>
+                            );
+                          })}
+                          <label
+                            className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-3 transition ${
+                              showNewBranchForm
+                                ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                                : "border-[#35547E] hover:border-[#5a8abf]"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="branch-select-modal"
+                              value="new"
+                              checked={showNewBranchForm}
+                              onChange={handleSelectNewBranch}
+                              className="sr-only"
+                            />
+                            <Plus className="h-5 w-5 text-[#D7A91D]" />
+                            <span className="text-sm font-semibold text-[#9BB3D3]">
+                              Nueva sucursal
+                            </span>
+                          </label>
+                        </div>
+                      )}
 
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Distrito
-                        </span>
-                        <input
-                          value={quotationClientForm.branchDistrict}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchDistrict",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. Catedral"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Direccion
-                        </span>
-                        <input
-                          value={quotationClientForm.branchAddress}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchAddress",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Direccion exacta"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Telefono sucursal
-                        </span>
-                        <input
-                          value={quotationClientForm.branchPhone}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "branchPhone",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 2222-3333"
-                        />
-                      </label>
+                      {(clientBranches.length === 0 || showNewBranchForm) && (
+                        <>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Provincia
+                            </span>
+                            <input
+                              value={quotationClientForm.branchProvince}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchProvince",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. San Jose"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Distrito
+                            </span>
+                            <input
+                              value={quotationClientForm.branchDistrict}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchDistrict",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. Catedral"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Direccion
+                            </span>
+                            <input
+                              value={quotationClientForm.branchAddress}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchAddress",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Direccion exacta"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Telefono sucursal
+                            </span>
+                            <input
+                              value={quotationClientForm.branchPhone}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchPhone",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. 2222-3333"
+                            />
+                          </label>
+                        </>
+                      )}
 
                       <div className="md:col-span-2 border-t border-[#29466F] pt-4 text-sm font-extrabold text-white">
                         Representante

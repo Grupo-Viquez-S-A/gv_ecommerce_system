@@ -501,14 +501,16 @@ export async function getQuotationClientByLegalId(legalId) {
   const activeBranch =
     branches.find((branch) => branch.is_active !== false) || branches[0] || null;
 
-  const [branchPhones, representatives] = await Promise.all([
-    activeBranch?.branch_id
+  const branchIds = branches.map((b) => b.branch_id).filter(Boolean);
+
+  const [allBranchPhones, allRepresentatives] = await Promise.all([
+    branchIds.length > 0
       ? throwIfError(
           await supabase
             .from("phones")
             .select("phone_id, branch_id, phone, type, is_primary, created_at")
-            .eq("branch_id", activeBranch.branch_id),
-          "No fue posible cargar los telefonos de la sucursal",
+            .in("branch_id", branchIds),
+          "No fue posible cargar los telefonos de las sucursales",
         )
       : [],
 
@@ -524,17 +526,49 @@ export async function getQuotationClientByLegalId(legalId) {
     ),
   ]);
 
-  const activeRepresentative =
-    representatives.find((representative) => {
-      const belongsToBranch =
-        !activeBranch?.branch_id ||
-        representative.branch_id === activeBranch.branch_id;
+  const getPhoneForBranch = (branchId) =>
+    getPrimaryValue(
+      allBranchPhones.filter((p) => p.branch_id === branchId),
+      "phone",
+    );
 
-      return representative.is_active !== false && belongsToBranch;
-    }) ||
-    representatives.find((representative) => representative.is_active !== false) ||
-    representatives[0] ||
+  const getRepForBranch = (branchId) =>
+    allRepresentatives.find(
+      (r) => r.branch_id === branchId && r.is_active !== false,
+    ) ||
+    allRepresentatives.find((r) => r.branch_id === branchId) ||
     null;
+
+  const activeBranchPhone = activeBranch?.branch_id
+    ? getPhoneForBranch(activeBranch.branch_id)
+    : "";
+
+  const activeRepresentative =
+    (activeBranch?.branch_id
+      ? getRepForBranch(activeBranch.branch_id)
+      : null) ||
+    allRepresentatives.find((r) => r.is_active !== false) ||
+    allRepresentatives[0] ||
+    null;
+
+  const allBranches = branches.map((branch) => {
+    const rep = getRepForBranch(branch.branch_id);
+    return {
+      branch_id: branch.branch_id,
+      province: branch.province || "",
+      district: branch.district || "",
+      address: branch.address || "",
+      is_active: branch.is_active !== false,
+      branchPhone: getPhoneForBranch(branch.branch_id),
+      representative: rep
+        ? {
+            representative_id: rep.representative_id,
+            name: rep.name || "",
+            email: rep.email || "",
+          }
+        : null,
+    };
+  });
 
   return {
     businessId: business.business_id,
@@ -553,10 +587,12 @@ export async function getQuotationClientByLegalId(legalId) {
     branchProvince: activeBranch?.province || "",
     branchDistrict: activeBranch?.district || "",
     branchAddress: activeBranch?.address || "",
-    branchPhone: getPrimaryValue(branchPhones, "phone"),
+    branchPhone: activeBranchPhone,
 
     representativeName: activeRepresentative?.name || "",
     representativeEmail: activeRepresentative?.email || "",
+
+    allBranches,
   };
 }
 
