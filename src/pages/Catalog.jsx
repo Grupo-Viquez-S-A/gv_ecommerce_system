@@ -696,7 +696,7 @@ export default function Catalog() {
     setSelectedProductDetails(product);
   };
 
-  const handleAddToCart = (product, quantity = 1) => {
+  const handleAddToCart = (product, quantity = 1, size = null) => {
     const productId = getCartProductId(product);
 
     if (!productId) {
@@ -704,15 +704,24 @@ export default function Catalog() {
     }
 
     const safeQuantity = Math.max(1, Number(quantity) || 1);
+    const sizeId = size?.size_id ?? null;
+    const sizeName = size?.size_name ?? null;
+    const cartItemId =
+      sizeId ? `${productId}_${sizeId}` : productId;
+    const baseName = getCartProductName(product);
+    const isUnica =
+      sizeName && sizeName.toLowerCase() === "única";
+    const itemName =
+      sizeName && !isUnica ? `${baseName} — ${sizeName}` : baseName;
 
     setCartItems((currentItems) => {
       const itemExists = currentItems.some(
-        (item) => item.id === productId,
+        (item) => item.id === cartItemId,
       );
 
       if (itemExists) {
         return currentItems.map((item) =>
-          item.id === productId
+          item.id === cartItemId
             ? {
                 ...item,
                 quantity: item.quantity + safeQuantity,
@@ -724,8 +733,9 @@ export default function Catalog() {
       return [
         ...currentItems,
         {
-          id: productId,
-          name: getCartProductName(product),
+          id: cartItemId,
+          name: itemName,
+          sizeName: isUnica ? null : sizeName,
           sku: getCartProductSku(product),
           catalogType: getCartProductType(product),
           quantity: safeQuantity,
@@ -1140,6 +1150,12 @@ export default function Catalog() {
                           <span className="truncate text-xs text-[#86A4CE]">
                             {item.sku}
                           </span>
+
+                          {item.sizeName && (
+                            <span className="rounded-lg border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              {item.sizeName}
+                            </span>
+                          )}
                         </div>
 
                         <p className="mt-1 truncate text-sm font-bold text-white">
@@ -1716,6 +1732,12 @@ export default function Catalog() {
                           <span className="truncate text-xs text-[#86A4CE]">
                             {item.sku}
                           </span>
+
+                          {item.sizeName && (
+                            <span className="rounded-lg border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              {item.sizeName}
+                            </span>
+                          )}
                         </div>
 
                         <p className="mt-1 truncate text-sm font-bold text-white">
