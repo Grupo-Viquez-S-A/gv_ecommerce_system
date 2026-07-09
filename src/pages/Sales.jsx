@@ -34,7 +34,7 @@ const MOCK_SALES = [
     client: "María Fernández",
     date: "30/06/2024 14:30",
     products: 3,
-    total: "â‚¬45.200.000",
+    total: "₡45.200.000",
     status: "Completada",
     agent: "Ana Gómez",
     avatar: "AG",
@@ -45,7 +45,7 @@ const MOCK_SALES = [
     client: "Constructora Solís",
     date: "30/06/2024 11:12",
     products: 7,
-    total: "â‚¬28.750.000",
+    total: "₡28.750.000",
     status: "Completada",
     agent: "Manuel Rojas",
     avatar: "MR",
@@ -56,7 +56,7 @@ const MOCK_SALES = [
     client: "Hotel Los Laureles",
     date: "29/06/2024 16:45",
     products: 2,
-    total: "â‚¬15.600.000",
+    total: "₡15.600.000",
     status: "En proceso",
     agent: "Laura Gómez",
     avatar: "LG",
@@ -67,7 +67,7 @@ const MOCK_SALES = [
     client: "Pacific Pet Food",
     date: "27/06/2024 09:20",
     products: 5,
-    total: "â‚¬9.850.000",
+    total: "₡9.850.000",
     status: "Completada",
     agent: "Ana Gómez",
     avatar: "AG",
@@ -78,7 +78,7 @@ const MOCK_SALES = [
     client: "Distribuidora del Norte",
     date: "28/06/2024 10:35",
     products: 4,
-    total: "â‚¬6.450.000",
+    total: "₡6.450.000",
     status: "Completada",
     agent: "Manuel Rojas",
     avatar: "MR",
@@ -89,7 +89,7 @@ const MOCK_SALES = [
     client: "Farmacia La Salud",
     date: "27/06/2024 15:18",
     products: 2,
-    total: "â‚¬3.200.000",
+    total: "₡3.200.000",
     status: "Cancelada",
     agent: "Laura Gómez",
     avatar: "LG",
@@ -100,7 +100,7 @@ const MOCK_SALES = [
     client: "Grupo Alimenticio S.A.",
     date: "27/06/2024 12:54",
     products: 6,
-    total: "â‚¬18.500.000",
+    total: "₡18.500.000",
     status: "Completada",
     agent: "Ana Gómez",
     avatar: "AG",
@@ -244,7 +244,7 @@ export default function Sales() {
   const metrics = [
     {
       label: "VENTAS TOTALES",
-      value: "â‚¬185 M",
+      value: "₡185 M",
       growth: "+14%",
       growthColor: "text-green-400",
       color: "#C9A227",
@@ -262,7 +262,7 @@ export default function Sales() {
     },
     {
       label: "TICKET PROMEDIO",
-      value: "â‚¬748.000",
+      value: "₡748.000",
       growth: "+7%",
       growthColor: "text-green-400",
       color: "#8b5cf6",
@@ -280,7 +280,7 @@ export default function Sales() {
     },
     {
       label: "DEVOLUCIONES",
-      value: "â‚¬3.2 M",
+      value: "₡3.2 M",
       growth: "-8%",
       growthColor: "text-red-400",
       color: "#ef4444",
@@ -572,7 +572,7 @@ export default function Sales() {
                   tick={{ fontSize: 10, fill: "#6b7280" }}
                   axisLine={false}
                   tickLine={false}
-                  tickFormatter={(value) => `â‚¬${value} M`}
+                  tickFormatter={(value) => `₡${value} M`}
                 />
 
                 <Tooltip
@@ -584,7 +584,7 @@ export default function Sales() {
                     color: "#fff",
                   }}
                   itemStyle={{ color: "#fff" }}
-                  formatter={(value) => [`â‚¬${value} M`, "Ventas"]}
+                  formatter={(value) => [`₡${value} M`, "Ventas"]}
                 />
 
                 <Area
@@ -981,7 +981,7 @@ export default function Sales() {
                 <Field
                   icon={<RiMoneyDollarCircleFill size={14} />}
                   label="Total"
-                  placeholder="â‚¬0.000.000"
+                  placeholder="₡0.000.000"
                   value={form.total}
                   onChange={(event) =>
                     setForm({

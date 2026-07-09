@@ -136,7 +136,7 @@ const STATUS_CONFIG = {
 const kpiData = [
   {
     label: "VENTAS TOTALES",
-    value: "â‚¬185 M",
+    value: "₡185 M",
     change: "+14% vs. mes anterior",
     icon: RiBarChartFill,
     color: "#3b82f6",
@@ -144,7 +144,7 @@ const kpiData = [
   },
   {
     label: "UTILIDAD TOTAL",
-    value: "â‚¬26.5 M",
+    value: "₡26.5 M",
     change: "+18% vs. mes anterior",
     icon: RiCheckFill,
     color: "#22c55e",
@@ -176,7 +176,7 @@ const kpiData = [
   },
   {
     label: "TICKET PROMEDIO",
-    value: "â‚¬748.000",
+    value: "₡748.000",
     change: "+7% vs. mes anterior",
     icon: RiMoneyDollarCircleFill,
     color: "#ec4899",
@@ -686,7 +686,7 @@ export default function Reports() {
                     </span>
 
                     <span className="text-xs font-semibold text-white">
-                      â‚¬{category.value} M
+                      ₡{category.value} M
                     </span>
 
                     <span className="text-xs text-gray-500 w-8 text-right">

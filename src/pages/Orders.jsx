@@ -32,7 +32,7 @@ const MOCK_ORDERS = [
     number: "PED-000247",
     client: "María Fernández",
     date: "30/06/2024 14:30",
-    total: "â‚¬45.200.000",
+    total: "₡45.200.000",
     status: "En proceso",
     payment: "Pagado",
     agent: "Ana Gómez",
@@ -43,7 +43,7 @@ const MOCK_ORDERS = [
     number: "PED-000246",
     client: "Constructora Solís",
     date: "30/06/2024 11:12",
-    total: "â‚¬28.750.000",
+    total: "₡28.750.000",
     status: "Pendiente",
     payment: "Pendiente",
     agent: "Manuel Rojas",
@@ -54,7 +54,7 @@ const MOCK_ORDERS = [
     number: "PED-000245",
     client: "Hotel Los Laureles",
     date: "29/06/2024 16:45",
-    total: "â‚¬15.600.000",
+    total: "₡15.600.000",
     status: "Enviado",
     payment: "Pagado",
     agent: "Laura Gómez",
@@ -65,7 +65,7 @@ const MOCK_ORDERS = [
     number: "PED-000244",
     client: "Pacific Pet Food",
     date: "27/06/2024 09:20",
-    total: "â‚¬37.100.000",
+    total: "₡37.100.000",
     status: "Enviado",
     payment: "Pagado",
     agent: "Ana Gómez",
@@ -76,7 +76,7 @@ const MOCK_ORDERS = [
     number: "PED-000243",
     client: "Distribuidora del Norte",
     date: "28/06/2024 10:35",
-    total: "â‚¬9.850.000",
+    total: "₡9.850.000",
     status: "Entregado",
     payment: "Pagado",
     agent: "Manuel Rojas",
@@ -87,7 +87,7 @@ const MOCK_ORDERS = [
     number: "PED-000242",
     client: "Farmacia La Salud",
     date: "27/06/2024 15:18",
-    total: "â‚¬6.450.000",
+    total: "₡6.450.000",
     status: "Cancelado",
     payment: "Reembolsado",
     agent: "Laura Gómez",
@@ -98,7 +98,7 @@ const MOCK_ORDERS = [
     number: "PED-000241",
     client: "Grupo Alimenticio S.A.",
     date: "27/06/2024 12:54",
-    total: "â‚¬18.500.000",
+    total: "₡18.500.000",
     status: "Entregado",
     payment: "Pagado",
     agent: "Ana Gómez",
@@ -281,7 +281,7 @@ export default function Orders() {
     },
     {
       label: "VENTAS TOTALES",
-      value: "â‚¬185 M",
+      value: "₡185 M",
       growth: "+14%",
       growthColor: "text-green-400",
       color: "#22c55e",
@@ -1025,7 +1025,7 @@ export default function Orders() {
               <Field
                 icon={<RiMoneyDollarCircleFill size={14} />}
                 label="Total"
-                placeholder="â‚¬0.000.000"
+                placeholder="₡0.000.000"
                 value={form.total}
                 onChange={(event) =>
                   setForm({
