@@ -377,8 +377,6 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       const unitPrice = getNumber(item.unitPrice, 0);
       const unitIva = getNumber(item.ivaAmount, 0);
       const ivaAmount = unitIva * quantity;
-      const subtotal = unitPrice * quantity;
-      const total = subtotal + ivaAmount;
       const sizeId = getText(item.sizeId) || null;
 
       if (!productId) {
@@ -390,8 +388,6 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
         quantity,
         unit_price: unitPrice,
         iva_amount: ivaAmount,
-        subtotal,
-        total,
         size_id: sizeId,
         has_sublimation: getBoolean(item.hasSublimation),
         has_embroidery: getBoolean(item.hasEmbroidery),
