@@ -2,3 +2,4 @@
 - [Supabase RLS & empty tables](supabase-rls-empty.md) — tables exist but are empty; RLS blocks anon-key inserts; need service role key or admin panel for seeding
 - [Auth HMR compatibility](auth-hmr-js.md) — AuthContext.js (no JSX export) + AuthProvider.jsx (JSX only) avoids Vite Fast Refresh invalidation
 - [Quotation schema volatility](quotation-schema-volatility.md) — user iterates quotations/quote_products/textile_products columns directly in DB; always re-check schema via user screenshots before editing quotationService.js
+- [quote_products generated columns](quote-products-generated-columns.md) — subtotal/total are Postgres GENERATED ALWAYS AS columns; never insert/update them manually, DB computes from quantity*unit_price(+iva_amount)
