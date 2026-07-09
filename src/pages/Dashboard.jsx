@@ -12,7 +12,6 @@ import { useAuth } from "../context/AuthContext.js";
 import { getDashboardOverview } from "../services/dashboardService.js";
 
 import DashboardGreeting from "../components/dashboard/DashboardGreeting.jsx";
-import DashboardDateSelector from "../components/dashboard/DashboardDateSelector.jsx";
 import DashboardStats from "../components/dashboard/DashboardStats.jsx";
 import ConsolidatedSalesChart from "../components/dashboard/ConsolidatedSalesChart.jsx";
 import SalesDistributionChart from "../components/dashboard/SalesDistributionChart.jsx";
@@ -39,8 +38,6 @@ export default function Dashboard() {
 
   const handlePlaceholderAction = () => {
     // Aquí se conectarán filtros, reportes y navegaciones futuras.
-    // NOTA: El selector de fechas (DashboardDateSelector) sigue siendo un
-    // placeholder visual; el filtrado por rango de fechas queda pendiente.
   };
 
   useEffect(() => {
@@ -103,11 +100,6 @@ export default function Dashboard() {
       <DashboardGreeting
         user={user}
         currentCompany={currentCompany}
-      />
-
-      <DashboardDateSelector
-        label="1 - 30 de junio, 2024"
-        onClick={handlePlaceholderAction}
       />
 
       <DashboardStats
