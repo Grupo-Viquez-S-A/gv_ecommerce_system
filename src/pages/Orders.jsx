@@ -484,22 +484,30 @@ export default function Orders() {
         {/* Filtros */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-            <div className="relative lg:col-span-2">
-              <RiSearchLine
-                size={14}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-              />
+            <div className="lg:col-span-2">
+              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                Buscar
+              </label>
+              <div className="relative">
+                <RiSearchLine
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                />
 
-              <input
-                type="text"
-                placeholder="Buscar por codigo, cotizacion o cliente..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
-              />
+                <input
+                  type="text"
+                  placeholder="Buscar por codigo, cotizacion o cliente..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
+                />
+              </div>
             </div>
 
             <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                Estado de pago
+              </label>
               <div className="relative">
                 <select
                   value={paymentFilter}
@@ -519,6 +527,9 @@ export default function Orders() {
             </div>
 
             <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                Vendedor
+              </label>
               <div className="relative">
                 <select
                   value={agentFilter}
@@ -561,11 +572,11 @@ export default function Orders() {
               />
             </div>
 
-            <div className="flex items-center gap-2 lg:col-span-6">
+            <div className="flex items-end lg:col-span-6">
               <button
                 type="button"
                 onClick={clearFilters}
-                className="flex-1 sm:flex-none sm:px-6 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors cursor-pointer"
+                className="w-full sm:w-auto sm:px-6 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors cursor-pointer"
               >
                 Limpiar filtros
               </button>
