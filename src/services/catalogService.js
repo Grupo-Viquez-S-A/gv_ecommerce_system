@@ -426,7 +426,9 @@ function createTextileProductCatalogItem({
     width: product.width || "",
     height: product.height || "",
     unit: product.unit || "",
-    iva_amount: normalizePrice(product.iva_amount),
+    iva_percentage: normalizePrice(product.iva),
+    iva_amount:
+      (normalizePrice(product.price) * normalizePrice(product.iva)) / 100,
     embroidery: Boolean(product.embroidery),
     sublimation: Boolean(product.sublimation),
     is_active: Boolean(product.is_active),

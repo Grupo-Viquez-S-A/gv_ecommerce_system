@@ -755,7 +755,7 @@ export async function getQuotations() {
           await supabase
             .from("textile_products")
             .select(
-              "product_id, sku, product_name, description, price, iva_amount, sublimation_price, embroidery_price",
+              "product_id, sku, product_name, description, price, iva, sublimation_price, embroidery_price",
             )
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos cotizados",
