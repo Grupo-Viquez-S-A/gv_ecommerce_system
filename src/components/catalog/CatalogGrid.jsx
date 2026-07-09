@@ -4,6 +4,7 @@ export default function CatalogGrid({
   products = [],
   onOpenProductDetails,
   onAddToCart,
+  canPurchase = true,
 }) {
   const validProducts = Array.isArray(products) ? products : [];
 
@@ -28,6 +29,7 @@ export default function CatalogGrid({
           product={product}
           onOpenProductDetails={onOpenProductDetails}
           onAddToCart={onAddToCart}
+          canPurchase={canPurchase}
         />
       ))}
     </section>

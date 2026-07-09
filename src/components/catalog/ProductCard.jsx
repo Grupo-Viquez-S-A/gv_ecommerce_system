@@ -255,6 +255,7 @@ export default function ProductCard({
   product,
   onOpenProductDetails,
   onAddToCart,
+  canPurchase = true,
 }) {
   const [quantity, setQuantity] = useState(1);
   const [hasSublimation, setHasSublimation] = useState(false);
@@ -550,7 +551,7 @@ export default function ProductCard({
                 </div>
               )}
 
-              {(canUseSublimation || canUseEmbroidery) && (
+              {canPurchase && (canUseSublimation || canUseEmbroidery) && (
                 <div className="pointer-events-auto relative z-20 grid gap-2 rounded-xl border border-[#29466F] bg-[#091A31]/70 p-3">
                   {canUseSublimation && (
                     <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#C9D8EC]">
@@ -578,20 +579,22 @@ export default function ProductCard({
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                className="
-                  pointer-events-auto relative z-20 inline-flex w-full items-center justify-center gap-2
-                  rounded-xl border border-[#45648D] bg-[#132F58]
-                  px-3.5 py-2.5 text-sm font-bold text-white transition
-                  hover:border-[#D7A91D] hover:bg-[#1B3E6B]
-                  hover:text-[#E9BC2D] active:scale-[0.98]
-                "
-              >
-                <ShoppingCart className="h-4 w-4" />
-                {hasMultipleSizes ? "Agregar al carrito..." : "Agregar al carrito"}
-              </button>
+              {canPurchase && (
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  className="
+                    pointer-events-auto relative z-20 inline-flex w-full items-center justify-center gap-2
+                    rounded-xl border border-[#45648D] bg-[#132F58]
+                    px-3.5 py-2.5 text-sm font-bold text-white transition
+                    hover:border-[#D7A91D] hover:bg-[#1B3E6B]
+                    hover:text-[#E9BC2D] active:scale-[0.98]
+                  "
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {hasMultipleSizes ? "Agregar al carrito..." : "Agregar al carrito"}
+                </button>
+              )}
             </div>
           )}
         </div>

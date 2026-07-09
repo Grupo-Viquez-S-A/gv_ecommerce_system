@@ -42,6 +42,8 @@ import {
   getQuotationClientByLegalId,
   getQuotationCompanies,
 } from "../services/quotationService.js";
+import { useAuth } from "../context/AuthContext.js";
+import { hasCatalogPurchaseAccess } from "../utils/roles.js";
 
 const PAGE_SIZE = 8;
 
@@ -112,6 +114,8 @@ function getCartProductType(product) {
 }
 
 export default function Catalog() {
+  const { user } = useAuth();
+  const canPurchase = hasCatalogPurchaseAccess(user);
   const mainContentRef = useRef(null);
   const catalogRequestRef = useRef(0);
 
@@ -1725,7 +1729,7 @@ export default function Catalog() {
                       </p>
                     )}
 
-                    {isTextileProductsCatalog && (
+                    {isTextileProductsCatalog && canPurchase && (
                       <button
                         type="button"
                         onClick={handleOpenCart}
@@ -1750,6 +1754,7 @@ export default function Catalog() {
                     handleOpenProductDetails
                   }
                   onAddToCart={handleAddToCart}
+                  canPurchase={canPurchase}
                 />
 
                 <Pagination
