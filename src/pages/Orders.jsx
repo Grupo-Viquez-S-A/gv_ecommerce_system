@@ -166,6 +166,8 @@ export default function Orders() {
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("Todos");
   const [agentFilter, setAgentFilter] = useState("Todos");
+  const [nextPaymentFrom, setNextPaymentFrom] = useState("");
+  const [nextPaymentTo, setNextPaymentTo] = useState("");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewOrder, setViewOrder] = useState(null);
@@ -281,7 +283,29 @@ export default function Orders() {
 
     const matchesAgent = agentFilter === "Todos" || order.agent === agentFilter;
 
-    return matchesSearch && matchesPayment && matchesAgent;
+    const nextPaymentTime = order.nextPaymentDate
+      ? new Date(order.nextPaymentDate).getTime()
+      : null;
+
+    const matchesNextPaymentFrom =
+      !nextPaymentFrom ||
+      (nextPaymentTime !== null &&
+        !Number.isNaN(nextPaymentTime) &&
+        nextPaymentTime >= new Date(`${nextPaymentFrom}T00:00:00`).getTime());
+
+    const matchesNextPaymentTo =
+      !nextPaymentTo ||
+      (nextPaymentTime !== null &&
+        !Number.isNaN(nextPaymentTime) &&
+        nextPaymentTime <= new Date(`${nextPaymentTo}T23:59:59`).getTime());
+
+    return (
+      matchesSearch &&
+      matchesPayment &&
+      matchesAgent &&
+      matchesNextPaymentFrom &&
+      matchesNextPaymentTo
+    );
   });
 
   const openViewDrawer = (order) => {
@@ -301,6 +325,8 @@ export default function Orders() {
     setSearch("");
     setPaymentFilter("Todos");
     setAgentFilter("Todos");
+    setNextPaymentFrom("");
+    setNextPaymentTo("");
   };
 
   return (
@@ -457,7 +483,7 @@ export default function Orders() {
 
         {/* Filtros */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
             <div className="relative lg:col-span-2">
               <RiSearchLine
                 size={14}
@@ -511,7 +537,31 @@ export default function Orders() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 lg:col-span-4">
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                Proxima fecha de pago (desde)
+              </label>
+              <input
+                type="date"
+                value={nextPaymentFrom}
+                onChange={(event) => setNextPaymentFrom(event.target.value)}
+                className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors [color-scheme:dark]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                Proxima fecha de pago (hasta)
+              </label>
+              <input
+                type="date"
+                value={nextPaymentTo}
+                onChange={(event) => setNextPaymentTo(event.target.value)}
+                className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors [color-scheme:dark]"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 lg:col-span-6">
               <button
                 type="button"
                 onClick={clearFilters}
@@ -553,6 +603,9 @@ export default function Orders() {
                   Fecha
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+                  Proxima fecha de pago
+                </th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                   Total
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
@@ -586,6 +639,10 @@ export default function Orders() {
 
                   <td className="px-4 py-3 text-sm text-gray-400">
                     {formatDate(order.createdAt)}
+                  </td>
+
+                  <td className="px-4 py-3 text-sm text-gray-400">
+                    {formatDate(order.nextPaymentDate)}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-white font-semibold">
