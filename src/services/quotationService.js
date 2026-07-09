@@ -20,6 +20,14 @@ function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getDatePlusDays(days = 15) {
+  const date = new Date();
+
+  date.setDate(date.getDate() + days);
+
+  return date.toISOString().slice(0, 10);
+}
+
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
     return response?.data;
@@ -31,10 +39,7 @@ function throwIfError(response, actionMessage) {
 function createQuotationNumber(prefix = "COT") {
   const now = new Date();
   const date = now.toISOString().slice(0, 10).replaceAll("-", "");
-  const time = now
-    .toTimeString()
-    .slice(0, 8)
-    .replaceAll(":", "");
+  const time = now.toTimeString().slice(0, 8).replaceAll(":", "");
 
   return `${prefix}-${date}-${time}`;
 }
@@ -84,22 +89,6 @@ function getQuotationStatusLabel(status) {
   return QUOTATION_STATUS_TO_LABEL[status] || "Pendiente";
 }
 
-function getStatusCandidates(status) {
-  const dbStatus = getDbQuotationStatus(status);
-  const fallbackByStatus = {
-    pending: ["pending", "Pendiente", "draft", "created"],
-    review: ["review", "En revision", "En revisión", "pending"],
-    approved: ["approved", "Aprobada", "accepted"],
-    rejected: ["rejected", "Rechazada", "declined"],
-    expired: ["expired", "Vencida"],
-    converted: ["converted", "Convertida"],
-  };
-
-  return [...new Set([dbStatus, ...(fallbackByStatus[dbStatus] || [])])];
-}
-
-void getStatusCandidates;
-
 function formatProfileName(profile) {
   const fullName = [profile?.name, profile?.surname]
     .filter(Boolean)
@@ -110,15 +99,14 @@ function formatProfileName(profile) {
 }
 
 function getInitials(name) {
-  const words = String(name || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const words = String(name || "").trim().split(/\s+/).filter(Boolean);
 
-  return words
-    .slice(0, 2)
-    .map((word) => word.charAt(0).toUpperCase())
-    .join("") || "NA";
+  return (
+    words
+      .slice(0, 2)
+      .map((word) => word.charAt(0).toUpperCase())
+      .join("") || "NA"
+  );
 }
 
 function indexById(rows = [], keyName) {
@@ -175,7 +163,6 @@ function getQuotationTotal(items = []) {
   return items.reduce((total, item) => total + getNumber(item.total, 0), 0);
 }
 
-<<<<<<< Updated upstream
 function getFileUrl(file) {
   return file?.public_url || file?.url || file?.file_url || null;
 }
@@ -199,7 +186,13 @@ function isImageFile(file) {
 
 function isTechnicalSheetFile(file) {
   const fileText = normalizeFileText(
-    [file?.file_type, file?.type, file?.file_name, file?.file_path, getFileUrl(file)]
+    [
+      file?.file_type,
+      file?.type,
+      file?.file_name,
+      file?.file_path,
+      getFileUrl(file),
+    ]
       .filter(Boolean)
       .join(" "),
   );
@@ -214,15 +207,17 @@ function isTechnicalSheetFile(file) {
 }
 
 function getProductImageUrl(files = []) {
-  const imageFile = files.find((file) => isImageFile(file) && !isTechnicalSheetFile(file));
+  const imageFile = files.find(
+    (file) => isImageFile(file) && !isTechnicalSheetFile(file),
+  );
 
   return getFileUrl(imageFile);
-=======
+}
+
 function getPrimaryValue(rows = [], valueKey) {
   const primaryRow = rows.find((row) => row.is_primary) || rows[0];
 
   return primaryRow?.[valueKey] || "";
->>>>>>> Stashed changes
 }
 
 function normalizeQuotation({
@@ -234,6 +229,7 @@ function normalizeQuotation({
   products,
 }) {
   const sellerName = formatProfileName(seller);
+
   const items = products.map((item) => ({
     id: item.quote_product_id,
     quoteProductId: item.quote_product_id,
@@ -257,19 +253,28 @@ function normalizeQuotation({
     id: quotation.quotation_id,
     quotationId: quotation.quotation_id,
     number: quotation.quotation_number || "Sin numero",
+
     client: representative?.name || business?.business_name || "Sin cliente",
     company: business?.business_name || business?.legal_name || "Sin empresa",
     legalName: business?.legal_name || "",
     legalId: business?.legal_id || "",
     activityCode: business?.activity_code || "",
+
     date: quotation.created_at,
-    validity: getValidityDate(quotation.created_at),
+    validity: quotation.valid_until || getValidityDate(quotation.created_at),
+    validUntil: quotation.valid_until,
+
+    earlyDelivery: quotation.early_delivery === true,
+    earlyDeliveryDate: quotation.early_delivery_date || null,
+
     total: getQuotationTotal(items),
     status: getQuotationStatusLabel(quotation.state || quotation.status),
     dbStatus: quotation.state || quotation.status || "pending",
+
     agent: sellerName,
     avatar: getInitials(sellerName),
     notes: quotation.notes || "",
+
     business,
     branch,
     representative,
@@ -314,22 +319,31 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       businessId: getText(client.businessId),
       branchId: getText(client.branchId),
       representativeId: getText(client.representativeId),
+
       companyId,
       legalId: getText(client.legalId),
       legalName,
       businessName,
       activityCode: getText(client.activityCode),
+
       businessEmail: getText(client.businessEmail),
       businessPhone: getText(client.businessPhone),
+
       branchProvince: getText(client.branchProvince),
       branchDistrict: getText(client.branchDistrict),
       branchAddress,
       branchPhone: getText(client.branchPhone),
+
       representativeName,
       representativeEmail: getText(client.representativeEmail),
+
       notes: getText(client.notes),
+
       earlyDelivery: getBoolean(client.earlyDelivery),
+      earlyDeliveryDate: getText(client.earlyDeliveryDate),
+      validUntil: getText(client.validUntil),
     },
+
     items: items.map((item) => {
       const productId = getText(item.productId || item.id);
       const quantity = Math.max(1, getNumber(item.quantity, 1));
@@ -348,6 +362,7 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
         iva_amount: ivaAmount,
       };
     }),
+
     status: getDbQuotationStatus(status),
   };
 }
@@ -405,13 +420,17 @@ async function rollbackQuotation({
 
     if (businessId) {
       await supabase.from("emails").delete().eq("business_id", businessId);
+
       await supabase
         .from("businesses")
         .delete()
         .eq("business_id", businessId);
     }
   } catch (rollbackError) {
-    console.error("No fue posible revertir la cotizacion parcial:", rollbackError);
+    console.error(
+      "No fue posible revertir la cotizacion parcial:",
+      rollbackError,
+    );
   }
 }
 
@@ -455,18 +474,24 @@ export async function getQuotationClientByLegalId(legalId) {
         .eq("business_id", business.business_id),
       "No fue posible cargar los correos del cliente",
     ),
+
     throwIfError(
       await supabase
         .from("phones")
-        .select("phone_id, business_id, branch_id, phone, type, is_primary, created_at")
+        .select(
+          "phone_id, business_id, branch_id, phone, type, is_primary, created_at",
+        )
         .eq("business_id", business.business_id)
         .is("branch_id", null),
       "No fue posible cargar los telefonos del cliente",
     ),
+
     throwIfError(
       await supabase
         .from("branches")
-        .select("branch_id, business_id, province, district, address, is_active, created_at")
+        .select(
+          "branch_id, business_id, province, district, address, is_active, created_at",
+        )
         .eq("business_id", business.business_id)
         .order("created_at", { ascending: true }),
       "No fue posible cargar las sucursales del cliente",
@@ -486,6 +511,7 @@ export async function getQuotationClientByLegalId(legalId) {
           "No fue posible cargar los telefonos de la sucursal",
         )
       : [],
+
     throwIfError(
       await supabase
         .from("representatives")
@@ -514,17 +540,21 @@ export async function getQuotationClientByLegalId(legalId) {
     businessId: business.business_id,
     branchId: activeBranch?.branch_id || "",
     representativeId: activeRepresentative?.representative_id || "",
+
     companyId: business.company_id || "",
     legalId: business.legal_id || normalizedLegalId,
     legalName: business.legal_name || "",
     businessName: business.business_name || business.legal_name || "",
     activityCode: business.activity_code || "",
+
     businessEmail: getPrimaryValue(emails, "email"),
     businessPhone: getPrimaryValue(businessPhones, "phone"),
+
     branchProvince: activeBranch?.province || "",
     branchDistrict: activeBranch?.district || "",
     branchAddress: activeBranch?.address || "",
     branchPhone: getPrimaryValue(branchPhones, "phone"),
+
     representativeName: activeRepresentative?.name || "",
     representativeEmail: activeRepresentative?.email || "",
   };
@@ -535,7 +565,23 @@ export async function getQuotations() {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id",
+        `
+        quotation_id,
+        business_id,
+        branch_id,
+        representative_id,
+        quotation_number,
+        status,
+        state,
+        notes,
+        is_active,
+        created_at,
+        updated_at,
+        user_id,
+        early_delivery,
+        early_delivery_date,
+        valid_until
+      `,
       )
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
@@ -546,12 +592,24 @@ export async function getQuotations() {
     return [];
   }
 
-  const businessIds = [...new Set(quotations.map((item) => item.business_id).filter(Boolean))];
-  const branchIds = [...new Set(quotations.map((item) => item.branch_id).filter(Boolean))];
-  const representativeIds = [
-    ...new Set(quotations.map((item) => item.representative_id).filter(Boolean)),
+  const businessIds = [
+    ...new Set(quotations.map((item) => item.business_id).filter(Boolean)),
   ];
-  const sellerIds = [...new Set(quotations.map((item) => item.user_id).filter(Boolean))];
+
+  const branchIds = [
+    ...new Set(quotations.map((item) => item.branch_id).filter(Boolean)),
+  ];
+
+  const representativeIds = [
+    ...new Set(
+      quotations.map((item) => item.representative_id).filter(Boolean),
+    ),
+  ];
+
+  const sellerIds = [
+    ...new Set(quotations.map((item) => item.user_id).filter(Boolean)),
+  ];
+
   const quotationIds = quotations.map((item) => item.quotation_id);
 
   const [businesses, branches, representatives, sellers, quoteProducts] =
@@ -567,6 +625,7 @@ export async function getQuotations() {
             "No fue posible cargar los clientes de las cotizaciones",
           )
         : [],
+
       branchIds.length
         ? throwIfError(
             await supabase
@@ -576,6 +635,7 @@ export async function getQuotations() {
             "No fue posible cargar las sucursales de las cotizaciones",
           )
         : [],
+
       representativeIds.length
         ? throwIfError(
             await supabase
@@ -587,6 +647,7 @@ export async function getQuotations() {
             "No fue posible cargar los representantes de las cotizaciones",
           )
         : [],
+
       sellerIds.length
         ? throwIfError(
             await supabase
@@ -596,6 +657,7 @@ export async function getQuotations() {
             "No fue posible cargar los vendedores de las cotizaciones",
           )
         : [],
+
       throwIfError(
         await supabase
           .from("quote_products")
@@ -686,11 +748,18 @@ export async function createBusinessQuotation(payload) {
   let businessId = client.businessId || null;
   let branchId = client.branchId || null;
   let representativeId = client.representativeId || null;
+
   let quotationId = null;
   let createdBusinessId = null;
   let createdBranchId = null;
   let createdRepresentativeId = null;
-  const earlyDeliveryDate = client.earlyDelivery ? getTodayDate() : null;
+
+  const earlyDeliveryDate = client.earlyDelivery
+    ? client.earlyDeliveryDate || getTodayDate()
+    : null;
+
+  const validUntil = client.validUntil || getDatePlusDays(15);
+
   const createdPhoneIds = [];
 
   try {
@@ -810,8 +879,17 @@ export async function createBusinessQuotation(payload) {
         is_active: true,
         early_delivery: client.earlyDelivery,
         early_delivery_date: earlyDeliveryDate,
+        valid_until: validUntil,
       })
-      .select("quotation_id, quotation_number, early_delivery, early_delivery_date")
+      .select(
+        `
+        quotation_id,
+        quotation_number,
+        early_delivery,
+        early_delivery_date,
+        valid_until
+      `,
+      )
       .single();
 
     const quotation = throwIfError(
@@ -839,6 +917,7 @@ export async function createBusinessQuotation(payload) {
       quotationNumber: quotation.quotation_number,
       earlyDelivery: quotation.early_delivery,
       earlyDeliveryDate: quotation.early_delivery_date,
+      validUntil: quotation.valid_until,
     };
   } catch (error) {
     await rollbackQuotation({
