@@ -1,19 +1,14 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { RiCheckboxCircleFill, RiFileList3Fill, RiTimeFill, RiErrorWarningFill } from "react-icons/ri";
+import { RiCheckboxCircleFill, RiFileList3Fill, RiMoneyDollarCircleFill, RiWallet3Fill } from "react-icons/ri";
 
 import ClientSummaryCard from "../components/clientPanel/ClientSummaryCard.jsx";
 import MyQuotationsList from "../components/clientPanel/MyQuotationsList.jsx";
 import QuotationDetailModal from "../components/clientPanel/QuotationDetailModal.jsx";
+import formatCurrency from "../utils/formatCurrency.js";
 import {
   getMyQuotationDetail,
   getMyQuotations,
 } from "../services/clientPanelService.js";
-
-function isStatusOneOf(status, values) {
-  const normalizedStatus = String(status || "").trim().toLowerCase();
-
-  return values.includes(normalizedStatus);
-}
 
 export default function MyQuotations() {
   const [quotations, setQuotations] = useState([]);
@@ -99,19 +94,11 @@ export default function MyQuotations() {
   };
 
   const summary = useMemo(() => {
-    const pending = quotations.filter((quotation) =>
-      isStatusOneOf(quotation.status, ["pending", "pendiente", "draft", "created"]),
-    ).length;
+    const totalQuoted = quotations.reduce((sum, quotation) => sum + (Number(quotation.total) || 0), 0);
+    const totalAdvance = quotations.reduce((sum, quotation) => sum + (Number(quotation.advancePayment) || 0), 0);
+    const totalItems = quotations.reduce((sum, quotation) => sum + (Number(quotation.itemsCount) || 0), 0);
 
-    const approved = quotations.filter((quotation) =>
-      isStatusOneOf(quotation.status, ["approved", "aprobada", "accepted", "converted", "convertida"]),
-    ).length;
-
-    const reviewOrRejected = quotations.filter((quotation) =>
-      isStatusOneOf(quotation.status, ["review", "revision", "en revision", "rejected", "rechazada", "declined"]),
-    ).length;
-
-    return { pending, approved, reviewOrRejected };
+    return { totalQuoted, totalAdvance, totalItems };
   }, [quotations]);
 
   return (
@@ -119,15 +106,15 @@ export default function MyQuotations() {
       <div className="mb-6">
         <h1 className="text-2xl font-black text-white lg:text-3xl">Mis cotizaciones</h1>
         <p className="mt-2 max-w-3xl text-sm text-gray-400">
-          Revisa el estado, productos relacionados y total aproximado de tus cotizaciones.
+          Revisa el resumen y los productos de tus cotizaciones aprobadas.
         </p>
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <ClientSummaryCard icon={<RiFileList3Fill size={22} />} label="Total de cotizaciones" value={quotations.length} tone="gold" />
-        <ClientSummaryCard icon={<RiTimeFill size={22} />} label="Pendientes" value={summary.pending} tone="blue" />
-        <ClientSummaryCard icon={<RiCheckboxCircleFill size={22} />} label="Aprobadas" value={summary.approved} tone="green" />
-        <ClientSummaryCard icon={<RiErrorWarningFill size={22} />} label="Revision o rechazadas" value={summary.reviewOrRejected} tone="red" />
+        <ClientSummaryCard icon={<RiCheckboxCircleFill size={22} />} label="Cotizaciones aprobadas" value={quotations.length} tone="green" />
+        <ClientSummaryCard icon={<RiFileList3Fill size={22} />} label="Productos cotizados" value={summary.totalItems} tone="gold" />
+        <ClientSummaryCard icon={<RiMoneyDollarCircleFill size={22} />} label="Monto total" value={formatCurrency(summary.totalQuoted, "CRC 0")} tone="blue" />
+        <ClientSummaryCard icon={<RiWallet3Fill size={22} />} label="Adelanto total (50%)" value={formatCurrency(summary.totalAdvance, "CRC 0")} tone="red" />
       </div>
 
       <section className="rounded-lg border border-[#2a3550] bg-[#141d2e]/50 p-4 lg:p-5">
