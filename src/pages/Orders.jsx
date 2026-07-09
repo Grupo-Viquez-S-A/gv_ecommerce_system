@@ -36,6 +36,21 @@ const STATUS_CONFIG = {
     text: "text-[#C9A227]",
     border: "border-[#C9A227]/20",
   },
+  pausada: {
+    bg: "bg-orange-500/10",
+    text: "text-orange-400",
+    border: "border-orange-500/20",
+  },
+  finalizada: {
+    bg: "bg-green-500/10",
+    text: "text-green-400",
+    border: "border-green-500/20",
+  },
+  cancelada: {
+    bg: "bg-gray-500/10",
+    text: "text-gray-400",
+    border: "border-gray-500/20",
+  },
 };
 
 const PAYMENT_CONFIG = {
@@ -58,6 +73,11 @@ const PAYMENT_CONFIG = {
     bg: "bg-orange-500/10",
     text: "text-orange-400",
     border: "border-orange-500/20",
+  },
+  cancelado: {
+    bg: "bg-gray-500/10",
+    text: "text-gray-400",
+    border: "border-gray-500/20",
   },
 };
 

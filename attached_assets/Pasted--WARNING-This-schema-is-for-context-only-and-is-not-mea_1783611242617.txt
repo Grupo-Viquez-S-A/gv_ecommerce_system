@@ -1,0 +1,477 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.companies (
+  company_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  legal_id character varying UNIQUE,
+  company_name character varying NOT NULL,
+  commercial_name character varying,
+  email character varying,
+  address character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT companies_pkey PRIMARY KEY (company_id)
+);
+CREATE TABLE public.departments (
+  department_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name character varying NOT NULL,
+  email character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT departments_pkey PRIMARY KEY (department_id)
+);
+CREATE TABLE public.roles (
+  role_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role_name character varying NOT NULL,
+  role_code character varying NOT NULL UNIQUE,
+  description text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT roles_pkey PRIMARY KEY (role_id)
+);
+CREATE TABLE public.profiles (
+  user_id uuid NOT NULL,
+  name character varying,
+  surname character varying,
+  email character varying UNIQUE,
+  identification character varying,
+  phone character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (user_id),
+  CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_memberships (
+  membership_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  company_id uuid NOT NULL,
+  department_id uuid,
+  role_id uuid NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  start_date date DEFAULT CURRENT_DATE,
+  end_date date,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_memberships_pkey PRIMARY KEY (membership_id),
+  CONSTRAINT user_memberships_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT user_memberships_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(company_id),
+  CONSTRAINT user_memberships_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(department_id),
+  CONSTRAINT user_memberships_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(role_id)
+);
+CREATE TABLE public.businesses (
+  business_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL,
+  legal_id character varying NOT NULL UNIQUE,
+  legal_name character varying NOT NULL,
+  business_name character varying,
+  activity_code character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT businesses_pkey PRIMARY KEY (business_id),
+  CONSTRAINT businesses_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(company_id)
+);
+CREATE TABLE public.branches (
+  branch_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  province character varying,
+  district character varying,
+  address character varying NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT branches_pkey PRIMARY KEY (branch_id),
+  CONSTRAINT branches_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(business_id)
+);
+CREATE TABLE public.emails (
+  email_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  email character varying NOT NULL,
+  type character varying DEFAULT 'general'::character varying,
+  is_primary boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT emails_pkey PRIMARY KEY (email_id),
+  CONSTRAINT emails_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(business_id)
+);
+CREATE TABLE public.phones (
+  phone_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid,
+  company_id uuid,
+  branch_id uuid,
+  phone character varying NOT NULL,
+  type character varying DEFAULT 'general'::character varying,
+  is_primary boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  representative_id uuid,
+  CONSTRAINT phones_pkey PRIMARY KEY (phone_id),
+  CONSTRAINT phones_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(business_id),
+  CONSTRAINT phones_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(company_id),
+  CONSTRAINT phones_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id),
+  CONSTRAINT phones_representative_id_fkey FOREIGN KEY (representative_id) REFERENCES public.representatives(representative_id)
+);
+CREATE TABLE public.representatives (
+  representative_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  user_id uuid,
+  name character varying NOT NULL,
+  email character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  branch_id uuid,
+  CONSTRAINT representatives_pkey PRIMARY KEY (representative_id),
+  CONSTRAINT representatives_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(business_id),
+  CONSTRAINT representatives_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT representatives_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id)
+);
+CREATE TABLE public.modules (
+  module_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  module_code character varying NOT NULL UNIQUE,
+  name character varying NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  parent_module_id uuid,
+  route character varying,
+  display_order integer NOT NULL DEFAULT 0,
+  is_public boolean NOT NULL DEFAULT false,
+  is_assignable boolean NOT NULL DEFAULT true,
+  CONSTRAINT modules_pkey PRIMARY KEY (module_id),
+  CONSTRAINT modules_parent_module_id_fkey FOREIGN KEY (parent_module_id) REFERENCES public.modules(module_id)
+);
+CREATE TABLE public.logbooks (
+  log_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  module_id uuid,
+  log_title character varying,
+  detail text NOT NULL,
+  log_time timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT logbooks_pkey PRIMARY KEY (log_id),
+  CONSTRAINT logbooks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT logbooks_module_id_fkey FOREIGN KEY (module_id) REFERENCES public.modules(module_id)
+);
+CREATE TABLE public.fabrics (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fabric_code character varying,
+  fabric_name character varying,
+  type character varying,
+  description text,
+  weight character varying,
+  width character varying,
+  price numeric,
+  image_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  weave_type character varying,
+  provider character varying,
+  CONSTRAINT fabrics_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.color_variants (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fabric_id uuid NOT NULL,
+  color character varying,
+  hex_color character varying,
+  quantity numeric,
+  CONSTRAINT color_variants_pkey PRIMARY KEY (id),
+  CONSTRAINT color_variants_fabric_id_fkey FOREIGN KEY (fabric_id) REFERENCES public.fabrics(id)
+);
+CREATE TABLE public.materials (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fabric_id uuid NOT NULL,
+  material character varying,
+  percentage numeric,
+  CONSTRAINT materials_pkey PRIMARY KEY (id),
+  CONSTRAINT materials_fabric_id_fkey FOREIGN KEY (fabric_id) REFERENCES public.fabrics(id)
+);
+CREATE TABLE public.features (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fabric_id uuid NOT NULL,
+  feature character varying,
+  CONSTRAINT features_pkey PRIMARY KEY (id),
+  CONSTRAINT features_fabric_id_fkey FOREIGN KEY (fabric_id) REFERENCES public.fabrics(id)
+);
+CREATE TABLE public.managements (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fabric_id uuid NOT NULL,
+  management character varying,
+  CONSTRAINT managements_pkey PRIMARY KEY (id),
+  CONSTRAINT managements_fabric_id_fkey FOREIGN KEY (fabric_id) REFERENCES public.fabrics(id)
+);
+CREATE TABLE public.fabric_files (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  fabric_id uuid NOT NULL,
+  file_type character varying,
+  file_name text,
+  file_path text,
+  public_url text,
+  mime_type text,
+  file_size bigint,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT fabric_files_pkey PRIMARY KEY (id),
+  CONSTRAINT fabric_files_fabric_id_fkey FOREIGN KEY (fabric_id) REFERENCES public.fabrics(id)
+);
+CREATE TABLE public.legal_entities (
+  legal_entity_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL,
+  entity_type USER-DEFINED NOT NULL,
+  legal_id character varying NOT NULL,
+  legal_name character varying NOT NULL,
+  trade_name character varying,
+  activity_code character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT legal_entities_pkey PRIMARY KEY (legal_entity_id),
+  CONSTRAINT legal_entities_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(company_id)
+);
+CREATE TABLE public.categories (
+  category_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  category_name character varying NOT NULL CHECK (btrim(category_name::text) <> ''::text),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  catalog_slug character varying,
+  storage_folder character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  CONSTRAINT categories_pkey PRIMARY KEY (category_id)
+);
+CREATE TABLE public.product_types (
+  type_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  product_type character varying NOT NULL CHECK (btrim(product_type::text) <> ''::text),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT product_types_pkey PRIMARY KEY (type_id)
+);
+CREATE TABLE public.textile_products (
+  product_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  category_id uuid NOT NULL,
+  type_id uuid NOT NULL,
+  sku character varying NOT NULL CHECK (btrim(sku::text) <> ''::text),
+  product_name character varying NOT NULL CHECK (btrim(product_name::text) <> ''::text),
+  description character varying NOT NULL CHECK (btrim(description::text) <> ''::text),
+  size character varying,
+  length character varying,
+  width character varying,
+  height character varying,
+  unit character varying DEFAULT 'cm'::character varying,
+  embroidery boolean NOT NULL DEFAULT false,
+  sublimation boolean NOT NULL DEFAULT false,
+  price numeric NOT NULL CHECK (price >= 0::numeric),
+  iva numeric NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  collection_id uuid,
+  sublimation_price numeric,
+  embroidery_price numeric,
+  CONSTRAINT textile_products_pkey PRIMARY KEY (product_id),
+  CONSTRAINT fk_textile_products_category FOREIGN KEY (category_id) REFERENCES public.categories(category_id),
+  CONSTRAINT fk_textile_products_type FOREIGN KEY (type_id) REFERENCES public.product_types(type_id),
+  CONSTRAINT fk_textile_products_collection FOREIGN KEY (collection_id) REFERENCES public.product_collections(collection_id),
+  CONSTRAINT fk_textile_products_category_type FOREIGN KEY (category_id) REFERENCES public.category_product_types(category_id),
+  CONSTRAINT fk_textile_products_category_type FOREIGN KEY (type_id) REFERENCES public.category_product_types(type_id)
+);
+CREATE TABLE public.textile_product_files (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL,
+  file_type character varying NOT NULL CHECK (file_type::text = ANY (ARRAY['image'::character varying, 'datasheet'::character varying]::text[])),
+  file_name character varying NOT NULL CHECK (btrim(file_name::text) <> ''::text),
+  file_path text NOT NULL,
+  public_url text NOT NULL,
+  mime_type character varying NOT NULL,
+  file_size integer CHECK (file_size IS NULL OR file_size >= 0),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT textile_product_files_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_textile_product_files_product FOREIGN KEY (product_id) REFERENCES public.textile_products(product_id)
+);
+CREATE TABLE public.category_product_types (
+  category_id uuid NOT NULL,
+  type_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT category_product_types_pkey PRIMARY KEY (category_id, type_id),
+  CONSTRAINT fk_category_product_types_category FOREIGN KEY (category_id) REFERENCES public.categories(category_id),
+  CONSTRAINT fk_category_product_types_type FOREIGN KEY (type_id) REFERENCES public.product_types(type_id)
+);
+CREATE TABLE public.product_collections (
+  collection_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  category_id uuid NOT NULL,
+  collection_name character varying NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT product_collections_pkey PRIMARY KEY (collection_id),
+  CONSTRAINT fk_product_collections_category FOREIGN KEY (category_id) REFERENCES public.categories(category_id)
+);
+CREATE TABLE public.sizes (
+  size_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  size_name character varying NOT NULL CHECK (btrim(size_name::text) <> ''::text),
+  display_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT sizes_pkey PRIMARY KEY (size_id)
+);
+CREATE TABLE public.dimensions (
+  dimension_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  dimension_code character varying NOT NULL UNIQUE CHECK (btrim(dimension_code::text) <> ''::text),
+  dimension_name character varying NOT NULL CHECK (btrim(dimension_name::text) <> ''::text),
+  display_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT dimensions_pkey PRIMARY KEY (dimension_id)
+);
+CREATE TABLE public.textile_product_measurements (
+  measurement_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  product_id uuid NOT NULL,
+  size_id uuid NOT NULL,
+  dimension_id uuid NOT NULL,
+  measurement_value numeric NOT NULL CHECK (measurement_value >= 0::numeric),
+  unit character varying NOT NULL DEFAULT 'cm'::character varying CHECK (btrim(unit::text) <> ''::text),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT textile_product_measurements_pkey PRIMARY KEY (measurement_id),
+  CONSTRAINT fk_product_measurements_product FOREIGN KEY (product_id) REFERENCES public.textile_products(product_id),
+  CONSTRAINT fk_product_measurements_size FOREIGN KEY (size_id) REFERENCES public.sizes(size_id),
+  CONSTRAINT fk_product_measurements_dimension FOREIGN KEY (dimension_id) REFERENCES public.dimensions(dimension_id)
+);
+CREATE TABLE public.profile_modules (
+  profile_id uuid NOT NULL,
+  module_id uuid NOT NULL,
+  can_view boolean NOT NULL DEFAULT true,
+  can_create boolean NOT NULL DEFAULT false,
+  can_edit boolean NOT NULL DEFAULT false,
+  can_delete boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT profile_modules_pkey PRIMARY KEY (profile_id, module_id),
+  CONSTRAINT profile_modules_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT profile_modules_module_id_fkey FOREIGN KEY (module_id) REFERENCES public.modules(module_id)
+);
+CREATE TABLE public.department_modules (
+  department_id uuid NOT NULL,
+  module_id uuid NOT NULL,
+  can_view boolean NOT NULL DEFAULT true,
+  can_create boolean NOT NULL DEFAULT true,
+  can_edit boolean NOT NULL DEFAULT true,
+  can_delete boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT department_modules_pkey PRIMARY KEY (department_id, module_id),
+  CONSTRAINT department_modules_department_id_fkey FOREIGN KEY (department_id) REFERENCES public.departments(department_id),
+  CONSTRAINT department_modules_module_id_fkey FOREIGN KEY (module_id) REFERENCES public.modules(module_id)
+);
+CREATE TABLE public.applications (
+  application_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  application_code character varying NOT NULL UNIQUE,
+  name character varying NOT NULL,
+  description text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT applications_pkey PRIMARY KEY (application_id)
+);
+CREATE TABLE public.user_applications (
+  user_application_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  application_id uuid NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  start_date date NOT NULL DEFAULT CURRENT_DATE,
+  end_date date,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_applications_pkey PRIMARY KEY (user_application_id),
+  CONSTRAINT user_applications_application_id_fkey FOREIGN KEY (application_id) REFERENCES public.applications(application_id),
+  CONSTRAINT user_applications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id)
+);
+CREATE TABLE public.quotations (
+  quotation_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  business_id uuid NOT NULL,
+  branch_id uuid NOT NULL,
+  representative_id uuid NOT NULL,
+  quotation_number character varying NOT NULL UNIQUE,
+  status character varying NOT NULL DEFAULT 'draft'::character varying CHECK (status::text = ANY (ARRAY['draft'::character varying, 'sent'::character varying, 'approved'::character varying, 'rejected'::character varying, 'cancelled'::character varying]::text[])),
+  notes character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  user_id uuid NOT NULL DEFAULT auth.uid(),
+  state character varying NOT NULL DEFAULT 'pendiente'::character varying,
+  early_delivery boolean NOT NULL DEFAULT false,
+  early_delivery_date date,
+  valid_until date,
+  early_delivery_price numeric,
+  iva_amount numeric NOT NULL DEFAULT 0,
+  subtotal numeric NOT NULL DEFAULT 0,
+  total numeric NOT NULL DEFAULT 0,
+  advance_payment numeric NOT NULL DEFAULT 0,
+  method_id uuid,
+  CONSTRAINT quotations_pkey PRIMARY KEY (quotation_id),
+  CONSTRAINT quotations_business_id_fkey FOREIGN KEY (business_id) REFERENCES public.businesses(business_id),
+  CONSTRAINT quotations_branch_id_fkey FOREIGN KEY (branch_id) REFERENCES public.branches(branch_id),
+  CONSTRAINT quotations_representative_id_fkey FOREIGN KEY (representative_id) REFERENCES public.representatives(representative_id),
+  CONSTRAINT quotations_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id),
+  CONSTRAINT quotations_method_id_fkey FOREIGN KEY (method_id) REFERENCES public.payment_methods(method_id)
+);
+CREATE TABLE public.quote_products (
+  quote_product_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  quotation_id uuid NOT NULL,
+  product_id uuid NOT NULL,
+  quantity numeric NOT NULL DEFAULT 1 CHECK (quantity > 0::numeric),
+  unit_price numeric NOT NULL CHECK (unit_price >= 0::numeric),
+  iva_amount numeric NOT NULL DEFAULT 0 CHECK (iva_amount >= 0::numeric),
+  subtotal numeric DEFAULT round((quantity * unit_price), 2),
+  total numeric DEFAULT round(((quantity * unit_price) + iva_amount), 2),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  size_id uuid,
+  has_sublimation boolean,
+  has_embroidery boolean,
+  CONSTRAINT quote_products_pkey PRIMARY KEY (quote_product_id),
+  CONSTRAINT quote_products_quotation_id_fkey FOREIGN KEY (quotation_id) REFERENCES public.quotations(quotation_id),
+  CONSTRAINT quote_products_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.textile_products(product_id),
+  CONSTRAINT quote_products_size_id_fkey FOREIGN KEY (size_id) REFERENCES public.sizes(size_id)
+);
+CREATE TABLE public.production_orders (
+  production_order_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  quotation_id uuid NOT NULL,
+  production_order_code character varying NOT NULL UNIQUE,
+  committed_delivery_date date,
+  unexpected_delivery_date date,
+  production_order_status character varying NOT NULL DEFAULT 'pendiente'::character varying CHECK (production_order_status::text = ANY (ARRAY['pendiente'::character varying, 'en_proceso'::character varying, 'pausada'::character varying, 'finalizada'::character varying, 'cancelada'::character varying]::text[])),
+  payment_status character varying NOT NULL DEFAULT 'pendiente'::character varying CHECK (payment_status::text = ANY (ARRAY['pendiente'::character varying, 'parcial'::character varying, 'pagado'::character varying, 'vencido'::character varying, 'cancelado'::character varying]::text[])),
+  next_payment_date date,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  balance numeric NOT NULL DEFAULT 0,
+  overdue_days integer NOT NULL DEFAULT 0,
+  penalty_amount numeric NOT NULL DEFAULT 0,
+  CONSTRAINT production_orders_pkey PRIMARY KEY (production_order_id),
+  CONSTRAINT fk_production_orders_quotation FOREIGN KEY (quotation_id) REFERENCES public.quotations(quotation_id)
+);
+CREATE TABLE public.payment_methods (
+  method_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  method_name character varying NOT NULL UNIQUE,
+  is_active boolean NOT NULL DEFAULT true,
+  description text,
+  CONSTRAINT payment_methods_pkey PRIMARY KEY (method_id)
+);
+CREATE TABLE public.payments (
+  payment_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  production_order_id uuid NOT NULL,
+  method_id uuid,
+  amount numeric NOT NULL CHECK (amount > 0::numeric),
+  payment_date date NOT NULL DEFAULT CURRENT_DATE,
+  reference_number character varying,
+  notes text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT payments_pkey PRIMARY KEY (payment_id),
+  CONSTRAINT payments_production_order_id_fkey FOREIGN KEY (production_order_id) REFERENCES public.production_orders(production_order_id),
+  CONSTRAINT payments_method_id_fkey FOREIGN KEY (method_id) REFERENCES public.payment_methods(method_id),
+  CONSTRAINT payments_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(user_id)
+);

@@ -33,11 +33,15 @@ export const PAYMENT_STATUS_LABELS = {
   parcial: "Pago adelantado",
   pagado: "Pagado",
   vencido: "Vencido",
+  cancelado: "Cancelado",
 };
 
 export const PRODUCTION_STATUS_LABELS = {
   pendiente: "Pendiente",
   en_proceso: "En proceso",
+  pausada: "Pausada",
+  finalizada: "Finalizada",
+  cancelada: "Cancelada",
 };
 
 function getInitials(fullName) {
@@ -91,7 +95,7 @@ export async function getSalesOrders({
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, total, created_at",
+        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, total, created_at",
       )
       .in("quotation_id", quotationIds),
     "No fue posible cargar las cotizaciones asociadas",
@@ -107,13 +111,11 @@ export async function getSalesOrders({
     ...new Set(quotations.map((quotation) => quotation.branch_id).filter(Boolean)),
   ];
 
-  const representativeIds = [
-    ...new Set(
-      quotations.map((quotation) => quotation.representative_id).filter(Boolean),
-    ),
+  const sellerUserIds = [
+    ...new Set(quotations.map((quotation) => quotation.user_id).filter(Boolean)),
   ];
 
-  const [businesses, branches, representatives] = await Promise.all([
+  const [businesses, branches, sellerProfiles] = await Promise.all([
     businessIds.length
       ? throwIfError(
           await supabase
@@ -132,27 +134,27 @@ export async function getSalesOrders({
           "No fue posible cargar las sucursales",
         )
       : [],
-    representativeIds.length
+    sellerUserIds.length
       ? throwIfError(
           await supabase
-            .from("representatives")
-            .select("representative_id, name")
-            .in("representative_id", representativeIds),
-          "No fue posible cargar los representantes",
+            .from("profiles")
+            .select("user_id, name, surname, email")
+            .in("user_id", sellerUserIds),
+          "No fue posible cargar los vendedores",
         )
       : [],
   ]);
 
   const businessesById = indexRowsByKey(businesses, "business_id");
   const branchesById = indexRowsByKey(branches, "branch_id");
-  const representativesById = indexRowsByKey(representatives, "representative_id");
+  const sellerProfilesById = indexRowsByKey(sellerProfiles, "user_id");
 
   return orders.map((order) => {
     const quotation = quotationsById[order.quotation_id] || null;
     const business = quotation ? businessesById[quotation.business_id] : null;
     const branch = quotation ? branchesById[quotation.branch_id] : null;
-    const representative = quotation
-      ? representativesById[quotation.representative_id]
+    const sellerProfile = quotation
+      ? sellerProfilesById[quotation.user_id]
       : null;
 
     const clientName =
@@ -161,6 +163,11 @@ export async function getSalesOrders({
     const branchLabel = branch
       ? [branch.district, branch.province].filter(Boolean).join(", ")
       : null;
+
+    const sellerName =
+      [sellerProfile?.name, sellerProfile?.surname].filter(Boolean).join(" ") ||
+      sellerProfile?.email ||
+      "Sin asignar";
 
     const paymentStatus = String(order.payment_status || "pendiente").toLowerCase();
     const productionStatus = String(
@@ -175,8 +182,8 @@ export async function getSalesOrders({
       quotationNumber: quotation?.quotation_number || "Sin cotizacion",
       client: clientName,
       branchLabel,
-      agent: representative?.name || "Sin asignar",
-      avatar: getInitials(representative?.name),
+      agent: sellerName,
+      avatar: getInitials(sellerName),
       total: getNumber(quotation?.total, 0),
       balance: getNumber(order.balance, 0),
       paymentStatus,
