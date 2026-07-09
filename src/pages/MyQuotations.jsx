@@ -6,6 +6,7 @@ import MyQuotationsList from "../components/clientPanel/MyQuotationsList.jsx";
 import QuotationDetailModal from "../components/clientPanel/QuotationDetailModal.jsx";
 import formatCurrency from "../utils/formatCurrency.js";
 import {
+  acceptMyQuotation,
   getMyQuotationDetail,
   getMyQuotations,
 } from "../services/clientPanelService.js";
@@ -18,11 +19,27 @@ export default function MyQuotations() {
   const [quotationDetail, setQuotationDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [acceptingId, setAcceptingId] = useState(null);
+  const [acceptError, setAcceptError] = useState("");
+  const [acceptSuccess, setAcceptSuccess] = useState("");
+
+  async function loadQuotations() {
+    try {
+      setLoading(true);
+      setError("");
+      const rows = await getMyQuotations();
+      setQuotations(rows);
+    } catch (loadError) {
+      setError(loadError.message || "No fue posible cargar tus cotizaciones.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
 
-    async function loadQuotations() {
+    async function initialLoad() {
       try {
         setLoading(true);
         setError("");
@@ -42,12 +59,32 @@ export default function MyQuotations() {
       }
     }
 
-    loadQuotations();
+    initialLoad();
 
     return () => {
       mounted = false;
     };
   }, []);
+
+  async function handleAcceptQuotation(quotationId) {
+    if (!quotationId || acceptingId) {
+      return;
+    }
+
+    try {
+      setAcceptingId(quotationId);
+      setAcceptError("");
+      setAcceptSuccess("");
+      await acceptMyQuotation(quotationId);
+      setAcceptSuccess("Cotizacion aceptada. Se creo tu orden de produccion en 'Mis pedidos'.");
+      closeDetail();
+      await loadQuotations();
+    } catch (acceptActionError) {
+      setAcceptError(acceptActionError.message || "No fue posible aceptar la cotizacion.");
+    } finally {
+      setAcceptingId(null);
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -137,10 +174,24 @@ export default function MyQuotations() {
           </div>
         )}
 
+        {acceptSuccess && (
+          <div className="mb-4 rounded-lg border border-green-500/25 bg-green-500/10 px-5 py-4 text-sm text-green-200">
+            {acceptSuccess}
+          </div>
+        )}
+
+        {acceptError && (
+          <div className="mb-4 rounded-lg border border-red-500/25 bg-red-500/10 px-5 py-4 text-sm text-red-200">
+            {acceptError}
+          </div>
+        )}
+
         {!loading && !error && (
           <MyQuotationsList
             quotations={quotations}
             onSelectQuotation={setSelectedQuotation}
+            onAcceptQuotation={handleAcceptQuotation}
+            acceptingId={acceptingId}
           />
         )}
       </section>
@@ -151,6 +202,8 @@ export default function MyQuotations() {
         loading={detailLoading}
         error={detailError}
         onClose={closeDetail}
+        onAccept={handleAcceptQuotation}
+        accepting={Boolean(acceptingId) && acceptingId === quotationDetail?.quotationId}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import {
   RiBuilding2Fill,
   RiCalendarEventFill,
+  RiCheckLine,
   RiFileList3Fill,
   RiMapPin2Fill,
   RiMoneyDollarCircleFill,
@@ -12,6 +13,12 @@ import ClientDetailModal from "./ClientDetailModal.jsx";
 import DetailInfoCard from "./DetailInfoCard.jsx";
 import DetailProductsTable from "./DetailProductsTable.jsx";
 import StatusBadge from "./StatusBadge.jsx";
+
+const ACCEPTABLE_STATES = ["approved", "aprobada"];
+
+function canAcceptQuotation(status) {
+  return ACCEPTABLE_STATES.includes(String(status || "").toLowerCase());
+}
 
 function formatDate(dateValue) {
   if (!dateValue) {
@@ -47,6 +54,8 @@ export default function QuotationDetailModal({
   loading,
   error,
   onClose,
+  onAccept,
+  accepting,
 }) {
   return (
     <ClientDetailModal
@@ -156,6 +165,26 @@ export default function QuotationDetailModal({
               </div>
             </div>
           </section>
+
+          {canAcceptQuotation(quotation.status) && (
+            <section className="flex flex-col items-start justify-between gap-3 rounded-lg border border-green-500/30 bg-green-500/5 p-4 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-sm font-semibold text-white">Aceptar esta cotizacion</p>
+                <p className="text-sm text-gray-400">
+                  Al aceptarla se creara tu orden de produccion asociada.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={accepting}
+                onClick={() => onAccept?.(quotation.quotationId)}
+                className="flex items-center gap-2 rounded-lg border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm font-semibold text-green-300 transition-colors hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              >
+                <RiCheckLine size={16} />
+                {accepting ? "Procesando..." : "Aceptar cotizacion"}
+              </button>
+            </section>
+          )}
 
           {quotation.notes && (
             <section className="rounded-lg border border-[#2a3550] bg-[#182235] p-4">

@@ -243,6 +243,8 @@ function normalizeQuotationDetail({ quotation, business, branch, representative,
     advancePayment:
       getNumber(quotation.advance_payment, null) ??
       (getNumber(quotation.total, null) ?? getItemTotal(items)) / 2,
+    methodId: quotation.method_id || null,
+    paymentMethod: quotation.payment_methods?.method_name || null,
     business: business
       ? {
           id: business.business_id,
@@ -303,6 +305,96 @@ async function getMyRepresentativeIds(userId) {
   return representatives.map((representative) => representative.representative_id);
 }
 
+function createProductionOrderCode() {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replaceAll("-", "");
+  const time = now.toTimeString().slice(0, 8).replaceAll(":", "");
+
+  return `OP-${date}-${time}`;
+}
+
+function getDatePlusDays(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+
+  return date.toISOString().slice(0, 10);
+}
+
+export async function acceptMyQuotation(quotationId) {
+  const userId = await getAuthenticatedUserId();
+  const representativeIds = await getMyRepresentativeIds(userId);
+
+  if (!quotationId) {
+    throw new Error("No se encontro la cotizacion seleccionada.");
+  }
+
+  const ownerFilters = [`user_id.eq.${userId}`];
+
+  if (representativeIds.length) {
+    ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
+  }
+
+  const quotation = throwIfError(
+    await supabase
+      .from("quotations")
+      .select("quotation_id, total, state, is_active")
+      .eq("quotation_id", quotationId)
+      .or(ownerFilters.join(","))
+      .in("state", APPROVED_QUOTATION_STATES)
+      .eq("is_active", true)
+      .maybeSingle(),
+    "No fue posible validar la cotizacion",
+  );
+
+  if (!quotation) {
+    throw new Error("No se encontro la cotizacion o no puede ser aceptada.");
+  }
+
+  throwIfError(
+    await supabase
+      .from("quotations")
+      .update({ state: "converted" })
+      .eq("quotation_id", quotationId),
+    "No fue posible actualizar el estado de la cotizacion",
+  );
+
+  try {
+    const productionOrder = throwIfError(
+      await supabase
+        .from("production_orders")
+        .insert({
+          quotation_id: quotationId,
+          production_order_code: createProductionOrderCode(),
+          committed_delivery_date: null,
+          unexpected_delivery_date: null,
+          production_order_status: "Pendiente",
+          payment_status: "Pendiente",
+          next_payment_date: getDatePlusDays(15),
+          is_active: true,
+          balance: getNumber(quotation.total, 0),
+          overdue_days: 0,
+          penalty_amount: 0,
+        })
+        .select("production_order_id, production_order_code")
+        .single(),
+      "No fue posible crear la orden de produccion",
+    );
+
+    return {
+      quotationId,
+      productionOrderId: productionOrder?.production_order_id ?? productionOrder?.[0]?.production_order_id,
+      productionOrderCode: productionOrder?.production_order_code ?? productionOrder?.[0]?.production_order_code,
+    };
+  } catch (insertError) {
+    await supabase
+      .from("quotations")
+      .update({ state: quotation.state })
+      .eq("quotation_id", quotationId);
+
+    throw insertError;
+  }
+}
+
 export async function getMyQuotations() {
   const userId = await getAuthenticatedUserId();
   const representativeIds = await getMyRepresentativeIds(userId);
@@ -317,7 +409,7 @@ export async function getMyQuotations() {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment",
+        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .or(ownerFilters.join(","))
       .in("state", APPROVED_QUOTATION_STATES)
@@ -357,6 +449,8 @@ export async function getMyQuotations() {
       advancePayment:
         getNumber(quotation.advance_payment, null) ??
         (getNumber(quotation.total, null) ?? getItemTotal(items)) / 2,
+      methodId: quotation.method_id || null,
+      paymentMethod: quotation.payment_methods?.method_name || null,
       items,
     };
   });
@@ -375,7 +469,7 @@ export async function getMyProductionOrders() {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, payment_method, next_payment_date, is_active, created_at, updated_at",
+        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount",
       )
       .in("quotation_id", quotationIds)
       .eq("is_active", true)
@@ -393,10 +487,13 @@ export async function getMyProductionOrders() {
     quotationNumber: quotationsById[order.quotation_id]?.number || "Sin cotizacion",
     productionStatus: order.production_order_status || "pending",
     paymentStatus: order.payment_status || "pending",
-    paymentMethod: order.payment_method || "No definido",
+    paymentMethod: quotationsById[order.quotation_id]?.paymentMethod || "No definido",
     committedDeliveryDate: order.committed_delivery_date,
     unexpectedDeliveryDate: order.unexpected_delivery_date,
     nextPaymentDate: order.next_payment_date,
+    balance: getNumber(order.balance, 0),
+    overdueDays: getNumber(order.overdue_days, 0),
+    penaltyAmount: getNumber(order.penalty_amount, 0),
     createdAt: order.created_at,
     updatedAt: order.updated_at,
   }));
@@ -420,7 +517,7 @@ export async function getMyQuotationDetail(quotationId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment",
+        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", quotationId)
       .or(ownerFilters.join(","))
@@ -459,7 +556,7 @@ export async function getMyOrderDetail(productionOrderId) {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, payment_method, next_payment_date, is_active, created_at, updated_at",
+        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount",
       )
       .eq("production_order_id", productionOrderId)
       .eq("is_active", true)
@@ -475,7 +572,7 @@ export async function getMyOrderDetail(productionOrderId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id",
+        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", order.quotation_id)
       .eq("user_id", userId)
@@ -509,10 +606,13 @@ export async function getMyOrderDetail(productionOrderId) {
     quotationNumber: quotationDetail.number,
     productionStatus: order.production_order_status || "pending",
     paymentStatus: order.payment_status || "pending",
-    paymentMethod: order.payment_method || "No definido",
+    paymentMethod: quotationDetail.paymentMethod || "No definido",
     committedDeliveryDate: order.committed_delivery_date,
     unexpectedDeliveryDate: order.unexpected_delivery_date,
     nextPaymentDate: order.next_payment_date,
+    balance: getNumber(order.balance, 0),
+    overdueDays: getNumber(order.overdue_days, 0),
+    penaltyAmount: getNumber(order.penalty_amount, 0),
     createdAt: order.created_at,
     updatedAt: order.updated_at,
     total: quotationDetail.total,
