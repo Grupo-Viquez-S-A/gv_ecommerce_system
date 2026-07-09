@@ -872,16 +872,64 @@ export default function Orders() {
                   </span>
                 </div>
 
-                {viewOrder.overdueDays > 0 && (
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">
+                    Fecha de entrega comprometida
+                  </span>
+                  <span className="text-sm text-white font-medium text-right">
+                    {formatDate(viewOrder.committedDeliveryDate)}
+                  </span>
+                </div>
+
+                {viewOrder.unexpectedDeliveryDate && (
                   <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
                     <span className="text-xs text-gray-500">
-                      Dias de atraso
+                      Fecha de entrega inesperada
                     </span>
-                    <span className="text-sm text-red-400 font-medium text-right">
-                      {viewOrder.overdueDays}
+                    <span className="text-sm text-white font-medium text-right">
+                      {formatDate(viewOrder.unexpectedDeliveryDate)}
                     </span>
                   </div>
                 )}
+
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">
+                    Proxima fecha de pago
+                  </span>
+                  <span className="text-sm text-white font-medium text-right">
+                    {formatDate(viewOrder.nextPaymentDate)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">
+                    Dias de atraso
+                  </span>
+                  <span
+                    className={`text-sm font-medium text-right ${
+                      viewOrder.overdueDays > 0
+                        ? "text-red-400"
+                        : "text-white"
+                    }`}
+                  >
+                    {viewOrder.overdueDays}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">
+                    Monto de penalizacion
+                  </span>
+                  <span
+                    className={`text-sm font-medium text-right ${
+                      viewOrder.penaltyAmount > 0
+                        ? "text-red-400"
+                        : "text-white"
+                    }`}
+                  >
+                    {formatCurrency(viewOrder.penaltyAmount)}
+                  </span>
+                </div>
               </div>
             </div>
           )}
