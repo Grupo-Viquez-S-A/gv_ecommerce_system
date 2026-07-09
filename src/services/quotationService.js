@@ -251,8 +251,6 @@ function normalizeQuotation({
     total: getNumber(item.total, 0),
     hasSublimation: item.has_sublimation === true,
     hasEmbroidery: item.has_embroidery === true,
-    sublimationPrice: getNumber(item.sublimation_price, 0),
-    embroideryPrice: getNumber(item.embroidery_price, 0),
   }));
 
   return {
@@ -370,8 +368,6 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
         size_id: sizeId,
         has_sublimation: getBoolean(item.hasSublimation),
         has_embroidery: getBoolean(item.hasEmbroidery),
-        sublimation_price: getNumber(item.sublimationPrice, 0),
-        embroidery_price: getNumber(item.embroideryPrice, 0),
       };
     }),
 
@@ -710,7 +706,7 @@ export async function getQuotations() {
         await supabase
           .from("quote_products")
           .select(
-            "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery, sublimation_price, embroidery_price",
+            "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
           )
           .in("quotation_id", quotationIds),
         "No fue posible cargar los productos de las cotizaciones",
@@ -957,6 +953,8 @@ export async function createBusinessQuotation(payload) {
         early_delivery: client.earlyDelivery,
         early_delivery_date: earlyDeliveryDate,
         valid_until: validUntil,
+        sublimation_price: getNumber(client.sublimationPrice, 0) || null,
+        embroidery_price: getNumber(client.embroideryPrice, 0) || null,
       })
       .select(
         `
@@ -964,7 +962,9 @@ export async function createBusinessQuotation(payload) {
         quotation_number,
         early_delivery,
         early_delivery_date,
-        valid_until
+        valid_until,
+        sublimation_price,
+        embroidery_price
       `,
       )
       .single();
