@@ -519,7 +519,7 @@ export async function reportPayment({
         payment_date: paymentDate,
         reference_number: referenceNumber || null,
         notes: notes || null,
-        is_active: true,
+        is_valid: false,
         created_by: userId,
       })
       .select("payment_id")

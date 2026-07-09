@@ -1643,12 +1643,12 @@ export default function Quotations() {
             <div className="flex items-start justify-between gap-4 border-b border-[#2a3550] px-5 py-4">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31] text-[#C9A227]">
-                  <RiEyeFill size={20} />
+                  {showPaymentForm ? <RiBankCardFill size={20} /> : <RiEyeFill size={20} />}
                 </div>
 
                 <div className="min-w-0">
                   <h2 className="truncate text-lg font-bold text-white">
-                    {selectedQuotation.number}
+                    {showPaymentForm ? "Reportar pago" : selectedQuotation.number}
                   </h2>
                   <p className="truncate text-sm text-gray-400">
                     {selectedQuotation.client} - {selectedQuotation.agent}
@@ -1667,7 +1667,47 @@ export default function Quotations() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-4">
-              <div className="mb-4 grid gap-3 md:grid-cols-4">
+              {showPaymentForm ? (
+                <PaymentForm
+                  quotation={selectedQuotation}
+                  paymentMethods={paymentMethods}
+                  loading={paymentLoading}
+                  error={paymentError}
+                  success={paymentSuccess}
+                  onBack={() => {
+                    setShowPaymentForm(false);
+                    setPaymentError("");
+                    setPaymentSuccess("");
+                  }}
+                  onSubmit={async (payload) => {
+                    setPaymentLoading(true);
+                    setPaymentError("");
+                    setPaymentSuccess("");
+                    try {
+                      await reportPayment({
+                        ...payload,
+                        userId: user?.user_id || user?.id || null,
+                      });
+                      setPaymentSuccess(
+                        "Pago reportado correctamente. Queda pendiente de validacion.",
+                      );
+                      setTimeout(() => {
+                        closeQuotationModal();
+                      }, 1800);
+                    } catch (err) {
+                      console.error(err);
+                      setPaymentError(
+                        err?.message ||
+                          "No fue posible reportar el pago. Intenta de nuevo.",
+                      );
+                    } finally {
+                      setPaymentLoading(false);
+                    }
+                  }}
+                />
+              ) : (
+                <>
+                  <div className="mb-4 grid gap-3 md:grid-cols-4">
                 {[
                   { label: "Estado", value: selectedQuotation.status },
                   { label: "Fecha", value: formatDate(selectedQuotation.date) },
@@ -1892,11 +1932,13 @@ export default function Quotations() {
                   </p>
                 </div>
               )}
+            </>
+          )}
             </div>
 
             {/* Footer del modal */}
             <div className="border-t border-[#2a3550] px-5 py-4">
-              {!showPaymentForm ? (
+              {!showPaymentForm && (
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-gray-500">
                     Cotizacion {selectedQuotation.number} —{" "}
@@ -1924,45 +1966,6 @@ export default function Quotations() {
                     Reportar pago
                   </button>
                 </div>
-              ) : (
-                <PaymentForm
-                  quotation={selectedQuotation}
-                  paymentMethods={paymentMethods}
-                  loading={paymentLoading}
-                  error={paymentError}
-                  success={paymentSuccess}
-                  onBack={() => {
-                    setShowPaymentForm(false);
-                    setPaymentError("");
-                    setPaymentSuccess("");
-                  }}
-                  onSubmit={async (payload) => {
-                    setPaymentLoading(true);
-                    setPaymentError("");
-                    setPaymentSuccess("");
-                    try {
-                      await reportPayment({
-                        ...payload,
-                        userId: user?.user_id || user?.id || null,
-                      });
-                      setPaymentSuccess(
-                        "Pago reportado correctamente. Queda pendiente de validacion.",
-                      );
-                      setTimeout(() => {
-                        setShowPaymentForm(false);
-                        setPaymentSuccess("");
-                      }, 2500);
-                    } catch (err) {
-                      console.error(err);
-                      setPaymentError(
-                        err?.message ||
-                          "No fue posible reportar el pago. Intenta de nuevo.",
-                      );
-                    } finally {
-                      setPaymentLoading(false);
-                    }
-                  }}
-                />
               )}
             </div>
           </div>
