@@ -8,6 +8,41 @@ function throwIfError(response, actionMessage) {
   throw new Error(`${actionMessage}: ${response.error.message}`);
 }
 
+async function getFunctionErrorMessage(error, fallbackMessage) {
+  if (!error) {
+    return fallbackMessage;
+  }
+
+  const response = error.context;
+
+  if (response && typeof response.clone === "function") {
+    try {
+      const body = await response.clone().json();
+      const message = body?.error || body?.message;
+
+      if (message) {
+        return typeof message === "string" ? message : JSON.stringify(message);
+      }
+    } catch {
+      try {
+        const text = await response.clone().text();
+
+        if (text) {
+          return text;
+        }
+      } catch {
+        // Keep Supabase's original error when the body is not readable.
+      }
+    }
+  }
+
+  if (typeof error.message === "string" && error.message !== "{}") {
+    return error.message;
+  }
+
+  return fallbackMessage;
+}
+
 function getNumber(value, fallback = 0) {
   const numericValue = Number(value);
 
@@ -42,6 +77,34 @@ function groupRowsByKey(rows = [], keyName) {
 
     return groupedRows;
   }, {});
+}
+
+async function notifyPaymentSuccess(productionOrderId) {
+  const { data, error } = await supabase.functions.invoke(
+    "notify-payment-success",
+    {
+      body: {
+        production_order_id: productionOrderId,
+      },
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      await getFunctionErrorMessage(
+        error,
+        "No fue posible enviar el correo de confirmacion.",
+      ),
+    );
+  }
+
+  if (data?.ok === false) {
+    throw new Error(
+      data.error || "No fue posible enviar el correo de confirmacion.",
+    );
+  }
+
+  return data;
 }
 
 /**
@@ -231,6 +294,26 @@ export async function importOrderPayments(productionOrderId) {
     "No fue posible actualizar el estado de pago de la orden",
   );
 
+  let emailNotification;
+
+  try {
+    const notificationResult = await notifyPaymentSuccess(productionOrderId);
+
+    emailNotification = {
+      sent: true,
+      error: null,
+      recipient: notificationResult?.recipient || null,
+    };
+  } catch (error) {
+    emailNotification = {
+      sent: false,
+      error:
+        error?.message ||
+        "El pago fue importado, pero no fue posible enviar el correo.",
+      recipient: null,
+    };
+  }
+
   return {
     productionOrderId,
     total,
@@ -238,5 +321,6 @@ export async function importOrderPayments(productionOrderId) {
     balance,
     paymentStatus,
     movedToSales: paymentStatus === "pagado",
+    emailNotification,
   };
 }

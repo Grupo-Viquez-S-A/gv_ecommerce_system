@@ -712,12 +712,8 @@ export default function Sales() {
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {viewSale && (
             <div className="space-y-5">
-              <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
-                <div className="w-14 h-14 rounded-xl bg-[#C9A227]/15 flex items-center justify-center text-lg font-bold text-[#C9A227]">
-                  {viewSale.code.slice(-3)}
-                </div>
-
-                <div>
+              <div className="pb-5 border-b border-[#2a3550]">
+                <div className="space-y-2">
                   <h3 className="text-lg font-bold text-white">
                     {viewSale.code}
                   </h3>

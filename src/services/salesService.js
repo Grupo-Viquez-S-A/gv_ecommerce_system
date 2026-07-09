@@ -110,7 +110,7 @@ export async function getPaidSales() {
           await supabase
             .from("quotations")
             .select(
-              "quotation_id, quotation_number, business_id, branch_id, representative_id, subtotal, iva_amount, total, advance_payment, method_id, state, status, created_at",
+              "quotation_id, quotation_number, business_id, branch_id, representative_id, user_id, subtotal, iva_amount, total, advance_payment, method_id, state, status, created_at",
             )
             .in("quotation_id", quotationIds),
           "No fue posible cargar las cotizaciones asociadas",
@@ -145,6 +145,10 @@ export async function getPaidSales() {
     ),
   ];
 
+  const sellerUserIds = [
+    ...new Set(quotations.map((quotation) => quotation.user_id).filter(Boolean)),
+  ];
+
   const methodIds = [
     ...new Set(
       [
@@ -154,7 +158,7 @@ export async function getPaidSales() {
     ),
   ];
 
-  const [businesses, branches, representatives, paymentMethods] =
+  const [businesses, branches, representatives, sellerProfiles, paymentMethods] =
     await Promise.all([
       businessIds.length
         ? throwIfError(
@@ -183,6 +187,15 @@ export async function getPaidSales() {
             "No fue posible cargar los representantes",
           )
         : [],
+      sellerUserIds.length
+        ? throwIfError(
+            await supabase
+              .from("profiles")
+              .select("user_id, name, surname, email")
+              .in("user_id", sellerUserIds),
+            "No fue posible cargar los vendedores",
+          )
+        : [],
       methodIds.length
         ? throwIfError(
             await supabase
@@ -197,6 +210,7 @@ export async function getPaidSales() {
   const businessesById = indexRowsByKey(businesses, "business_id");
   const branchesById = indexRowsByKey(branches, "branch_id");
   const representativesById = indexRowsByKey(representatives, "representative_id");
+  const sellerProfilesById = indexRowsByKey(sellerProfiles, "user_id");
   const paymentMethodsById = indexRowsByKey(paymentMethods, "method_id");
 
   const sales = [];
@@ -252,6 +266,7 @@ export async function getPaidSales() {
     const branch = branchesById[quotation.branch_id] || null;
     const representative =
       representativesById[quotation.representative_id] || null;
+    const sellerProfile = sellerProfilesById[quotation.user_id] || null;
 
     const lastPayment = orderPayments[0] || null;
 
@@ -269,6 +284,11 @@ export async function getPaidSales() {
       ? [branch.district, branch.province].filter(Boolean).join(", ")
       : null;
 
+    const sellerName =
+      [sellerProfile?.name, sellerProfile?.surname].filter(Boolean).join(" ") ||
+      sellerProfile?.email ||
+      "Sin asignar";
+
     const paymentStatus = String(order.payment_status || "pagado").toLowerCase();
     const productionStatus = String(
       order.production_order_status || "pendiente",
@@ -283,8 +303,9 @@ export async function getPaidSales() {
       client: clientName,
       legalId: business?.legal_id || null,
       branchLabel,
-      representative: representative?.name || "Sin asignar",
-      avatar: getInitials(representative?.name),
+      representative: sellerName,
+      clientRepresentative: representative?.name || "Sin asignar",
+      avatar: getInitials(sellerName),
       saleDate,
       total: totalSale,
       amountPaid,

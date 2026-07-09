@@ -918,12 +918,8 @@ export default function Orders() {
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {viewOrder && (
             <div className="space-y-5">
-              <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
-                <div className="w-14 h-14 rounded-xl bg-[#C9A227]/15 flex items-center justify-center text-lg font-bold text-[#C9A227]">
-                  {viewOrder.code.slice(-3)}
-                </div>
-
-                <div>
+              <div className="pb-5 border-b border-[#2a3550]">
+                <div className="space-y-2">
                   <h3 className="text-lg font-bold text-white">
                     {viewOrder.code}
                   </h3>
@@ -1132,12 +1128,8 @@ export default function Orders() {
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
           {viewOrder && (
             <div className="space-y-5">
-              <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
-                <div className="w-14 h-14 rounded-xl bg-[#C9A227]/15 flex items-center justify-center text-lg font-bold text-[#C9A227]">
-                  {orderPayments.length}
-                </div>
-
-                <div>
+              <div className="pb-5 border-b border-[#2a3550]">
+                <div className="space-y-1">
                   <h3 className="text-lg font-bold text-white">
                     {viewOrder.quotationNumber}
                   </h3>
@@ -1203,6 +1195,17 @@ export default function Orders() {
                   ? "El pago cubre el total, la orden se movio a Ventas."
                   : "Pago parcial registrado, la orden quedo en Pago adelantado."}
               </p>
+
+              {importResult.emailNotification?.sent ? (
+                <p className="text-xs text-green-300">
+                  Correo enviado a {importResult.emailNotification.recipient}.
+                </p>
+              ) : (
+                <p className="text-xs text-yellow-300">
+                  El pago se importo, pero no se pudo enviar el correo:{" "}
+                  {importResult.emailNotification?.error || "error no indicado"}
+                </p>
+              )}
             </div>
           )}
 
