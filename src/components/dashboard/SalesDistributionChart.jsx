@@ -10,6 +10,20 @@ import {
   RiEyeLine,
 } from "react-icons/ri";
 
+function formatMillionsLabel(value) {
+  const numericValue = Number(value) || 0;
+
+  if (numericValue === 0) {
+    return "₡0";
+  }
+
+  if (Math.abs(numericValue) < 1) {
+    return `₡${Math.round(numericValue * 1000).toLocaleString("es-CR")} mil`;
+  }
+
+  return `₡${numericValue.toFixed(numericValue >= 10 ? 0 : 1)} M`;
+}
+
 export default function SalesDistributionChart({
   data = [],
   totalLabel = "₡0 M",
@@ -97,7 +111,7 @@ export default function SalesDistributionChart({
               }}
               itemStyle={{ color: "#e2e8f0" }}
               labelStyle={{ color: "#94a3b8" }}
-              formatter={(value) => [`₡${value} M`, "Ventas"]}
+              formatter={(value) => [formatMillionsLabel(value), "Ventas"]}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -136,7 +150,7 @@ export default function SalesDistributionChart({
 
               <div className="text-right whitespace-nowrap">
                 <span className="text-white font-medium">
-                  ₡{item.value} M
+                  {formatMillionsLabel(item.value)}
                 </span>
 
                 <span className="text-gray-500 ml-2">

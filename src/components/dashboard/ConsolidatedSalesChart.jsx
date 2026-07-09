@@ -1,4 +1,4 @@
-﻿import {
+import {
   Bar,
   BarChart,
   CartesianGrid,
@@ -7,8 +7,23 @@
   XAxis,
   YAxis,
 } from "recharts";
+import { RiArrowDownSLine } from "react-icons/ri";
 
 import ChartLegend from "./ChartLegend";
+
+function formatMillionsLabel(value) {
+  const numericValue = Number(value) || 0;
+
+  if (numericValue === 0) {
+    return "₡0";
+  }
+
+  if (Math.abs(numericValue) < 1) {
+    return `₡${Math.round(numericValue * 1000).toLocaleString("es-CR")} mil`;
+  }
+
+  return `₡${numericValue.toFixed(numericValue >= 10 ? 0 : 1)} M`;
+}
 
 const DEFAULT_LEGEND_ITEMS = [
   { id: "textiles", name: "Textiles de Occidente", color: "#6366f1" },
@@ -45,7 +60,7 @@ export default function ConsolidatedSalesChart({
           className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
         >
           {periodLabel}
-          <span className="text-sm leading-none">âŒ„</span>
+          <RiArrowDownSLine size={14} />
         </button>
       </div>
 
@@ -82,7 +97,7 @@ export default function ConsolidatedSalesChart({
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: "#64748b", fontSize: 12 }}
-                tickFormatter={(value) => `₡${value} M`}
+                tickFormatter={(value) => formatMillionsLabel(value)}
               />
 
               <Tooltip
@@ -94,7 +109,7 @@ export default function ConsolidatedSalesChart({
                 }}
                 itemStyle={{ color: "#e2e8f0" }}
                 labelStyle={{ color: "#94a3b8" }}
-                formatter={(value) => [`₡${value} M`, "Ventas"]}
+                formatter={(value) => [formatMillionsLabel(value), "Ventas"]}
               />
 
               {legendItems.map((item, index) => (

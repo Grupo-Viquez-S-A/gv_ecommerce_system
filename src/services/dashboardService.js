@@ -52,7 +52,7 @@ function getNumber(value, fallback = 0) {
 }
 
 function formatMillions(amount) {
-  return Math.round(((Number(amount) || 0) / 1_000_000) * 10) / 10;
+  return Math.round(((Number(amount) || 0) / 1_000_000) * 1000) / 1000;
 }
 
 function formatCurrency(amount) {
