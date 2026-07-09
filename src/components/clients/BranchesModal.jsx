@@ -14,7 +14,7 @@ export default function BranchesModal({ client, onClose }) {
   const stats = [
     {
       label: "Ventas acumuladas",
-      value: client.sales || "â‚¡0",
+      value: client.sales || "₡0",
     },
     {
       label: "Cotizaciones activas",

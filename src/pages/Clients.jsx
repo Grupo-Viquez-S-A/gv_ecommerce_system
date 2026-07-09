@@ -161,7 +161,7 @@ function cloneClient(client = {}, index = 0) {
     status: normalizeStatus(
       client.status || (client.is_active === false ? "Inactivo" : "Activo"),
     ),
-    sales: client.sales || "â‚¡0 M",
+    sales: client.sales || "₡0 M",
     lastPurchase: client.lastPurchase || "Sin compras",
     totalOrders: client.totalOrders ?? 0,
     totalQuotes: client.totalQuotes ?? 0,
@@ -468,7 +468,7 @@ export default function Clients() {
     },
     {
       label: "Ventas Acumuladas",
-      value: `â‚¡${accumulatedSales.toFixed(1)} M`,
+      value: `₡${accumulatedSales.toFixed(1)} M`,
       icon: <RiMoneyDollarCircleFill size={20} />,
       color: "bg-[#2d200a]",
       iconColor: "text-[#fbbf24]",
