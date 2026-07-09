@@ -1684,10 +1684,7 @@ export default function Quotations() {
                     setPaymentError("");
                     setPaymentSuccess("");
                     try {
-                      await reportPayment({
-                        ...payload,
-                        userId: user?.user_id || user?.id || null,
-                      });
+                      await reportPayment(payload);
                       setPaymentSuccess(
                         "Pago reportado correctamente. Queda pendiente de validacion.",
                       );

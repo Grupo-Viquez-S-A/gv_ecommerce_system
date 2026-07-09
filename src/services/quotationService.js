@@ -1,4 +1,5 @@
 import { supabase } from "./primarySupabaseClient.js";
+import { serviceSupabase } from "./serviceSupabaseClient.js";
 import { createRepresentativeUser } from "./representativeUserService.js";
 
 function getText(value) {
@@ -489,8 +490,16 @@ export async function reportPayment({
   referenceNumber,
   notes,
   receiptFile,
-  userId,
 }) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const authUserId = session?.user?.id || null;
+
+  if (!authUserId) {
+    throw new Error("Debes iniciar sesion para reportar un pago.");
+  }
+
   const orders = throwIfError(
     await supabase
       .from("production_orders")
@@ -520,7 +529,7 @@ export async function reportPayment({
         reference_number: referenceNumber || null,
         notes: notes || null,
         is_valid: false,
-        created_by: userId,
+        created_by: authUserId,
       })
       .select("payment_id")
       .single(),
@@ -547,8 +556,12 @@ export async function reportPayment({
       );
     }
 
+    if (!serviceSupabase) {
+      throw new Error("Servicio de comprobantes no disponible. Contacte al administrador.");
+    }
+
     throwIfError(
-      await supabase.from("payment_receipts").insert({
+      await serviceSupabase.from("payment_receipts").insert({
         payment_id: paymentId,
         bucket_name: "Ecommerce",
         folder_name: "Comprobantes",
@@ -557,7 +570,7 @@ export async function reportPayment({
         mime_type: receiptFile.type,
         file_size: receiptFile.size,
         is_valid: false,
-        created_by: userId,
+        created_by: authUserId,
       }),
       "No fue posible registrar el comprobante",
     );
