@@ -723,6 +723,24 @@ export default function Catalog() {
     const itemName =
       sizeName && !isUnica ? `${baseName} - ${sizeName}` : baseName;
 
+    const hasSublimation = Boolean(options.hasSublimation);
+    const hasEmbroidery = Boolean(options.hasEmbroidery);
+    const sublimationPrice = hasSublimation
+      ? Number(product?.sublimation_price) || 0
+      : 0;
+    const embroideryPrice = hasEmbroidery
+      ? Number(product?.embroidery_price) || 0
+      : 0;
+    const basePrice = getCartProductPrice(product);
+    const baseIva = getCartProductIva(product);
+    const basePercentage =
+      basePrice > 0 && Number.isFinite(basePrice) ? baseIva / basePrice : 0;
+    const unitPrice = basePrice + sublimationPrice + embroideryPrice;
+    const ivaAmount =
+      baseIva +
+      sublimationPrice * basePercentage +
+      embroideryPrice * basePercentage;
+
     setCartItems((currentItems) => {
       const itemExists = currentItems.some(
         (item) => item.id === cartItemId,
@@ -750,12 +768,12 @@ export default function Catalog() {
           catalogType: getCartProductType(product),
           quantity: safeQuantity,
           productId,
-          unitPrice: getCartProductPrice(product),
-          ivaAmount: getCartProductIva(product),
-          hasSublimation: Boolean(options.hasSublimation),
-          hasEmbroidery: Boolean(options.hasEmbroidery),
-          sublimationPrice: 0,
-          embroideryPrice: 0,
+          unitPrice,
+          ivaAmount,
+          hasSublimation,
+          hasEmbroidery,
+          sublimationPrice,
+          embroideryPrice,
         },
       ];
     });

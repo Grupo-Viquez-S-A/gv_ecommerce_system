@@ -429,6 +429,8 @@ function createTextileProductCatalogItem({
     iva_percentage: normalizePrice(product.iva),
     iva_amount:
       (normalizePrice(product.price) * normalizePrice(product.iva)) / 100,
+    sublimation_price: normalizePrice(product.sublimation_price),
+    embroidery_price: normalizePrice(product.embroidery_price),
     embroidery: Boolean(product.embroidery),
     sublimation: Boolean(product.sublimation),
     is_active: Boolean(product.is_active),
