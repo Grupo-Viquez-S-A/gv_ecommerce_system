@@ -1,4 +1,5 @@
 import { supabase } from "./primarySupabaseClient.js";
+import { serviceSupabase } from "./serviceSupabaseClient.js";
 import { createRepresentativeUser } from "./representativeUserService.js";
 
 function getText(value) {
@@ -528,8 +529,10 @@ export async function reportPayment({
 
   const productionOrderId = orders[0].production_order_id;
 
+  const dbClient = serviceSupabase || supabase;
+
   const payment = throwIfError(
-    await supabase
+    await dbClient
       .from("payments")
       .insert({
         production_order_id: productionOrderId,
@@ -567,7 +570,7 @@ export async function reportPayment({
     }
 
     throwIfError(
-      await supabase.from("payment_receipts").insert({
+      await serviceSupabase.from("payment_receipts").insert({
         payment_id: paymentId,
         bucket_name: "Ecommerce",
         folder_name: "Comprobantes",

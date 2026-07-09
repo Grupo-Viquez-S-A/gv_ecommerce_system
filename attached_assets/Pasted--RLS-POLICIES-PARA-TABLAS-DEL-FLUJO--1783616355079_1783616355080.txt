@@ -1,0 +1,99 @@
+-- =========================================================
+-- RLS POLICIES PARA TABLAS DEL FLUJO DE COTIZACIÓN,
+-- PRODUCCIÓN Y PAGOS
+-- =========================================================
+
+DO $$
+DECLARE
+  tbl text;
+  tables_to_secure text[] := ARRAY[
+    'textile_products',
+    'quote_products',
+    'quotations',
+    'production_orders',
+    'payment_methods',
+    'payments',
+    'payment_receipts'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY tables_to_secure
+  LOOP
+    -- Verifica que la tabla exista antes de aplicar políticas
+    IF to_regclass('public.' || tbl) IS NULL THEN
+      RAISE NOTICE 'La tabla public.% no existe. Se omite.', tbl;
+      CONTINUE;
+    END IF;
+
+    -- Activar RLS
+    EXECUTE format(
+      'ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;',
+      tbl
+    );
+
+    -- SELECT
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON public.%I;',
+      'Authenticated can select ' || tbl,
+      tbl
+    );
+
+    EXECUTE format(
+      'CREATE POLICY %I ON public.%I
+       FOR SELECT
+       TO authenticated
+       USING (auth.uid() IS NOT NULL);',
+      'Authenticated can select ' || tbl,
+      tbl
+    );
+
+    -- INSERT
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON public.%I;',
+      'Authenticated can insert ' || tbl,
+      tbl
+    );
+
+    EXECUTE format(
+      'CREATE POLICY %I ON public.%I
+       FOR INSERT
+       TO authenticated
+       WITH CHECK (auth.uid() IS NOT NULL);',
+      'Authenticated can insert ' || tbl,
+      tbl
+    );
+
+    -- UPDATE
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON public.%I;',
+      'Authenticated can update ' || tbl,
+      tbl
+    );
+
+    EXECUTE format(
+      'CREATE POLICY %I ON public.%I
+       FOR UPDATE
+       TO authenticated
+       USING (auth.uid() IS NOT NULL)
+       WITH CHECK (auth.uid() IS NOT NULL);',
+      'Authenticated can update ' || tbl,
+      tbl
+    );
+
+    -- DELETE
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON public.%I;',
+      'Authenticated can delete ' || tbl,
+      tbl
+    );
+
+    EXECUTE format(
+      'CREATE POLICY %I ON public.%I
+       FOR DELETE
+       TO authenticated
+       USING (auth.uid() IS NOT NULL);',
+      'Authenticated can delete ' || tbl,
+      tbl
+    );
+
+  END LOOP;
+END $$;
