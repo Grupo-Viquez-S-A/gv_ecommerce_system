@@ -12,7 +12,6 @@ import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
 import Sales from "./pages/Sales";
 import Orders from "./pages/Orders";
-import Agenda from "./pages/Agenda";
 import Reports from "./pages/Reports";
 import MyOrders from "./pages/MyOrders";
 import MyQuotations from "./pages/MyQuotations";
@@ -104,15 +103,6 @@ function App() {
           />
 
           <Route
-            path="/agenda"
-            element={
-              <ProtectedRoute>
-                <Agenda />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/reportes"
             element={
               <ProtectedRoute>
@@ -161,7 +151,6 @@ function App() {
           <Route path="/cotizaciones-dev" element={<Quotations />} />
           <Route path="/ventas-dev" element={<Sales />} />
           <Route path="/pedidos-dev" element={<Orders />} />
-          <Route path="/agenda-dev" element={<Agenda />} />
           <Route path="/reportes-dev" element={<Reports />} />
           <Route path="/mis-pedidos-dev" element={<MyOrders />} />
           <Route path="/mis-cotizaciones-dev" element={<MyQuotations />} />

@@ -3,7 +3,6 @@ import {
   RiGroupFill,
   RiUserFill,
   RiClipboardFill,
-  RiCalendarFill,
   RiSettings4Fill,
   RiLogoutBoxLine,
   RiArrowLeftSLine,
@@ -267,24 +266,6 @@ function DashSideBar({
             collapsed={sidebarCollapsed}
           />
 
-          {/* OPERACIONES */}
-          {!sidebarCollapsed ? (
-            <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
-                Operaciones
-              </span>
-            </div>
-          ) : (
-            <div className="mx-3 my-1 border-t border-[#2a3550]" />
-          )}
-
-          <NavItem
-            icon={<RiCalendarFill size={18} />}
-            label="Agenda"
-            to="/agenda"
-            collapsed={sidebarCollapsed}
-          />
-
             </>
           )}
           {/* CLIENTE */}
@@ -509,20 +490,6 @@ function DashSideBar({
               icon={<RiFileListFill size={18} />}
               label="Ordenes de venta"
               to="/pedidos"
-              collapsed={false}
-            />
-
-            {/* OPERACIONES */}
-            <div className="px-4 pb-1 pt-4">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
-                Operaciones
-              </span>
-            </div>
-
-            <NavItem
-              icon={<RiCalendarFill size={18} />}
-              label="Agenda"
-              to="/agenda"
               collapsed={false}
             />
 

@@ -4,7 +4,6 @@ import {
   RiArrowDownSFill,
   RiArrowLeftSLine,
   RiArrowRightSFill,
-  RiCalendarLine,
   RiCheckboxCircleFill,
   RiDownloadFill,
   RiExportFill,
@@ -115,6 +114,31 @@ function formatDate(value) {
   });
 }
 
+function formatFileSize(value) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return "Tamano no disponible";
+  }
+
+  if (numericValue < 1024 * 1024) {
+    return `${Math.round(numericValue / 1024)} KB`;
+  }
+
+  return `${(numericValue / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function DetailRow({ label, value, children }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-2 border-b border-[#2a3550]">
+      <span className="text-xs text-gray-500">{label}</span>
+      <div className="text-sm text-white font-medium text-right">
+        {children || value || "No indicado"}
+      </div>
+    </div>
+  );
+}
+
 function buildDailyOrdersData(orders) {
   const countsByDay = orders.reduce((acc, order) => {
     const date = order.createdAt ? new Date(order.createdAt) : null;
@@ -220,6 +244,30 @@ export default function Orders() {
   }, [orders]);
 
   const dailyOrdersData = useMemo(() => buildDailyOrdersData(orders), [orders]);
+
+  const paymentSummary = useMemo(() => {
+    const amountReported = orderPayments.reduce(
+      (sum, payment) => sum + (Number(payment.amount) || 0),
+      0,
+    );
+    const amountValidated = orderPayments
+      .filter((payment) => payment.isValid)
+      .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+    const pendingPayments = orderPayments.filter(
+      (payment) => !payment.isValid,
+    ).length;
+    const receiptCount = orderPayments.reduce(
+      (sum, payment) => sum + (payment.receipts?.length || 0),
+      0,
+    );
+
+    return {
+      amountReported,
+      amountValidated,
+      pendingPayments,
+      receiptCount,
+    };
+  }, [orderPayments]);
 
   const metrics = useMemo(() => {
     const totalVentas = orders.reduce((sum, order) => sum + order.total, 0);
@@ -329,9 +377,13 @@ export default function Orders() {
 
   const closeDrawer = () => {
     setDrawerOpen(false);
+    setPaymentsDrawerOpen(false);
 
     window.setTimeout(() => {
       setViewOrder(null);
+      setOrderPayments([]);
+      setPaymentsError(null);
+      setImportResult(null);
     }, 300);
   };
 
@@ -834,7 +886,11 @@ export default function Orders() {
       {/* Drawer */}
       <div
         className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#141d2e] border-l border-[#2a3550] z-50 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
-          drawerOpen ? "translate-x-0" : "translate-x-full"
+          drawerOpen
+            ? paymentsDrawerOpen
+              ? "translate-x-0 xl:-translate-x-[32rem]"
+              : "translate-x-0"
+            : "translate-x-full"
         }`}
       >
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
@@ -1040,14 +1096,14 @@ export default function Orders() {
         <button
           type="button"
           onClick={closePaymentsDrawer}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 cursor-default"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 cursor-default xl:hidden"
           aria-label="Cerrar panel de comprobantes"
         />
       )}
 
       {/* Drawer de comprobantes de pago */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#141d2e] border-l border-[#2a3550] z-[60] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-full max-w-[32rem] bg-[#141d2e] border-l border-[#2a3550] z-[60] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
           paymentsDrawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -1059,7 +1115,7 @@ export default function Orders() {
             </h2>
 
             <p className="text-sm text-gray-400 mt-0.5">
-              Pagos reportados desde la cotizacion {viewOrder?.quotationNumber}.
+              Revision de pagos reportados para esta orden de venta.
             </p>
           </div>
 
@@ -1073,7 +1129,49 @@ export default function Orders() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {viewOrder && (
+            <div className="space-y-5">
+              <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
+                <div className="w-14 h-14 rounded-xl bg-[#C9A227]/15 flex items-center justify-center text-lg font-bold text-[#C9A227]">
+                  {orderPayments.length}
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    {viewOrder.quotationNumber}
+                  </h3>
+
+                  <p className="text-sm text-gray-400">
+                    {paymentSummary.receiptCount} archivo
+                    {paymentSummary.receiptCount === 1 ? "" : "s"} adjunto
+                    {paymentSummary.receiptCount === 1 ? "" : "s"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <DetailRow label="Orden" value={viewOrder.code} />
+                <DetailRow label="Cliente" value={viewOrder.client} />
+                <DetailRow label="Total de la orden">
+                  {formatCurrency(viewOrder.total)}
+                </DetailRow>
+                <DetailRow label="Saldo actual">
+                  {formatCurrency(viewOrder.balance)}
+                </DetailRow>
+                <DetailRow label="Monto reportado">
+                  {formatCurrency(paymentSummary.amountReported)}
+                </DetailRow>
+                <DetailRow label="Monto validado">
+                  {formatCurrency(paymentSummary.amountValidated)}
+                </DetailRow>
+                <DetailRow label="Pendientes de validar">
+                  {paymentSummary.pendingPayments}
+                </DetailRow>
+              </div>
+            </div>
+          )}
+
           {paymentsLoading && (
             <p className="text-sm text-gray-400">Cargando comprobantes...</p>
           )}
@@ -1112,12 +1210,17 @@ export default function Orders() {
             orderPayments.map((payment) => (
               <div
                 key={payment.paymentId}
-                className="rounded-lg border border-[#2a3550] bg-[#1c2538] px-4 py-3 space-y-2"
+                className="rounded-lg border border-[#2a3550] bg-[#1c2538] px-4 py-4 space-y-4"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-white">
-                    {formatCurrency(payment.amount)}
-                  </span>
+                <div className="flex items-start justify-between gap-4 pb-3 border-b border-[#2a3550]">
+                  <div>
+                    <span className="block text-xs text-gray-500">
+                      Pago reportado
+                    </span>
+                    <span className="text-lg font-semibold text-white">
+                      {formatCurrency(payment.amount)}
+                    </span>
+                  </div>
 
                   <span
                     className={`text-xs font-medium px-2 py-0.5 rounded-md border ${
@@ -1130,61 +1233,97 @@ export default function Orders() {
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>{payment.methodName}</span>
-                  <span>{formatDate(payment.paymentDate)}</span>
+                <div className="space-y-3">
+                  <DetailRow label="Metodo" value={payment.methodName} />
+                  <DetailRow label="Fecha reportada">
+                    {formatDate(payment.paymentDate)}
+                  </DetailRow>
+
+                  {payment.referenceNumber && (
+                    <DetailRow label="Referencia">
+                      {payment.referenceNumber}
+                    </DetailRow>
+                  )}
+
+                  <DetailRow label="Archivos adjuntos">
+                    {payment.receipts.length}
+                  </DetailRow>
+
+                  {payment.notes && (
+                    <div className="rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2">
+                      <span className="block text-xs text-gray-500 mb-1">
+                        Notas del pago
+                      </span>
+                      <p className="text-sm text-gray-300 leading-relaxed">
+                        {payment.notes}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {payment.referenceNumber && (
-                  <p className="text-xs text-gray-400">
-                    Referencia: {payment.referenceNumber}
-                  </p>
-                )}
-
-                {payment.notes && (
-                  <p className="text-xs text-gray-400">{payment.notes}</p>
-                )}
-
                 {payment.receipts.length > 0 && (
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {payment.receipts.map((receipt) => {
-                      const isImage = (receipt.mimeType || "").startsWith(
-                        "image/",
-                      );
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <span className="text-xs font-medium uppercase tracking-widest text-[#C9A227]/80">
+                        Comprobantes
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Puedes abrir una imagen para revisarla en pantalla
+                        completa o descargar el archivo original.
+                      </p>
+                    </div>
 
-                      if (isImage && receipt.signedUrl) {
-                        return (
-                          <button
-                            key={receipt.receiptId}
-                            type="button"
-                            onClick={() => setPreviewReceipt(receipt)}
-                            className="group relative w-20 h-20 rounded-lg overflow-hidden border border-[#2a3550] hover:border-[#C9A227] transition-colors cursor-pointer"
-                            title={receipt.fileName || "Comprobante"}
-                          >
-                            <img
-                              src={receipt.signedUrl}
-                              alt={receipt.fileName || "Comprobante de pago"}
-                              className="w-full h-full object-cover"
-                            />
-
-                            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                          </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {payment.receipts.map((receipt) => {
+                        const isImage = (receipt.mimeType || "").startsWith(
+                          "image/",
                         );
-                      }
 
-                      return (
-                        <a
-                          key={receipt.receiptId}
-                          href={receipt.signedUrl || "#"}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-[#C9A227] hover:underline"
-                        >
-                          <RiDownloadFill size={12} />
-                          {receipt.fileName || "Comprobante"}
-                        </a>
-                      );
-                    })}
+                        if (isImage && receipt.signedUrl) {
+                          return (
+                            <button
+                              key={receipt.receiptId}
+                              type="button"
+                              onClick={() => setPreviewReceipt(receipt)}
+                              className="group relative aspect-[4/3] min-h-36 rounded-lg overflow-hidden border border-[#2a3550] hover:border-[#C9A227] transition-colors cursor-pointer bg-black/20"
+                              title={receipt.fileName || "Comprobante"}
+                            >
+                              <img
+                                src={receipt.signedUrl}
+                                alt={receipt.fileName || "Comprobante de pago"}
+                                className="w-full h-full object-contain"
+                              />
+
+                              <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                              <span className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-left text-[11px] text-white truncate">
+                                {receipt.fileName || "Comprobante"}
+                              </span>
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <a
+                            key={receipt.receiptId}
+                            href={receipt.signedUrl || "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="min-h-24 rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2 text-xs text-[#C9A227] hover:border-[#C9A227] transition-colors flex flex-col justify-between"
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              <RiDownloadFill size={12} />
+                              Descargar archivo
+                            </span>
+                            <span className="text-gray-300 break-all">
+                              {receipt.fileName || "Comprobante"}
+                            </span>
+                            <span className="text-gray-500">
+                              {formatFileSize(receipt.fileSize)}
+                            </span>
+                          </a>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
