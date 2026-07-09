@@ -6,6 +6,9 @@ import {
   RiUserSharedFill,
 } from "react-icons/ri";
 
+import { useAuth } from "../../context/AuthContext.js";
+import { hasSystemAccess } from "../../utils/roles.js";
+
 export default function ClientActionButtons({
   client,
   compact = false,
@@ -15,6 +18,8 @@ export default function ClientActionButtons({
   onEdit,
   onDeactivate,
 }) {
+  const { user } = useAuth();
+  const canEditClient = hasSystemAccess(user);
   const buttonSize = compact ? "w-7 h-7" : "w-7 h-7";
   const iconSize = compact ? 13 : 14;
 
@@ -63,15 +68,17 @@ export default function ClientActionButtons({
         <RiEyeFill size={iconSize} />
       </button>
 
-      <button
-        type="button"
-        onClick={() => onEdit(client)}
-        className={baseButtonClasses}
-        title="Editar cliente"
-        aria-label={`Editar ${client.name}`}
-      >
-        <RiEditFill size={iconSize} />
-      </button>
+      {canEditClient && (
+        <button
+          type="button"
+          onClick={() => onEdit(client)}
+          className={baseButtonClasses}
+          title="Editar cliente"
+          aria-label={`Editar ${client.name}`}
+        >
+          <RiEditFill size={iconSize} />
+        </button>
+      )}
 
       <button
         type="button"
