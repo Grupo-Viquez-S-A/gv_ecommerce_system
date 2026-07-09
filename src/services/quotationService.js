@@ -528,27 +528,20 @@ export async function reportPayment({
 
   const productionOrderId = orders[0].production_order_id;
 
-  const dbClient = serviceSupabase || supabase;
-
-  const payment = throwIfError(
-    await dbClient
-      .from("payments")
-      .insert({
-        production_order_id: productionOrderId,
-        method_id: methodId,
-        amount: Number(amount),
-        payment_date: paymentDate,
-        reference_number: referenceNumber || null,
-        notes: notes || null,
-        is_valid: false,
-        created_by: authUserId,
-      })
-      .select("payment_id")
-      .single(),
+  const paymentResult = throwIfError(
+    await supabase.rpc("insert_payment", {
+      p_production_order_id: productionOrderId,
+      p_method_id: methodId,
+      p_amount: Number(amount),
+      p_payment_date: paymentDate,
+      p_reference_number: referenceNumber || null,
+      p_notes: notes || null,
+      p_created_by: authUserId,
+    }),
     "No fue posible registrar el pago",
   );
 
-  const paymentId = payment.payment_id;
+  const paymentId = paymentResult;
 
   if (receiptFile) {
     const fileExt = receiptFile.name.split(".").pop();
