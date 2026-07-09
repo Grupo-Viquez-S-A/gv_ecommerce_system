@@ -81,6 +81,22 @@ export default function OrderDetailModal({
             />
           </div>
 
+          {(order.paymentStatus === "parcial" ||
+            order.paymentStatus === "pagado") && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <DetailInfoCard
+                label="Total pagado"
+                value={formatCurrency(order.amountPaid, "CRC 0")}
+                icon={<RiWallet3Fill size={20} />}
+              />
+              <DetailInfoCard
+                label="Saldo pendiente"
+                value={formatCurrency(order.balance, "CRC 0")}
+                icon={<RiMoneyDollarCircleFill size={20} />}
+              />
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <DetailInfoCard
               label="Cotizacion"

@@ -598,9 +598,17 @@ export async function getMyOrderDetail(productionOrderId) {
     throw new Error("El pedido no pertenece a una cotizacion de tu usuario.");
   }
 
-  const [{ business, branch, representative }, items] = await Promise.all([
+  const [{ business, branch, representative }, items, payments] = await Promise.all([
     getQuotationRelations(quotation),
     getQuotationProducts([quotation.quotation_id]),
+    throwIfError(
+      await supabase
+        .from("payments")
+        .select("amount")
+        .eq("production_order_id", order.production_order_id)
+        .eq("is_valid", true),
+      "No fue posible cargar los pagos del pedido",
+    ),
   ]);
 
   const quotationDetail = normalizeQuotationDetail({
@@ -610,6 +618,11 @@ export async function getMyOrderDetail(productionOrderId) {
     representative,
     items,
   });
+
+  const amountPaid = payments.reduce(
+    (sum, payment) => sum + getNumber(payment.amount, 0),
+    0,
+  );
 
   return {
     id: order.production_order_id,
@@ -624,6 +637,7 @@ export async function getMyOrderDetail(productionOrderId) {
     unexpectedDeliveryDate: order.unexpected_delivery_date,
     nextPaymentDate: order.next_payment_date,
     balance: getNumber(order.balance, 0),
+    amountPaid,
     overdueDays: getNumber(order.overdue_days, 0),
     penaltyAmount: getNumber(order.penalty_amount, 0),
     createdAt: order.created_at,
