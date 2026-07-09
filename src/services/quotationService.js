@@ -1,5 +1,4 @@
 import { supabase } from "./primarySupabaseClient.js";
-import { serviceSupabase } from "./serviceSupabaseClient.js";
 import { createRepresentativeUser } from "./representativeUserService.js";
 
 function getText(value) {
@@ -570,16 +569,15 @@ export async function reportPayment({
     }
 
     throwIfError(
-      await serviceSupabase.from("payment_receipts").insert({
-        payment_id: paymentId,
-        bucket_name: "Ecommerce",
-        folder_name: "Comprobantes",
-        object_path: uploadResult.data.path,
-        file_name: receiptFile.name,
-        mime_type: receiptFile.type,
-        file_size: receiptFile.size,
-        is_valid: false,
-        created_by: authUserId,
+      await supabase.rpc("insert_payment_receipt", {
+        p_payment_id: paymentId,
+        p_bucket_name: "Ecommerce",
+        p_folder_name: "Comprobantes",
+        p_object_path: uploadResult.data.path,
+        p_file_name: receiptFile.name,
+        p_mime_type: receiptFile.type,
+        p_file_size: receiptFile.size,
+        p_created_by: authUserId,
       }),
       "No fue posible registrar el comprobante",
     );
