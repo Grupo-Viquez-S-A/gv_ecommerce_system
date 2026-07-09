@@ -736,6 +736,7 @@ export default function Catalog() {
           id: cartItemId,
           name: itemName,
           sizeName: isUnica ? null : sizeName,
+          sizeId: isUnica ? null : sizeId,
           sku: getCartProductSku(product),
           catalogType: getCartProductType(product),
           quantity: safeQuantity,

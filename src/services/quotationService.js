@@ -350,6 +350,7 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       const unitPrice = getNumber(item.unitPrice, 0);
       const unitIva = getNumber(item.ivaAmount, 0);
       const ivaAmount = unitIva * quantity;
+      const sizeId = getText(item.sizeId) || null;
 
       if (!productId) {
         throw new Error("Uno de los productos no tiene identificador.");
@@ -360,6 +361,7 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
         quantity,
         unit_price: unitPrice,
         iva_amount: ivaAmount,
+        size_id: sizeId,
       };
     }),
 
