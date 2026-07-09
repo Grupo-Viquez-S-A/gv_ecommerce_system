@@ -27,8 +27,10 @@ export default function ConsolidatedSalesChart({
   data = [],
   legendItems = DEFAULT_LEGEND_ITEMS,
   periodLabel = "Este año",
-  totalLabel = "₡1,050 M",
+  totalLabel = "₡0 M",
   onPeriodClick,
+  isLoading = false,
+  error = null,
 }) {
   return (
     <section className="lg:col-span-2 bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
@@ -47,85 +49,71 @@ export default function ConsolidatedSalesChart({
         </button>
       </div>
 
-      <div className="h-56">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barCategoryGap="20%">
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#2a3550"
-              vertical={false}
-            />
+      {error ? (
+        <div className="h-56 flex items-center justify-center text-sm text-red-400 text-center px-4">
+          No fue posible cargar las ventas: {error}
+        </div>
+      ) : isLoading ? (
+        <div className="h-56 flex items-center justify-center text-sm text-gray-500">
+          Cargando ventas...
+        </div>
+      ) : data.length === 0 ? (
+        <div className="h-56 flex items-center justify-center text-sm text-gray-500">
+          No hay ventas registradas todavía.
+        </div>
+      ) : (
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} barCategoryGap="20%">
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#2a3550"
+                vertical={false}
+              />
 
-            <XAxis
-              dataKey="name"
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#64748b", fontSize: 12 }}
-            />
+              <XAxis
+                dataKey="name"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#64748b", fontSize: 12 }}
+              />
 
-            <YAxis
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: "#64748b", fontSize: 12 }}
-              tickFormatter={(value) => `₡${value} M`}
-            />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "#64748b", fontSize: 12 }}
+                tickFormatter={(value) => `₡${value} M`}
+              />
 
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1c2538",
-                border: "1px solid #2a3550",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-              itemStyle={{ color: "#e2e8f0" }}
-              labelStyle={{ color: "#94a3b8" }}
-              formatter={(value) => [`₡${value} M`, "Ventas"]}
-            />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1c2538",
+                  border: "1px solid #2a3550",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                }}
+                itemStyle={{ color: "#e2e8f0" }}
+                labelStyle={{ color: "#94a3b8" }}
+                formatter={(value) => [`₡${value} M`, "Ventas"]}
+              />
 
-            <Bar
-              dataKey="textiles"
-              stackId="sales"
-              fill="#6366f1"
-              radius={[0, 0, 0, 0]}
-            />
-
-            <Bar
-              dataKey="lab"
-              stackId="sales"
-              fill="#22c55e"
-              radius={[0, 0, 0, 0]}
-            />
-
-            <Bar
-              dataKey="petfood"
-              stackId="sales"
-              fill="#ec4899"
-              radius={[0, 0, 0, 0]}
-            />
-
-            <Bar
-              dataKey="constructora"
-              stackId="sales"
-              fill="#C9A227"
-              radius={[0, 0, 0, 0]}
-            />
-
-            <Bar
-              dataKey="capital"
-              stackId="sales"
-              fill="#f59e0b"
-              radius={[0, 0, 0, 0]}
-            />
-
-            <Bar
-              dataKey="grupo"
-              stackId="sales"
-              fill="#c9a227"
-              radius={[4, 4, 0, 0]}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+              {legendItems.map((item, index) => (
+                <Bar
+                  key={item.id || item.name}
+                  dataKey={item.id}
+                  stackId="sales"
+                  fill={item.color}
+                  radius={
+                    index === legendItems.length - 1
+                      ? [4, 4, 0, 0]
+                      : [0, 0, 0, 0]
+                  }
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <ChartLegend items={legendItems} />
 

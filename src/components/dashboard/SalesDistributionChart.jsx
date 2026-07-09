@@ -12,13 +12,43 @@ import {
 
 export default function SalesDistributionChart({
   data = [],
-  totalLabel = "₡185 M",
+  totalLabel = "₡0 M",
   onViewDetails,
+  isLoading = false,
+  error = null,
 }) {
   const totalSales = data.reduce(
     (total, item) => total + (Number(item.value) || 0),
     0,
   );
+
+  if (error) {
+    return (
+      <section className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">
+          Ventas por Empresa (Acumulado del mes)
+        </h3>
+
+        <div className="h-48 flex items-center justify-center text-sm text-red-400 text-center px-4">
+          No fue posible cargar la distribución: {error}
+        </div>
+      </section>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <section className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-white mb-4">
+          Ventas por Empresa (Acumulado del mes)
+        </h3>
+
+        <div className="h-48 flex items-center justify-center text-sm text-gray-500">
+          Cargando distribución...
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">

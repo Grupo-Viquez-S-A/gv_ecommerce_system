@@ -3,6 +3,8 @@ import { RiArrowRightSLine } from "react-icons/ri";
 export default function CompanyPerformance({
   performance = [],
   onViewReport,
+  isLoading = false,
+  error = null,
 }) {
   return (
     <section className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
@@ -12,7 +14,17 @@ export default function CompanyPerformance({
         </h3>
       </div>
 
-      {performance.length > 0 ? (
+      {error ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-red-400">
+            No fue posible cargar el rendimiento: {error}
+          </p>
+        </div>
+      ) : isLoading ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-gray-500">Cargando rendimiento...</p>
+        </div>
+      ) : performance.length > 0 ? (
         <div className="space-y-3">
           {performance.map((item, index) => {
             const safePercentage = Math.max(

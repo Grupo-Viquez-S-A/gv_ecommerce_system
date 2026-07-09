@@ -8,6 +8,8 @@ export default function AdvisorRanking({
   periodLabel = "Este mes",
   onPeriodClick,
   onViewRanking,
+  isLoading = false,
+  error = null,
 }) {
   return (
     <section className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
@@ -26,7 +28,17 @@ export default function AdvisorRanking({
         </button>
       </div>
 
-      {advisors.length > 0 ? (
+      {error ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-red-400">
+            No fue posible cargar los asesores: {error}
+          </p>
+        </div>
+      ) : isLoading ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-gray-500">Cargando asesores...</p>
+        </div>
+      ) : advisors.length > 0 ? (
         <div className="space-y-3">
           {advisors.map((advisor, index) => {
             const percentage = Number(advisor.percentage) || 0;

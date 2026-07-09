@@ -300,6 +300,7 @@ export async function getPaidSales() {
       code: order.production_order_code || "Sin codigo",
       quotationId: order.quotation_id,
       quotationNumber: quotation.quotation_number || "Sin cotizacion",
+      businessId: quotation.business_id || null,
       client: clientName,
       legalId: business?.legal_id || null,
       branchLabel,

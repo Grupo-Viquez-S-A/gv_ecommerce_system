@@ -28,6 +28,8 @@ const activityStyles = {
 export default function RecentActivity({
   activities = [],
   onViewAll,
+  isLoading = false,
+  error = null,
 }) {
   return (
     <section className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5">
@@ -48,7 +50,17 @@ export default function RecentActivity({
         )}
       </div>
 
-      {activities.length > 0 ? (
+      {error ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-red-400">
+            No fue posible cargar la actividad: {error}
+          </p>
+        </div>
+      ) : isLoading ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-gray-500">Cargando actividad...</p>
+        </div>
+      ) : activities.length > 0 ? (
         <div className="space-y-3">
           {activities.map((activity, index) => {
             const style =

@@ -5,6 +5,8 @@ export default function TopClients({
   periodLabel = "Este mes",
   onPeriodClick,
   onViewAll,
+  isLoading = false,
+  error = null,
 }) {
   return (
     <section className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-5 mb-6">
@@ -23,7 +25,17 @@ export default function TopClients({
         </button>
       </div>
 
-      {clients.length > 0 ? (
+      {error ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-red-400">
+            No fue posible cargar los clientes: {error}
+          </p>
+        </div>
+      ) : isLoading ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-gray-500">Cargando clientes...</p>
+        </div>
+      ) : clients.length > 0 ? (
         <div className="space-y-3">
           {clients.map((client, index) => {
             const rank = client.rank || index + 1;
