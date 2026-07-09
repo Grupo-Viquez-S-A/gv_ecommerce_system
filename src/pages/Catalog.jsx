@@ -268,6 +268,14 @@ export default function Catalog() {
     };
   }, []);
 
+  const selectedPaymentMethodDescription = useMemo(() => {
+    const selectedMethod = paymentMethods.find(
+      (method) => method.method_id === quotationClientForm.methodId,
+    );
+
+    return selectedMethod?.description || "";
+  }, [paymentMethods, quotationClientForm.methodId]);
+
   const categories = useMemo(() => {
     const uniqueCategories = new Map();
 
@@ -1654,6 +1662,11 @@ export default function Catalog() {
                             </option>
                           ))}
                         </select>
+                        {selectedPaymentMethodDescription ? (
+                          <p className="mt-2 rounded-xl border border-[#35547E] bg-[#091A31]/60 px-3 py-2 text-xs leading-5 text-slate-400">
+                            {selectedPaymentMethodDescription}
+                          </p>
+                        ) : null}
                       </label>
 
                       <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
@@ -2272,6 +2285,11 @@ export default function Catalog() {
                             </option>
                           ))}
                         </select>
+                        {selectedPaymentMethodDescription ? (
+                          <p className="mt-2 rounded-xl border border-[#35547E] bg-[#091A31]/60 px-3 py-2 text-xs leading-5 text-slate-400">
+                            {selectedPaymentMethodDescription}
+                          </p>
+                        ) : null}
                       </label>
 
                       <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">

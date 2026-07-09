@@ -472,7 +472,7 @@ export async function getPaymentMethods() {
   const paymentMethods = throwIfError(
     await supabase
       .from("payment_methods")
-      .select("method_id, method_name, is_active")
+      .select("method_id, method_name, description, is_active")
       .eq("is_active", true)
       .order("method_name", { ascending: true }),
     "No fue posible cargar los metodos de pago",
