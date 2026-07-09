@@ -481,6 +481,91 @@ export async function getPaymentMethods() {
   return paymentMethods || [];
 }
 
+export async function reportPayment({
+  quotationId,
+  methodId,
+  amount,
+  paymentDate,
+  referenceNumber,
+  notes,
+  receiptFile,
+  userId,
+}) {
+  const orders = throwIfError(
+    await supabase
+      .from("production_orders")
+      .select("production_order_id")
+      .eq("quotation_id", quotationId)
+      .eq("is_active", true)
+      .limit(1),
+    "No fue posible encontrar la orden de produccion",
+  );
+
+  if (!orders?.length) {
+    throw new Error(
+      "No existe una orden de produccion activa para esta cotizacion",
+    );
+  }
+
+  const productionOrderId = orders[0].production_order_id;
+
+  const payment = throwIfError(
+    await supabase
+      .from("payments")
+      .insert({
+        production_order_id: productionOrderId,
+        method_id: methodId,
+        amount: Number(amount),
+        payment_date: paymentDate,
+        reference_number: referenceNumber || null,
+        notes: notes || null,
+        is_active: true,
+        created_by: userId,
+      })
+      .select("payment_id")
+      .single(),
+    "No fue posible registrar el pago",
+  );
+
+  const paymentId = payment.payment_id;
+
+  if (receiptFile) {
+    const fileExt = receiptFile.name.split(".").pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const filePath = `Comprobantes/${fileName}`;
+
+    const uploadResult = await supabase.storage
+      .from("Ecommerce")
+      .upload(filePath, receiptFile, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadResult.error) {
+      throw new Error(
+        `No fue posible subir el comprobante: ${uploadResult.error.message}`,
+      );
+    }
+
+    throwIfError(
+      await supabase.from("payment_receipts").insert({
+        payment_id: paymentId,
+        bucket_name: "Ecommerce",
+        folder_name: "Comprobantes",
+        object_path: uploadResult.data.path,
+        file_name: receiptFile.name,
+        mime_type: receiptFile.type,
+        file_size: receiptFile.size,
+        is_valid: false,
+        created_by: userId,
+      }),
+      "No fue posible registrar el comprobante",
+    );
+  }
+
+  return { paymentId, productionOrderId };
+}
+
 export async function getQuotationCompanies() {
   const response = await supabase
     .from("companies")
