@@ -395,7 +395,7 @@ export async function acceptMyQuotation(quotationId) {
   }
 }
 
-export async function getMyQuotations() {
+async function fetchOwnedQuotations({ statesFilter = null } = {}) {
   const userId = await getAuthenticatedUserId();
   const representativeIds = await getMyRepresentativeIds(userId);
 
@@ -405,18 +405,20 @@ export async function getMyQuotations() {
     ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
   }
 
-  const quotations = throwIfError(
-    await supabase
-      .from("quotations")
-      .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, method_id, payment_methods:method_id ( method_id, method_name )",
-      )
-      .or(ownerFilters.join(","))
-      .in("state", APPROVED_QUOTATION_STATES)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    "No fue posible cargar tus cotizaciones",
-  );
+  let query = supabase
+    .from("quotations")
+    .select(
+      "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, method_id, payment_methods:method_id ( method_id, method_name )",
+    )
+    .or(ownerFilters.join(","))
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (statesFilter) {
+    query = query.in("state", statesFilter);
+  }
+
+  const quotations = throwIfError(await query, "No fue posible cargar tus cotizaciones");
 
   if (!quotations.length) {
     return [];
@@ -456,8 +458,12 @@ export async function getMyQuotations() {
   });
 }
 
+export async function getMyQuotations() {
+  return fetchOwnedQuotations({ statesFilter: APPROVED_QUOTATION_STATES });
+}
+
 export async function getMyProductionOrders() {
-  const myQuotations = await getMyQuotations();
+  const myQuotations = await fetchOwnedQuotations();
 
   if (!myQuotations.length) {
     return [];
