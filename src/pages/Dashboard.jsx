@@ -1,4 +1,4 @@
-import { useOutletContext } from "react-router-dom";
+﻿import { useOutletContext } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.js";
 
@@ -48,14 +48,14 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
         <ConsolidatedSalesChart
           data={BAR_DATA}
-          totalLabel="₡1,050 M"
+          totalLabel="â‚¡1,050 M"
           periodLabel="Este año"
           onPeriodClick={handlePlaceholderAction}
         />
 
         <SalesDistributionChart
           data={DONUT_DATA}
-          totalLabel="₡185 M"
+          totalLabel="â‚¡185 M"
           onViewDetails={handlePlaceholderAction}
         />
       </div>

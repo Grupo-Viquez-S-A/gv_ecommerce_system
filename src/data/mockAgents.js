@@ -1,4 +1,4 @@
-export const MOCK_AGENTS = [
+﻿export const MOCK_AGENTS = [
   {
     id: 1,
     initials: "JC",

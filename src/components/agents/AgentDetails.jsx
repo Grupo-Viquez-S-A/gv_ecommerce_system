@@ -1,4 +1,4 @@
-import {
+﻿import {
   RiBriefcaseFill,
   RiClipboardFill,
   RiMailFill,
@@ -19,7 +19,7 @@ function DetailItem({ icon, label, value }) {
 
       <div>
         <div className="text-xs text-gray-500">{label}</div>
-        <div className="text-sm text-white">{value || "—"}</div>
+        <div className="text-sm text-white">{value || " - "}</div>
       </div>
     </div>
   );
@@ -129,3 +129,4 @@ export default function AgentDetails({ agent }) {
     </div>
   );
 }
+

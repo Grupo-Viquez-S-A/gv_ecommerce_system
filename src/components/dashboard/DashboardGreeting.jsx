@@ -1,4 +1,4 @@
-export default function DashboardGreeting({ user, currentCompany }) {
+﻿export default function DashboardGreeting({ user, currentCompany }) {
   const userName = user?.fullName || "Usuario";
   const roleName = user?.role?.name || "Usuario";
   const departmentName = user?.department?.name;
@@ -27,3 +27,4 @@ export default function DashboardGreeting({ user, currentCompany }) {
     </div>
   );
 }
+

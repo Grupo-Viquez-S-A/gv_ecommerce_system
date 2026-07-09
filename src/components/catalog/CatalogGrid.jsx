@@ -1,4 +1,4 @@
-import ProductCard from "./ProductCard";
+﻿import ProductCard from "./ProductCard";
 
 export default function CatalogGrid({
   products = [],
@@ -33,3 +33,4 @@ export default function CatalogGrid({
     </section>
   );
 }
+

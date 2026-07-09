@@ -1,4 +1,4 @@
-export const AGENT_COMPANIES = [
+﻿export const AGENT_COMPANIES = [
   "Todas",
   "Grupo Víquez",
   "Textiles de Occidente",

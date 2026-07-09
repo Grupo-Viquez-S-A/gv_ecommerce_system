@@ -1,4 +1,4 @@
-export const MOCK_CLIENTS = [
+﻿export const MOCK_CLIENTS = [
   {
     id: 1,
     initials: "HL",

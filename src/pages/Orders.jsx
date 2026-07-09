@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 import {
   RiAddFill,
@@ -25,14 +25,14 @@ import {
   YAxis,
 } from "recharts";
 
-/* ─── MOCK DATA: PEDIDOS ─────────────────────────────────── */
+/* --- MOCK DATA: PEDIDOS --- */
 const MOCK_ORDERS = [
   {
     id: 1,
     number: "PED-000247",
     client: "María Fernández",
     date: "30/06/2024 14:30",
-    total: "€45.200.000",
+    total: "â‚¬45.200.000",
     status: "En proceso",
     payment: "Pagado",
     agent: "Ana Gómez",
@@ -43,7 +43,7 @@ const MOCK_ORDERS = [
     number: "PED-000246",
     client: "Constructora Solís",
     date: "30/06/2024 11:12",
-    total: "€28.750.000",
+    total: "â‚¬28.750.000",
     status: "Pendiente",
     payment: "Pendiente",
     agent: "Manuel Rojas",
@@ -54,7 +54,7 @@ const MOCK_ORDERS = [
     number: "PED-000245",
     client: "Hotel Los Laureles",
     date: "29/06/2024 16:45",
-    total: "€15.600.000",
+    total: "â‚¬15.600.000",
     status: "Enviado",
     payment: "Pagado",
     agent: "Laura Gómez",
@@ -65,7 +65,7 @@ const MOCK_ORDERS = [
     number: "PED-000244",
     client: "Pacific Pet Food",
     date: "27/06/2024 09:20",
-    total: "€37.100.000",
+    total: "â‚¬37.100.000",
     status: "Enviado",
     payment: "Pagado",
     agent: "Ana Gómez",
@@ -76,7 +76,7 @@ const MOCK_ORDERS = [
     number: "PED-000243",
     client: "Distribuidora del Norte",
     date: "28/06/2024 10:35",
-    total: "€9.850.000",
+    total: "â‚¬9.850.000",
     status: "Entregado",
     payment: "Pagado",
     agent: "Manuel Rojas",
@@ -87,7 +87,7 @@ const MOCK_ORDERS = [
     number: "PED-000242",
     client: "Farmacia La Salud",
     date: "27/06/2024 15:18",
-    total: "€6.450.000",
+    total: "â‚¬6.450.000",
     status: "Cancelado",
     payment: "Reembolsado",
     agent: "Laura Gómez",
@@ -98,7 +98,7 @@ const MOCK_ORDERS = [
     number: "PED-000241",
     client: "Grupo Alimenticio S.A.",
     date: "27/06/2024 12:54",
-    total: "€18.500.000",
+    total: "â‚¬18.500.000",
     status: "Entregado",
     payment: "Pagado",
     agent: "Ana Gómez",
@@ -106,7 +106,7 @@ const MOCK_ORDERS = [
   },
 ];
 
-/* ─── CONFIGURACIÓN DE ESTADOS ───────────────────────────── */
+/* --- CONFIGURACIÓN DE ESTADOS --- */
 const STATUS_CONFIG = {
   Pendiente: {
     bg: "bg-red-500/10",
@@ -153,7 +153,7 @@ const PAYMENT_CONFIG = {
   },
 };
 
-/* ─── DATOS DEL GRÁFICO ──────────────────────────────────── */
+/* --- DATOS DEL GRÁFICO --- */
 const dailyOrdersData = [
   { name: "01 Jun", value: 8 },
   { name: "03 Jun", value: 12 },
@@ -173,7 +173,7 @@ const dailyOrdersData = [
   { name: "30 Jun", value: 8 },
 ];
 
-/* ─── COMPONENTES AUXILIARES ─────────────────────────────── */
+/* --- COMPONENTES AUXILIARES --- */
 function PagBtn({ icon, label, active = false }) {
   return (
     <button
@@ -236,7 +236,7 @@ function Field({
   );
 }
 
-/* ─── PÁGINA PRINCIPAL ───────────────────────────────────── */
+/* --- PÁGINA PRINCIPAL --- */
 export default function Orders() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
@@ -281,7 +281,7 @@ export default function Orders() {
     },
     {
       label: "VENTAS TOTALES",
-      value: "€185 M",
+      value: "â‚¬185 M",
       growth: "+14%",
       growthColor: "text-green-400",
       color: "#22c55e",
@@ -1025,7 +1025,7 @@ export default function Orders() {
               <Field
                 icon={<RiMoneyDollarCircleFill size={14} />}
                 label="Total"
-                placeholder="€0.000.000"
+                placeholder="â‚¬0.000.000"
                 value={form.total}
                 onChange={(event) =>
                   setForm({

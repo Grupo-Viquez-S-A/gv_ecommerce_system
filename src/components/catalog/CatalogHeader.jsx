@@ -1,4 +1,4 @@
-import { Boxes, PackageOpen } from 'lucide-react';
+﻿import { Boxes, PackageOpen } from 'lucide-react';
 
 export default function CatalogHeader({ totalProducts = 0 }) {
   return (

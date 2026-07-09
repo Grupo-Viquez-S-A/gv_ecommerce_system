@@ -22,6 +22,12 @@ const DEFAULT_COMPANY = {
   name: "Grupo Víquez S.A",
   color: "#C9A227",
 };
+function isClientAccount(user) {
+  const roleCode = String(user?.role?.code || "").trim().toLowerCase();
+  const roleName = String(user?.role?.name || "").trim().toLowerCase();
+
+  return roleCode === "client" || roleName === "cliente";
+}
 
 function getUserInitials(fullName) {
   if (!fullName) {
@@ -117,7 +123,8 @@ function DashSideBar({
   const { user, signOut } = useAuth();
 
   const activeCompany = currentCompany || DEFAULT_COMPANY;
-  const canAccessUserAdministration = true;
+  const isClientUser = isClientAccount(user);
+  const canAccessUserAdministration = !isClientUser;
 
   const handleCloseMobileSidebar = () => {
     setSidebarOpen?.(false);
@@ -180,6 +187,8 @@ function DashSideBar({
         </div>
 
         <nav className="scrollbar-hidden flex-1 overflow-y-auto py-3">
+          {!isClientUser && (
+            <>
           {/* COMERCIAL */}
           {!sidebarCollapsed ? (
             <div className="px-4 pb-1 pt-2">
@@ -276,6 +285,8 @@ function DashSideBar({
             collapsed={sidebarCollapsed}
           />
 
+            </>
+          )}
           {/* CLIENTE */}
           {!sidebarCollapsed ? (
             <div className="px-4 pb-1 pt-2">
@@ -429,6 +440,8 @@ function DashSideBar({
           </div>
 
           <nav className="scrollbar-hidden flex-1 overflow-y-auto py-3">
+            {!isClientUser && (
+              <>
             {/* COMERCIAL */}
             <div className="px-4 pb-1 pt-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
@@ -513,6 +526,8 @@ function DashSideBar({
               collapsed={false}
             />
 
+              </>
+            )}
             {/* CLIENTE */}
             <div className="px-4 pb-1 pt-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">

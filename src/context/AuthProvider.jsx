@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 import { AuthContext } from "./AuthContext.js";
+
 import {
   getActiveSession,
   onAuthStateChange,
@@ -7,13 +8,17 @@ import {
   signOut,
 } from "../services/loginService";
 
+function isPasswordResetRoute() {
+  return window.location.pathname === "/restablecer-contrasena";
+}
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadUserData = useCallback(async (session) => {
-    if (!session?.user) {
+    if (!session?.user || isPasswordResetRoute()) {
       setUser(null);
       return;
     }
@@ -76,3 +81,5 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
+

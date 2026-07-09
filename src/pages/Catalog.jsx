@@ -696,7 +696,7 @@ export default function Catalog() {
     setSelectedProductDetails(product);
   };
 
-  const handleAddToCart = (product, quantity = 1, size = null) => {
+  const handleAddToCart = (product, quantity = 1, size = null, options = {}) => {
     const productId = getCartProductId(product);
 
     if (!productId) {
@@ -706,13 +706,22 @@ export default function Catalog() {
     const safeQuantity = Math.max(1, Number(quantity) || 1);
     const sizeId = size?.size_id ?? null;
     const sizeName = size?.size_name ?? null;
-    const cartItemId =
-      sizeId ? `${productId}_${sizeId}` : productId;
+    const optionKey = [
+      options.hasSublimation ? "sublimation" : "",
+      options.hasEmbroidery ? "embroidery" : "",
+    ]
+      .filter(Boolean)
+      .join("_");
+    const cartItemId = [
+      productId,
+      sizeId || "no-size",
+      optionKey || "standard",
+    ].join("_");
     const baseName = getCartProductName(product);
     const isUnica =
       sizeName && sizeName.toLowerCase() === "única";
     const itemName =
-      sizeName && !isUnica ? `${baseName} — ${sizeName}` : baseName;
+      sizeName && !isUnica ? `${baseName} - ${sizeName}` : baseName;
 
     setCartItems((currentItems) => {
       const itemExists = currentItems.some(
@@ -743,6 +752,10 @@ export default function Catalog() {
           productId,
           unitPrice: getCartProductPrice(product),
           ivaAmount: getCartProductIva(product),
+          hasSublimation: Boolean(options.hasSublimation),
+          hasEmbroidery: Boolean(options.hasEmbroidery),
+          sublimationPrice: 0,
+          embroideryPrice: 0,
         },
       ];
     });
@@ -1158,6 +1171,18 @@ export default function Catalog() {
                             </span>
                           )}
                         </div>
+
+                          {item.hasSublimation && (
+                            <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
+                              Sublimación
+                            </span>
+                          )}
+
+                          {item.hasEmbroidery && (
+                            <span className="rounded-lg border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Bordado
+                            </span>
+                          )}
 
                         <p className="mt-1 truncate text-sm font-bold text-white">
                           {item.name}
@@ -1740,6 +1765,18 @@ export default function Catalog() {
                             </span>
                           )}
                         </div>
+
+                          {item.hasSublimation && (
+                            <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
+                              Sublimación
+                            </span>
+                          )}
+
+                          {item.hasEmbroidery && (
+                            <span className="rounded-lg border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Bordado
+                            </span>
+                          )}
 
                         <p className="mt-1 truncate text-sm font-bold text-white">
                           {item.name}

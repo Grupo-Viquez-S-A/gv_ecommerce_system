@@ -1,4 +1,4 @@
-import { supabase } from "../services/primarySupabaseClient.js";
+﻿import { supabase } from "../services/primarySupabaseClient.js";
 
 export const CATALOG_TYPES = {
   FABRICS: "fabrics",

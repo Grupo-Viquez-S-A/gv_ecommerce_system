@@ -1,6 +1,7 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
@@ -26,6 +27,7 @@ function App() {
       <Routes>
         {/* Pantallas públicas */}
         <Route path="/" element={<Login />} />
+        <Route path="/restablecer-contrasena" element={<ResetPassword />} />
         
         {/* Todas las vistas internas usan el mismo sidebar y AppTopBar */}
         <Route element={<MainLayout />}>
@@ -171,3 +173,4 @@ function App() {
 }
 
 export default App;
+

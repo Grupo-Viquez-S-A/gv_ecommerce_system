@@ -1,4 +1,4 @@
-export const DASHBOARD_COMPANIES = [
+﻿export const DASHBOARD_COMPANIES = [
   { id: "grupo-viquez", name: "Grupo Víquez", color: "#c9a227" },
   {
     id: "constructora",
@@ -127,35 +127,35 @@ export const TOP_CLIENTS = [
     rank: 1,
     name: "Hotel Los Laureles",
     company: "Textiles de Occidente",
-    amount: "₡4.2 M",
+    amount: "â‚¡4.2 M",
   },
   {
     id: "veterinaria-grecia",
     rank: 2,
     name: "Veterinaria Grecia",
     company: "Pacific Pet Food",
-    amount: "₡3.6 M",
+    amount: "â‚¡3.6 M",
   },
   {
     id: "constructora-viquez",
     rank: 3,
     name: "Constructora Víquez",
     company: "Textiles de Occidente",
-    amount: "₡2.8 M",
+    amount: "â‚¡2.8 M",
   },
   {
     id: "restaurante-el-trapiche",
     rank: 4,
     name: "Restaurante El Trapiche",
     company: "Occidente Lab",
-    amount: "₡2.4 M",
+    amount: "â‚¡2.4 M",
   },
   {
     id: "hotel-vista-real",
     rank: 5,
     name: "Hotel Vista Real",
     company: "Textiles de Occidente",
-    amount: "₡2.1 M",
+    amount: "â‚¡2.1 M",
   },
 ];
 
@@ -163,35 +163,35 @@ export const COMPANY_PERFORMANCE = [
   {
     id: "textiles",
     name: "Textiles de Occidente",
-    amount: "₡45 M",
+    amount: "â‚¡45 M",
     percentage: 92,
     color: "#6366f1",
   },
   {
     id: "occidente-lab",
     name: "Occidente Lab",
-    amount: "₡25 M",
+    amount: "â‚¡25 M",
     percentage: 88,
     color: "#22c55e",
   },
   {
     id: "pacific-pet-food",
     name: "Pacific Pet Food",
-    amount: "₡52 M",
+    amount: "â‚¡52 M",
     percentage: 105,
     color: "#ec4899",
   },
   {
     id: "constructora",
     name: "Constructora Víquez",
-    amount: "₡38 M",
+    amount: "â‚¡38 M",
     percentage: 95,
     color: "#C9A227",
   },
   {
     id: "capital",
     name: "Occidente Capital Group",
-    amount: "₡25 M",
+    amount: "â‚¡25 M",
     percentage: 63,
     color: "#f59e0b",
   },
@@ -203,7 +203,7 @@ export const ADVISORS = [
     name: "Zara Méndez",
     role: "Veterinaria",
     company: "Pacific Pet Food",
-    amount: "₡38.7 M",
+    amount: "â‚¡38.7 M",
     percentage: 112,
   },
   {
@@ -211,7 +211,7 @@ export const ADVISORS = [
     name: "María José Ramírez",
     role: "Veterinaria",
     company: "Agro Occidente",
-    amount: "₡32.1 M",
+    amount: "â‚¡32.1 M",
     percentage: 103,
   },
   {
@@ -219,7 +219,7 @@ export const ADVISORS = [
     name: "Andrés Vargas",
     role: "Hotel",
     company: "Camino Real",
-    amount: "₡28.4 M",
+    amount: "â‚¡28.4 M",
     percentage: 97,
   },
   {
@@ -227,7 +227,7 @@ export const ADVISORS = [
     name: "Sofía Jiménez",
     role: "Asesora",
     company: "Lavandería",
-    amount: "₡21.8 M",
+    amount: "â‚¡21.8 M",
     percentage: 91,
   },
   {
@@ -235,7 +235,7 @@ export const ADVISORS = [
     name: "Kevin Araya",
     role: "Asesor",
     company: "Pet Shop",
-    amount: "₡19.5 M",
+    amount: "â‚¡19.5 M",
     percentage: 89,
   },
 ];

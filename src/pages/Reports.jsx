@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 
 import {
   RiAddFill,
@@ -35,7 +35,7 @@ import {
   YAxis,
 } from "recharts";
 
-/* ─── MOCK DATA: REPORTES ──────────────────────────────────── */
+/* --- MOCK DATA: REPORTES --- */
 const MOCK_REPORTS = [
   {
     id: 1,
@@ -132,11 +132,11 @@ const STATUS_CONFIG = {
   },
 };
 
-/* ─── KPI DATA ─────────────────────────────────────────────── */
+/* --- KPI DATA --- */
 const kpiData = [
   {
     label: "VENTAS TOTALES",
-    value: "€185 M",
+    value: "â‚¬185 M",
     change: "+14% vs. mes anterior",
     icon: RiBarChartFill,
     color: "#3b82f6",
@@ -144,7 +144,7 @@ const kpiData = [
   },
   {
     label: "UTILIDAD TOTAL",
-    value: "€26.5 M",
+    value: "â‚¬26.5 M",
     change: "+18% vs. mes anterior",
     icon: RiCheckFill,
     color: "#22c55e",
@@ -176,7 +176,7 @@ const kpiData = [
   },
   {
     label: "TICKET PROMEDIO",
-    value: "€748.000",
+    value: "â‚¬748.000",
     change: "+7% vs. mes anterior",
     icon: RiMoneyDollarCircleFill,
     color: "#ec4899",
@@ -184,7 +184,7 @@ const kpiData = [
   },
 ];
 
-/* ─── CHART DATA ───────────────────────────────────────────── */
+/* --- CHART DATA --- */
 const trendData = [
   { name: "01 Jun", value: 4.2 },
   { name: "03 Jun", value: 5.1 },
@@ -265,7 +265,7 @@ const categoryData = [
   },
 ];
 
-/* ─── SAVED REPORTS ────────────────────────────────────────── */
+/* --- SAVED REPORTS --- */
 const savedReports = [
   {
     id: 1,
@@ -293,7 +293,7 @@ const savedReports = [
   },
 ];
 
-/* ─── PAGINATION ───────────────────────────────────────────── */
+/* --- PAGINATION --- */
 function Pagination({ current, total, onChange }) {
   const pages = Array.from({ length: total }, (_, index) => index + 1);
 
@@ -686,7 +686,7 @@ export default function Reports() {
                     </span>
 
                     <span className="text-xs font-semibold text-white">
-                      €{category.value} M
+                      â‚¬{category.value} M
                     </span>
 
                     <span className="text-xs text-gray-500 w-8 text-right">

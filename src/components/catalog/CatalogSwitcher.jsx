@@ -1,4 +1,4 @@
-import { Package, Shirt } from "lucide-react";
+﻿import { Package, Shirt } from "lucide-react";
 
 const CATALOG_OPTIONS = [
   {

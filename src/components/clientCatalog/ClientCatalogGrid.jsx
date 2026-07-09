@@ -1,4 +1,4 @@
-import ClientProductCard from "./ClientProductCard";
+﻿import ClientProductCard from "./ClientProductCard";
 
 export default function ClientCatalogGrid({
   products = [],

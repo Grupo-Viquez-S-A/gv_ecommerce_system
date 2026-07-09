@@ -1,4 +1,4 @@
-function normalizeHexColor(value) {
+﻿function normalizeHexColor(value) {
   if (!value || typeof value !== 'string') {
     return '#64748B';
   }

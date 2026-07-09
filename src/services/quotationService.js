@@ -1,4 +1,5 @@
 import { supabase } from "./primarySupabaseClient.js";
+import { createRepresentativeUser } from "./representativeUserService.js";
 
 function getText(value) {
   const normalizedValue = String(value || "").trim();
@@ -248,6 +249,10 @@ function normalizeQuotation({
     ivaAmount: getNumber(item.iva_amount, 0),
     subtotal: getNumber(item.subtotal, 0),
     total: getNumber(item.total, 0),
+    hasSublimation: item.has_sublimation === true,
+    hasEmbroidery: item.has_embroidery === true,
+    sublimationPrice: getNumber(item.sublimation_price, 0),
+    embroideryPrice: getNumber(item.embroidery_price, 0),
   }));
 
   return {
@@ -363,6 +368,10 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
         unit_price: unitPrice,
         iva_amount: ivaAmount,
         size_id: sizeId,
+        has_sublimation: getBoolean(item.hasSublimation),
+        has_embroidery: getBoolean(item.hasEmbroidery),
+        sublimation_price: getNumber(item.sublimationPrice, 0),
+        embroidery_price: getNumber(item.embroideryPrice, 0),
       };
     }),
 
@@ -701,7 +710,7 @@ export async function getQuotations() {
         await supabase
           .from("quote_products")
           .select(
-            "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total",
+            "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery, sublimation_price, embroidery_price",
           )
           .in("quotation_id", quotationIds),
         "No fue posible cargar los productos de las cotizaciones",
@@ -922,6 +931,17 @@ export async function createBusinessQuotation(payload) {
 
       representativeId = representative.representative_id;
       createdRepresentativeId = representativeId;
+    }
+
+    if (representativeId && client.representativeEmail) {
+      await createRepresentativeUser({
+        representative_id: representativeId,
+        business_id: businessId,
+        branch_id: branchId,
+        company_id: client.companyId,
+        name: client.representativeName,
+        email: client.representativeEmail,
+      });
     }
 
     const quotationResponse = await supabase

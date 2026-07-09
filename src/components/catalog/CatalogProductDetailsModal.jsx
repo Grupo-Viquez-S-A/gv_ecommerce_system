@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+﻿import { useEffect } from "react";
 import {
   FileText,
   ImageOff,
@@ -577,3 +577,5 @@ export default function CatalogProductDetailsModal({
     </div>
   );
 }
+
+

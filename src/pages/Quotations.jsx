@@ -31,12 +31,9 @@ import {
   YAxis,
 } from "recharts";
 
-import {
-  getQuotations,
-  updateQuotationStatus,
-} from "../services/quotationService.js";
+import { getQuotations } from "../services/quotationService.js";
 
-/* ─── MOCK DATA: COTIZACIONES ─────────────────────────────── */
+/* --- MOCK DATA: COTIZACIONES --- */
 const MOCK_QUOTATIONS = [
   {
     id: 1,
@@ -160,7 +157,7 @@ const MOCK_QUOTATIONS = [
   },
 ];
 
-/* ─── CONFIGURACIÓN DE ESTADOS ────────────────────────────── */
+/* CONFIGURACIÓN DE ESTADOS */
 const STATUS_CONFIG = {
   Pendiente: {
     bg: "bg-yellow-500/10",
@@ -246,7 +243,7 @@ function normalizeSearchText(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-/* ─── DATOS PARA GRÁFICOS ─────────────────────────────────── */
+/* --- DATOS PARA GRÁFICOS --- */
 const donutData = [
   { name: "Pendientes", value: 28, count: 28 },
   { name: "En revisión", value: 16, count: 16 },
@@ -286,7 +283,7 @@ const lineData = [
   { name: "Dic", value: 58 },
 ];
 
-/* ─── COMPONENTES AUXILIARES ──────────────────────────────── */
+/* --- COMPONENTES AUXILIARES --- */
 function PagBtn({ icon, label, active = false }) {
   return (
     <button
@@ -333,7 +330,7 @@ function StatusBadge({ status }) {
   );
 }
 
-/* ─── PÁGINA PRINCIPAL ────────────────────────────────────── */
+/* --- PÁGINA PRINCIPAL --- */
 export default function Quotations() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
@@ -346,7 +343,6 @@ export default function Quotations() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedQuotation, setSelectedQuotation] = useState(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const loadQuotations = async () => {
     try {
@@ -479,7 +475,7 @@ export default function Quotations() {
     },
     {
       label: "EN REVISIÓN",
-      value: String(statusCounts["En revision"] || statusCounts["En revisiÃ³n"] || 0),
+      value: String(statusCounts["En revision"] || statusCounts["En revisión"] || 0),
       growth: "En seguimiento",
       growthColor: "text-green-400",
       color: "#C9A227",
@@ -582,29 +578,6 @@ export default function Quotations() {
     setSelectedQuotation(null);
   };
 
-  const handleQuotationStatus = async (status) => {
-    if (!selectedQuotation) {
-      return;
-    }
-
-    try {
-      setUpdatingStatus(true);
-      await updateQuotationStatus(selectedQuotation.quotationId, status);
-      await loadQuotations();
-      setSelectedQuotation((currentQuotation) => ({
-        ...currentQuotation,
-        status,
-      }));
-    } catch (statusError) {
-      console.error("Quotation status update error:", statusError);
-      setError(
-        statusError?.message ||
-          "No fue posible actualizar el estado de la cotizacion.",
-      );
-    } finally {
-      setUpdatingStatus(false);
-    }
-  };
 
   const clearFilters = () => {
     setSearch("");
@@ -1562,6 +1535,21 @@ export default function Quotations() {
                                   {item.productId}
                                 </p>
                               </div>
+
+                                {(item.hasSublimation || item.hasEmbroidery) && (
+                                  <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {item.hasSublimation && (
+                                      <span className="rounded-md border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#D7A91D]">
+                                        Sublimación
+                                      </span>
+                                    )}
+                                    {item.hasEmbroidery && (
+                                      <span className="rounded-md border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#9BB3D3]">
+                                        Bordado
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-400">
@@ -1596,25 +1584,6 @@ export default function Quotations() {
               )}
             </div>
 
-            <div className="flex flex-col gap-3 border-t border-[#2a3550] px-5 py-4 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => handleQuotationStatus("Rechazada")}
-                disabled={updatingStatus}
-                className="rounded-xl border border-red-400/40 bg-red-500/10 px-5 py-2.5 text-sm font-bold text-red-100 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Rechazar
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuotationStatus("Aprobada")}
-                disabled={updatingStatus}
-                className="rounded-xl border border-green-400/40 bg-green-500/15 px-5 py-2.5 text-sm font-bold text-green-100 transition hover:bg-green-500/25 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {updatingStatus ? "Guardando..." : "Aprobar"}
-              </button>
-            </div>
           </div>
         </div>
       )}

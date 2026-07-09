@@ -1,4 +1,4 @@
-import {
+﻿import {
   RiBarChartFill,
   RiBuilding2Fill,
   RiFileList3Fill,
@@ -134,7 +134,7 @@ export default function ClientDetails({ client }) {
           <DetailRow
             icon={<RiBarChartFill size={15} />}
             label="Ventas acumuladas"
-            value={client.sales || "₡0 M"}
+            value={client.sales || "â‚¡0 M"}
           />
 
           <DetailRow

@@ -1,4 +1,4 @@
-import { RiUserFill } from "react-icons/ri";
+﻿import { RiUserFill } from "react-icons/ri";
 
 export default function ClientsEmptyState({
   onClearFilters,

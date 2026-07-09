@@ -257,6 +257,8 @@ export default function ProductCard({
   onAddToCart,
 }) {
   const [quantity, setQuantity] = useState(1);
+  const [hasSublimation, setHasSublimation] = useState(false);
+  const [hasEmbroidery, setHasEmbroidery] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
   const productImage = getProductImage(product);
 
@@ -303,6 +305,12 @@ export default function ProductCard({
     : [];
 
   const hasMultipleSizes = availableSizes.length > 1;
+  const canUseSublimation = Boolean(product?.sublimation);
+  const canUseEmbroidery = Boolean(product?.embroidery);
+  const customizationOptions = {
+    hasSublimation: canUseSublimation && hasSublimation,
+    hasEmbroidery: canUseEmbroidery && hasEmbroidery,
+  };
 
   const handleOpenProductDetails = () => {
     onOpenProductDetails?.(product);
@@ -330,13 +338,13 @@ export default function ProductCard({
     if (hasMultipleSizes) {
       setShowSizePicker(true);
     } else {
-      onAddToCart?.(product, quantity, availableSizes[0] ?? null);
+      onAddToCart?.(product, quantity, availableSizes[0] ?? null, customizationOptions);
     }
   };
 
   const handleSizePickerConfirm = (selections) => {
     selections.forEach(({ size, quantity: qty }) => {
-      onAddToCart?.(product, qty, size);
+      onAddToCart?.(product, qty, size, customizationOptions);
     });
     setShowSizePicker(false);
   };
@@ -539,6 +547,34 @@ export default function ProductCard({
                       <Plus className="h-4 w-4" />
                     </button>
                   </div>
+                </div>
+              )}
+
+              {(canUseSublimation || canUseEmbroidery) && (
+                <div className="pointer-events-auto relative z-20 grid gap-2 rounded-xl border border-[#29466F] bg-[#091A31]/70 p-3">
+                  {canUseSublimation && (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#C9D8EC]">
+                      <input
+                        type="checkbox"
+                        checked={hasSublimation}
+                        onChange={(event) => setHasSublimation(event.target.checked)}
+                        className="h-4 w-4 accent-[#D7A91D]"
+                      />
+                      Requiere sublimación
+                    </label>
+                  )}
+
+                  {canUseEmbroidery && (
+                    <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#C9D8EC]">
+                      <input
+                        type="checkbox"
+                        checked={hasEmbroidery}
+                        onChange={(event) => setHasEmbroidery(event.target.checked)}
+                        className="h-4 w-4 accent-[#D7A91D]"
+                      />
+                      Requiere bordado
+                    </label>
+                  )}
                 </div>
               )}
 

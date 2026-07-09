@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signUpWithEmail } from "../services/loginService";
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
@@ -197,3 +197,4 @@ function SignUp() {
 }
 
 export default SignUp;
+

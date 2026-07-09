@@ -1,4 +1,4 @@
-function getMaterialName(composition) {
+﻿function getMaterialName(composition) {
   return (
     composition.material_name ||
     composition.material?.material_name ||

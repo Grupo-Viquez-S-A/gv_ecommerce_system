@@ -1,4 +1,4 @@
-export default function RepresentativeEditor({
+﻿export default function RepresentativeEditor({
   representative,
   index,
   onChange,

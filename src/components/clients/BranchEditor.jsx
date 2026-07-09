@@ -1,4 +1,4 @@
-import { RiAddLine } from "react-icons/ri";
+﻿import { RiAddLine } from "react-icons/ri";
 import RepresentativeEditor from "./RepresentativeEditor";
 
 const createEmptyRepresentative = () => ({

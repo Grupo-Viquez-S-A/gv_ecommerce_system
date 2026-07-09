@@ -1,4 +1,4 @@
-import { supabase } from "./primarySupabaseClient";
+﻿import { supabase } from "./primarySupabaseClient";
 
 const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
 
@@ -84,6 +84,12 @@ export async function signOut() {
   return { error };
 }
 
+
+export async function updatePasswordForCurrentUser(password) {
+  const { data, error } = await supabase.auth.updateUser({ password });
+
+  return { data, error };
+}
 export async function getCorporateUserData(userId, authEmail) {
   const { data: userApplication, error: applicationError } = await supabase
     .from("user_applications")
@@ -232,3 +238,4 @@ export async function getCorporateUserData(userId, authEmail) {
     error: null,
   };
 }
+

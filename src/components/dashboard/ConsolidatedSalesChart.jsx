@@ -1,4 +1,4 @@
-import {
+﻿import {
   Bar,
   BarChart,
   CartesianGrid,
@@ -27,7 +27,7 @@ export default function ConsolidatedSalesChart({
   data = [],
   legendItems = DEFAULT_LEGEND_ITEMS,
   periodLabel = "Este año",
-  totalLabel = "₡1,050 M",
+  totalLabel = "â‚¡1,050 M",
   onPeriodClick,
 }) {
   return (
@@ -43,7 +43,7 @@ export default function ConsolidatedSalesChart({
           className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
         >
           {periodLabel}
-          <span className="text-sm leading-none">⌄</span>
+          <span className="text-sm leading-none">âŒ„</span>
         </button>
       </div>
 
@@ -67,7 +67,7 @@ export default function ConsolidatedSalesChart({
               axisLine={false}
               tickLine={false}
               tick={{ fill: "#64748b", fontSize: 12 }}
-              tickFormatter={(value) => `₡${value} M`}
+              tickFormatter={(value) => `â‚¡${value} M`}
             />
 
             <Tooltip
@@ -79,7 +79,7 @@ export default function ConsolidatedSalesChart({
               }}
               itemStyle={{ color: "#e2e8f0" }}
               labelStyle={{ color: "#94a3b8" }}
-              formatter={(value) => [`₡${value} M`, "Ventas"]}
+              formatter={(value) => [`â‚¡${value} M`, "Ventas"]}
             />
 
             <Bar

@@ -1,4 +1,4 @@
-import { PackageSearch, RotateCcw } from 'lucide-react';
+﻿import { PackageSearch, RotateCcw } from 'lucide-react';
 
 export default function EmptyState({
   hasActiveFilters = false,

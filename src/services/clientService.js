@@ -1,4 +1,4 @@
-import { supabase } from "./primarySupabaseClient.js";
+﻿import { supabase } from "./primarySupabaseClient.js";
 
 const AVATAR_COLORS = [
   "#6366f1",
@@ -318,7 +318,7 @@ function createBranchItem(
     address: branch.address || "",
     phone: getPrimaryValue(branchPhones, "phone"),
     phones: branchPhones,
-    sales: "₡0 M",
+    sales: "â‚¡0 M",
     lastPurchase: "Sin compras",
     status: normalizeStatus(branch.is_active),
     representatives: branchRepresentatives,
@@ -377,7 +377,7 @@ function createClientItem({
     phone: getPrimaryValue(clientPhones, "phone"),
     clientPhones,
 
-    sales: "₡0 M",
+    sales: "â‚¡0 M",
     lastPurchase: "Sin compras",
     totalOrders: 0,
     totalQuotes: 0,
