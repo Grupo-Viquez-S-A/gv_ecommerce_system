@@ -242,6 +242,7 @@ function normalizeQuotation({
       item.product?.main_image_url ||
       item.product?.cover_image_url ||
       getProductImageUrl(item.productFiles || []),
+    sizeName: item.size?.size_name || null,
     quantity: getNumber(item.quantity, 0),
     unitPrice: getNumber(item.unit_price, 0),
     ivaAmount: getNumber(item.iva_amount, 0),
@@ -700,7 +701,7 @@ export async function getQuotations() {
         await supabase
           .from("quote_products")
           .select(
-            "quote_product_id, quotation_id, product_id, quantity, unit_price, iva_amount, subtotal, total",
+            "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total",
           )
           .in("quotation_id", quotationIds),
         "No fue posible cargar los productos de las cotizaciones",
@@ -711,26 +712,42 @@ export async function getQuotations() {
     ...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean)),
   ];
 
-  const products = productIds.length
-    ? throwIfError(
-        await supabase
-          .from("textile_products")
-          .select("product_id, sku, product_name, description, price, iva_amount")
-          .in("product_id", productIds),
-        "No fue posible cargar el catalogo de productos cotizados",
-      )
-    : [];
+  const sizeIds = [
+    ...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean)),
+  ];
 
-  const productFiles = productIds.length
-    ? throwIfError(
-        await supabase
-          .from("textile_product_files")
-          .select("*")
-          .in("product_id", productIds)
-          .order("created_at", { ascending: true }),
-        "No fue posible cargar las imagenes de productos cotizados",
-      )
-    : [];
+  const [products, productFiles, sizes] = await Promise.all([
+    productIds.length
+      ? throwIfError(
+          await supabase
+            .from("textile_products")
+            .select("product_id, sku, product_name, description, price, iva_amount")
+            .in("product_id", productIds),
+          "No fue posible cargar el catalogo de productos cotizados",
+        )
+      : [],
+
+    productIds.length
+      ? throwIfError(
+          await supabase
+            .from("textile_product_files")
+            .select("*")
+            .in("product_id", productIds)
+            .order("created_at", { ascending: true }),
+          "No fue posible cargar las imagenes de productos cotizados",
+        )
+      : [],
+
+    sizeIds.length
+      ? throwIfError(
+          await supabase
+            .from("sizes")
+            .select("size_id, size_name")
+            .in("size_id", sizeIds),
+          "No fue posible cargar las tallas de los productos cotizados",
+        )
+      : [],
+  ]);
 
   const businessesById = indexById(businesses, "business_id");
   const branchesById = indexById(branches, "branch_id");
@@ -738,6 +755,7 @@ export async function getQuotations() {
   const sellersById = indexById(sellers, "user_id");
   const productsById = indexById(products, "product_id");
   const productFilesById = groupById(productFiles, "product_id");
+  const sizesById = indexById(sizes, "size_id");
   const quoteProductsByQuotationId = groupById(quoteProducts, "quotation_id");
 
   return quotations.map((quotation) => {
@@ -747,6 +765,7 @@ export async function getQuotations() {
       ...item,
       product: productsById[item.product_id],
       productFiles: productFilesById[item.product_id] || [],
+      size: sizesById[item.size_id] || null,
     }));
 
     return normalizeQuotation({

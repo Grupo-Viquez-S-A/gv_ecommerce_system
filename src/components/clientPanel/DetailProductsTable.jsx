@@ -67,6 +67,11 @@ export default function DetailProductsTable({ items = [], emptyMessage }) {
                       <p className="break-words text-sm font-semibold text-white">
                         {item.name || item.productId || "Producto sin nombre"}
                       </p>
+                      {item.sizeName && (
+                        <span className="mt-1 inline-block rounded-md border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#9BB3D3]">
+                          {item.sizeName}
+                        </span>
+                      )}
                       <p className="mt-0.5 text-xs text-gray-500">
                         {item.productId}
                       </p>
