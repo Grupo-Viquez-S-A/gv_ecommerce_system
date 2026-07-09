@@ -1,4 +1,5 @@
 ﻿import { supabase } from "./primarySupabaseClient.js";
+import { deleteRepresentativeUsers } from "./representativeUserService.js";
 
 const AVATAR_COLORS = [
   "#6366f1",
@@ -994,6 +995,8 @@ async function rollbackCreatedClient(businessId) {
       existingRelations.emails.map((email) => email.email_id),
     );
 
+    await deleteRepresentativeUsers(existingRelations.representatives);
+
     await deleteRowsByIds(
       "representatives",
       "representative_id",
@@ -1218,6 +1221,12 @@ export async function updateBusinessClient(
       .map(
         (representative) => representative.representative_id,
       );
+
+  await deleteRepresentativeUsers(
+    existingRelations.representatives.filter((representative) =>
+      representativeIdsToDelete.includes(representative.representative_id),
+    ),
+  );
 
   await deleteRowsByIds(
     "representatives",

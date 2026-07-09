@@ -60,3 +60,58 @@ export async function createRepresentativeUser(payload) {
 
   return data;
 }
+
+export async function deleteRepresentativeUser({ representativeId, userId } = {}) {
+  if (!representativeId && !userId) {
+    return { ok: true, skipped: true };
+  }
+
+  const { data, error } = await supabase.functions.invoke(
+    "delete-representative-user",
+    {
+      body: {
+        representative_id: representativeId || null,
+        user_id: userId || null,
+      },
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      await getFunctionErrorMessage(
+        error,
+        "No fue posible eliminar el acceso del representante.",
+      ),
+    );
+  }
+
+  if (data?.ok === false) {
+    throw new Error(
+      data.error || "No fue posible eliminar el acceso del representante.",
+    );
+  }
+
+  return data;
+}
+
+export async function deleteRepresentativeUsers(representatives = []) {
+  const candidates = representatives.filter(
+    (representative) => representative?.representative_id || representative?.user_id,
+  );
+
+  for (const representative of candidates) {
+    try {
+      await deleteRepresentativeUser({
+        representativeId: representative.representative_id,
+        userId: representative.user_id,
+      });
+    } catch (error) {
+      console.error(
+        `No fue posible eliminar la cuenta de acceso del representante ${
+          representative.representative_id || representative.user_id
+        }:`,
+        error,
+      );
+    }
+  }
+}
