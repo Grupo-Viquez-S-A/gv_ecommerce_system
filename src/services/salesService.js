@@ -120,10 +120,10 @@ export async function getPaidSales() {
       await supabase
         .from("payments")
         .select(
-          "payment_id, production_order_id, method_id, amount, payment_date, reference_number, notes, is_active, created_at",
+          "payment_id, production_order_id, method_id, amount, payment_date, reference_number, notes, is_valid, created_at",
         )
         .in("production_order_id", productionOrderIds)
-        .eq("is_active", true),
+        .eq("is_valid", true),
       "No fue posible cargar los pagos registrados",
     ),
   ]);

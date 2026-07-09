@@ -5,9 +5,11 @@ import {
   RiArrowLeftSLine,
   RiArrowRightSFill,
   RiCalendarLine,
+  RiCheckboxCircleFill,
   RiDownloadFill,
   RiExportFill,
   RiEyeFill,
+  RiFileTextLine,
   RiRefreshLine,
   RiSearchLine,
 } from "react-icons/ri";
@@ -23,6 +25,10 @@ import {
 } from "recharts";
 
 import { getSalesOrders } from "../services/orderService.js";
+import {
+  getOrderPayments,
+  importOrderPayments,
+} from "../services/paymentService.js";
 
 /* --- CONFIGURACIÓN DE ESTADOS --- */
 const STATUS_CONFIG = {
@@ -172,6 +178,13 @@ export default function Orders() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [viewOrder, setViewOrder] = useState(null);
 
+  const [paymentsDrawerOpen, setPaymentsDrawerOpen] = useState(false);
+  const [orderPayments, setOrderPayments] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsError, setPaymentsError] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -319,6 +332,59 @@ export default function Orders() {
     window.setTimeout(() => {
       setViewOrder(null);
     }, 300);
+  };
+
+  const openPaymentsDrawer = async (order) => {
+    setImportResult(null);
+    setPaymentsError(null);
+    setPaymentsDrawerOpen(true);
+    setPaymentsLoading(true);
+
+    try {
+      const payments = await getOrderPayments(order.productionOrderId);
+      setOrderPayments(payments);
+    } catch (error) {
+      setPaymentsError(
+        error?.message || "No fue posible cargar los pagos de la orden.",
+      );
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  const closePaymentsDrawer = () => {
+    setPaymentsDrawerOpen(false);
+
+    window.setTimeout(() => {
+      setOrderPayments([]);
+      setPaymentsError(null);
+      setImportResult(null);
+    }, 300);
+  };
+
+  const handleImportPayments = async () => {
+    if (!viewOrder) {
+      return;
+    }
+
+    setImporting(true);
+    setPaymentsError(null);
+
+    try {
+      const result = await importOrderPayments(viewOrder.productionOrderId);
+      setImportResult(result);
+
+      const payments = await getOrderPayments(viewOrder.productionOrderId);
+      setOrderPayments(payments);
+
+      await loadOrders();
+    } catch (error) {
+      setPaymentsError(
+        error?.message || "No fue posible importar los comprobantes de pago.",
+      );
+    } finally {
+      setImporting(false);
+    }
   };
 
   const clearFilters = () => {
@@ -953,6 +1019,171 @@ export default function Orders() {
             className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
           >
             Cerrar
+          </button>
+
+          {viewOrder && (
+            <button
+              type="button"
+              onClick={() => openPaymentsDrawer(viewOrder)}
+              className="flex-1 bg-[#C9A227] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#b8931f] transition-colors cursor-pointer flex items-center justify-center gap-2"
+            >
+              <RiFileTextLine size={16} />
+              Comprobantes de pago
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Fondo del drawer de pagos */}
+      {paymentsDrawerOpen && (
+        <button
+          type="button"
+          onClick={closePaymentsDrawer}
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 cursor-default"
+          aria-label="Cerrar panel de comprobantes"
+        />
+      )}
+
+      {/* Drawer de comprobantes de pago */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-[#141d2e] border-l border-[#2a3550] z-[60] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
+          paymentsDrawerOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <RiFileTextLine size={20} className="text-[#C9A227]" />
+              Comprobantes de pago
+            </h2>
+
+            <p className="text-sm text-gray-400 mt-0.5">
+              Pagos reportados desde la cotizacion {viewOrder?.quotationNumber}.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={closePaymentsDrawer}
+            className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1c2538] transition-colors"
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+          {paymentsLoading && (
+            <p className="text-sm text-gray-400">Cargando comprobantes...</p>
+          )}
+
+          {!paymentsLoading && paymentsError && (
+            <p className="text-sm text-red-400">{paymentsError}</p>
+          )}
+
+          {!paymentsLoading && !paymentsError && orderPayments.length === 0 && (
+            <p className="text-sm text-gray-400">
+              Esta orden no tiene pagos reportados todavia.
+            </p>
+          )}
+
+          {importResult && (
+            <div className="rounded-lg border border-[#C9A227]/40 bg-[#C9A227]/10 px-4 py-3 space-y-1">
+              <p className="text-sm text-white font-medium flex items-center gap-2">
+                <RiCheckboxCircleFill className="text-[#C9A227]" size={16} />
+                Comprobantes importados correctamente
+              </p>
+
+              <p className="text-xs text-gray-300">
+                Pagado: {formatCurrency(importResult.amountPaid)} de{" "}
+                {formatCurrency(importResult.total)}
+              </p>
+
+              <p className="text-xs text-gray-300">
+                {importResult.movedToSales
+                  ? "El pago cubre el total, la orden se movio a Ventas."
+                  : "Pago parcial registrado, la orden quedo en Pago adelantado."}
+              </p>
+            </div>
+          )}
+
+          {!paymentsLoading &&
+            orderPayments.map((payment) => (
+              <div
+                key={payment.paymentId}
+                className="rounded-lg border border-[#2a3550] bg-[#1c2538] px-4 py-3 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-white">
+                    {formatCurrency(payment.amount)}
+                  </span>
+
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-md border ${
+                      payment.isValid
+                        ? "bg-green-500/10 text-green-400 border-green-500/20"
+                        : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                    }`}
+                  >
+                    {payment.isValid ? "Validado" : "Pendiente de validar"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-gray-400">
+                  <span>{payment.methodName}</span>
+                  <span>{formatDate(payment.paymentDate)}</span>
+                </div>
+
+                {payment.referenceNumber && (
+                  <p className="text-xs text-gray-400">
+                    Referencia: {payment.referenceNumber}
+                  </p>
+                )}
+
+                {payment.notes && (
+                  <p className="text-xs text-gray-400">{payment.notes}</p>
+                )}
+
+                {payment.receipts.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {payment.receipts.map((receipt) => (
+                      <a
+                        key={receipt.receiptId}
+                        href={receipt.signedUrl || "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-[#C9A227] hover:underline"
+                      >
+                        <RiDownloadFill size={12} />
+                        {receipt.fileName || "Comprobante"}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+        </div>
+
+        <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+          <button
+            type="button"
+            onClick={closePaymentsDrawer}
+            className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+          >
+            Cerrar
+          </button>
+
+          <button
+            type="button"
+            disabled={
+              importing ||
+              paymentsLoading ||
+              !orderPayments.some((payment) => !payment.isValid)
+            }
+            onClick={handleImportPayments}
+            className="flex-1 bg-[#C9A227] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#b8931f] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {importing ? "Importando..." : "Importar comprobantes"}
           </button>
         </div>
       </div>
