@@ -139,6 +139,82 @@ function getPrimaryValue(rows = [], valueKey) {
   return primaryRow?.[valueKey] || "";
 }
 
+const CANCELLED_ORDER_STATUSES = ["cancelado", "cancelada", "rechazado", "rechazada"];
+
+function formatSalesAmount(amount) {
+  const millions = (Number(amount) || 0) / 1_000_000;
+
+  return `₡${millions.toFixed(1)} M`;
+}
+
+async function getConfirmedSalesByBusinessAndBranch(businessIds = []) {
+  const emptyResult = { byBusinessId: {}, byBranchId: {} };
+
+  if (!businessIds.length) {
+    return emptyResult;
+  }
+
+  const quotationsResponse = await supabase
+    .from("quotations")
+    .select("quotation_id, business_id, branch_id, total")
+    .in("business_id", businessIds)
+    .eq("is_active", true);
+
+  const quotations = throwIfError(
+    quotationsResponse,
+    "No fue posible cargar las cotizaciones para calcular las ventas",
+  );
+
+  if (!quotations?.length) {
+    return emptyResult;
+  }
+
+  const quotationsById = indexRowsByKey(quotations, "quotation_id");
+  const quotationIds = quotations.map((quotation) => quotation.quotation_id);
+
+  const productionOrdersResponse = await supabase
+    .from("production_orders")
+    .select("quotation_id, production_order_status, balance, is_active")
+    .in("quotation_id", quotationIds)
+    .eq("is_active", true);
+
+  const productionOrders = throwIfError(
+    productionOrdersResponse,
+    "No fue posible cargar los pedidos confirmados para calcular las ventas",
+  );
+
+  return (productionOrders || []).reduce(
+    (result, order) => {
+      const status = String(order.production_order_status || "").trim().toLowerCase();
+
+      if (CANCELLED_ORDER_STATUSES.includes(status)) {
+        return result;
+      }
+
+      const quotation = quotationsById[order.quotation_id];
+
+      if (!quotation) {
+        return result;
+      }
+
+      const amount = Number(quotation.total) || 0;
+
+      if (quotation.business_id) {
+        result.byBusinessId[quotation.business_id] =
+          (result.byBusinessId[quotation.business_id] || 0) + amount;
+      }
+
+      if (quotation.branch_id) {
+        result.byBranchId[quotation.branch_id] =
+          (result.byBranchId[quotation.branch_id] || 0) + amount;
+      }
+
+      return result;
+    },
+    { byBusinessId: {}, byBranchId: {} },
+  );
+}
+
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
     return response?.data;
@@ -287,6 +363,7 @@ function createBranchItem(
   branch,
   phones = [],
   representatives = [],
+  salesByBranchId = {},
 ) {
   const branchName =
     [branch.province, branch.district].filter(Boolean).join(", ") ||
@@ -318,7 +395,7 @@ function createBranchItem(
     address: branch.address || "",
     phone: getPrimaryValue(branchPhones, "phone"),
     phones: branchPhones,
-    sales: "₡0 M",
+    sales: formatSalesAmount(salesByBranchId[branch.branch_id]),
     lastPurchase: "Sin compras",
     status: normalizeStatus(branch.is_active),
     representatives: branchRepresentatives,
@@ -333,6 +410,8 @@ function createClientItem({
   branches,
   representatives,
   index,
+  salesByBusinessId = {},
+  salesByBranchId = {},
 }) {
   const name =
     business.business_name ||
@@ -352,6 +431,7 @@ function createClientItem({
       branch,
       phones,
       representatives,
+      salesByBranchId,
     ),
   );
 
@@ -377,7 +457,7 @@ function createClientItem({
     phone: getPrimaryValue(clientPhones, "phone"),
     clientPhones,
 
-    sales: "₡0 M",
+    sales: formatSalesAmount(salesByBusinessId[business.business_id]),
     lastPurchase: "Sin compras",
     totalOrders: 0,
     totalQuotes: 0,
@@ -501,7 +581,7 @@ export async function getBusinessClients() {
     businesses.map((business) => business.company_id),
   );
 
-  const [companiesResponse, relatedRows] = await Promise.all([
+  const [companiesResponse, relatedRows, salesTotals] = await Promise.all([
     companyIds.length > 0
       ? supabase
           .from("companies")
@@ -510,6 +590,7 @@ export async function getBusinessClients() {
       : Promise.resolve({ data: [], error: null }),
 
     getRelatedRowsByBusinessIds(businessIds),
+    getConfirmedSalesByBusinessAndBranch(businessIds),
   ]);
 
   const companies = throwIfError(
@@ -547,6 +628,8 @@ export async function getBusinessClients() {
       representatives:
         representativesByBusiness[business.business_id] || [],
       index,
+      salesByBusinessId: salesTotals.byBusinessId,
+      salesByBranchId: salesTotals.byBranchId,
     }),
   );
 }
