@@ -184,6 +184,7 @@ export default function Orders() {
   const [paymentsError, setPaymentsError] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [previewReceipt, setPreviewReceipt] = useState(null);
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1146,18 +1147,44 @@ export default function Orders() {
 
                 {payment.receipts.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {payment.receipts.map((receipt) => (
-                      <a
-                        key={receipt.receiptId}
-                        href={receipt.signedUrl || "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-[#C9A227] hover:underline"
-                      >
-                        <RiDownloadFill size={12} />
-                        {receipt.fileName || "Comprobante"}
-                      </a>
-                    ))}
+                    {payment.receipts.map((receipt) => {
+                      const isImage = (receipt.mimeType || "").startsWith(
+                        "image/",
+                      );
+
+                      if (isImage && receipt.signedUrl) {
+                        return (
+                          <button
+                            key={receipt.receiptId}
+                            type="button"
+                            onClick={() => setPreviewReceipt(receipt)}
+                            className="group relative w-20 h-20 rounded-lg overflow-hidden border border-[#2a3550] hover:border-[#C9A227] transition-colors cursor-pointer"
+                            title={receipt.fileName || "Comprobante"}
+                          >
+                            <img
+                              src={receipt.signedUrl}
+                              alt={receipt.fileName || "Comprobante de pago"}
+                              className="w-full h-full object-cover"
+                            />
+
+                            <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <a
+                          key={receipt.receiptId}
+                          href={receipt.signedUrl || "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-[#C9A227] hover:underline"
+                        >
+                          <RiDownloadFill size={12} />
+                          {receipt.fileName || "Comprobante"}
+                        </a>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1187,6 +1214,55 @@ export default function Orders() {
           </button>
         </div>
       </div>
+
+      {/* Lightbox de previsualizacion del comprobante */}
+      {previewReceipt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm px-6">
+          <button
+            type="button"
+            onClick={() => setPreviewReceipt(null)}
+            className="fixed inset-0 cursor-default"
+            aria-label="Cerrar previsualizacion"
+          />
+
+          <div className="relative z-[71] max-w-2xl w-full max-h-[85vh] bg-[#141d2e] border border-[#2a3550] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#2a3550] flex-shrink-0">
+              <p className="text-sm text-white font-medium truncate pr-3">
+                {previewReceipt.fileName || "Comprobante de pago"}
+              </p>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <a
+                  href={previewReceipt.signedUrl || "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-gray-400 hover:text-[#C9A227] transition-colors"
+                  title="Descargar"
+                >
+                  <RiDownloadFill size={18} />
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewReceipt(null)}
+                  className="w-8 h-8 rounded-lg text-gray-400 hover:text-white hover:bg-[#1c2538] transition-colors"
+                  aria-label="Cerrar"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto bg-black/30 flex items-center justify-center p-4">
+              <img
+                src={previewReceipt.signedUrl}
+                alt={previewReceipt.fileName || "Comprobante de pago"}
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
