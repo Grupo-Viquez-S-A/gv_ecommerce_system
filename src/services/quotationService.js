@@ -251,7 +251,20 @@ function normalizeQuotation({
     total: getNumber(item.total, 0),
     hasSublimation: item.has_sublimation === true,
     hasEmbroidery: item.has_embroidery === true,
+    sublimationPrice:
+      item.has_sublimation === true
+        ? getNumber(item.product?.sublimation_price, 0)
+        : 0,
+    embroideryPrice:
+      item.has_embroidery === true
+        ? getNumber(item.product?.embroidery_price, 0)
+        : 0,
   }));
+
+  const itemsTotal = getQuotationTotal(items);
+  const subtotal = getNumber(quotation.subtotal, null);
+  const ivaAmount = getNumber(quotation.iva_amount, null);
+  const total = getNumber(quotation.total, null);
 
   return {
     id: quotation.quotation_id,
@@ -270,8 +283,18 @@ function normalizeQuotation({
 
     earlyDelivery: quotation.early_delivery === true,
     earlyDeliveryDate: quotation.early_delivery_date || null,
+    earlyDeliveryPrice: getNumber(quotation.early_delivery_price, 0),
 
-    total: getQuotationTotal(items),
+    subtotal: subtotal !== null ? subtotal : itemsTotal,
+    ivaAmount:
+      ivaAmount !== null
+        ? ivaAmount
+        : items.reduce((sum, item) => sum + getNumber(item.ivaAmount, 0), 0),
+    total: total !== null ? total : itemsTotal,
+    advancePayment:
+      getNumber(quotation.advance_payment, null) !== null
+        ? getNumber(quotation.advance_payment, 0)
+        : (total !== null ? total : itemsTotal) / 2,
     status: getQuotationStatusLabel(quotation.state || quotation.status),
     dbStatus: quotation.state || quotation.status || "pending",
 
@@ -624,7 +647,12 @@ export async function getQuotations() {
         user_id,
         early_delivery,
         early_delivery_date,
-        valid_until
+        early_delivery_price,
+        valid_until,
+        iva_amount,
+        subtotal,
+        total,
+        advance_payment
       `,
       )
       .eq("is_active", true)
@@ -726,7 +754,9 @@ export async function getQuotations() {
       ? throwIfError(
           await supabase
             .from("textile_products")
-            .select("product_id, sku, product_name, description, price, iva_amount")
+            .select(
+              "product_id, sku, product_name, description, price, iva_amount, sublimation_price, embroidery_price",
+            )
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos cotizados",
         )
@@ -940,6 +970,14 @@ export async function createBusinessQuotation(payload) {
       });
     }
 
+    const subtotal = items.reduce(
+      (sum, item) => sum + item.unit_price * item.quantity,
+      0,
+    );
+    const ivaAmount = items.reduce((sum, item) => sum + item.iva_amount, 0);
+    const total = subtotal + ivaAmount;
+    const advancePayment = total / 2;
+
     const quotationResponse = await supabase
       .from("quotations")
       .insert({
@@ -953,8 +991,10 @@ export async function createBusinessQuotation(payload) {
         early_delivery: client.earlyDelivery,
         early_delivery_date: earlyDeliveryDate,
         valid_until: validUntil,
-        sublimation_price: getNumber(client.sublimationPrice, 0) || null,
-        embroidery_price: getNumber(client.embroideryPrice, 0) || null,
+        subtotal,
+        iva_amount: ivaAmount,
+        total,
+        advance_payment: advancePayment,
       })
       .select(
         `
@@ -963,8 +1003,10 @@ export async function createBusinessQuotation(payload) {
         early_delivery,
         early_delivery_date,
         valid_until,
-        sublimation_price,
-        embroidery_price
+        subtotal,
+        iva_amount,
+        total,
+        advance_payment
       `,
       )
       .single();

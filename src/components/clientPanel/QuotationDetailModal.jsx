@@ -117,6 +117,46 @@ export default function QuotationDetailModal({
             />
           </section>
 
+          <section className="rounded-lg border border-[#2a3550] bg-[#182235] p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">
+              Resumen de pago
+            </p>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div className="rounded-lg border border-[#2a3550] bg-[#10192b] p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  Subtotal
+                </p>
+                <p className="mt-1 text-sm font-bold text-white">
+                  {formatCurrency(quotation.subtotal, "CRC 0")}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[#2a3550] bg-[#10192b] p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  IVA
+                </p>
+                <p className="mt-1 text-sm font-bold text-white">
+                  {formatCurrency(quotation.ivaAmount, "CRC 0")}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[#C9A227]/40 bg-[#C9A227]/10 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  Total
+                </p>
+                <p className="mt-1 text-sm font-bold text-[#C9A227]">
+                  {formatCurrency(quotation.total, "CRC 0")}
+                </p>
+              </div>
+              <div className="rounded-lg border border-[#C9A227]/40 bg-[#C9A227]/10 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  Adelanto (50%)
+                </p>
+                <p className="mt-1 text-sm font-bold text-[#C9A227]">
+                  {formatCurrency(quotation.advancePayment, "CRC 0")}
+                </p>
+              </div>
+            </div>
+          </section>
+
           {quotation.notes && (
             <section className="rounded-lg border border-[#2a3550] bg-[#182235] p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">

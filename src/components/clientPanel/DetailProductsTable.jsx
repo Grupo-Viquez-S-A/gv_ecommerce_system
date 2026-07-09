@@ -72,6 +72,26 @@ export default function DetailProductsTable({ items = [], emptyMessage }) {
                           {item.sizeName}
                         </span>
                       )}
+                      {(item.hasSublimation || item.hasEmbroidery) && (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {item.hasSublimation && (
+                            <span className="rounded-md border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#D7A91D]">
+                              Sublimación
+                              {item.sublimationPrice > 0
+                                ? ` · ${formatCurrency(item.sublimationPrice, "CRC 0")}`
+                                : ""}
+                            </span>
+                          )}
+                          {item.hasEmbroidery && (
+                            <span className="rounded-md border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#9BB3D3]">
+                              Bordado
+                              {item.embroideryPrice > 0
+                                ? ` · ${formatCurrency(item.embroideryPrice, "CRC 0")}`
+                                : ""}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <p className="mt-0.5 text-xs text-gray-500">
                         {item.productId}
                       </p>

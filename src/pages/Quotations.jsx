@@ -1541,11 +1541,17 @@ export default function Quotations() {
                                     {item.hasSublimation && (
                                       <span className="rounded-md border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#D7A91D]">
                                         Sublimación
+                                        {item.sublimationPrice > 0
+                                          ? ` · ${formatCurrency(item.sublimationPrice)}`
+                                          : ""}
                                       </span>
                                     )}
                                     {item.hasEmbroidery && (
                                       <span className="rounded-md border border-[#5a8abf]/30 bg-[#132F58] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#9BB3D3]">
                                         Bordado
+                                        {item.embroideryPrice > 0
+                                          ? ` · ${formatCurrency(item.embroideryPrice)}`
+                                          : ""}
                                       </span>
                                     )}
                                   </div>
@@ -1571,6 +1577,57 @@ export default function Quotations() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+
+              <div className="mt-4 overflow-hidden rounded-xl border border-[#2a3550]">
+                <div className="border-b border-[#2a3550] bg-[#091A31] px-4 py-3">
+                  <h3 className="text-sm font-bold text-white">
+                    Resumen de pago
+                  </h3>
+                </div>
+
+                <div className="grid gap-3 p-4 md:grid-cols-4">
+                  {[
+                    {
+                      label: "Subtotal",
+                      value: formatCurrency(selectedQuotation.subtotal),
+                    },
+                    {
+                      label: "IVA",
+                      value: formatCurrency(selectedQuotation.ivaAmount),
+                    },
+                    {
+                      label: "Total",
+                      value: formatCurrency(selectedQuotation.total),
+                      highlight: true,
+                    },
+                    {
+                      label: "Adelanto (50%)",
+                      value: formatCurrency(selectedQuotation.advancePayment),
+                      highlight: true,
+                    },
+                  ].map(({ label, value, highlight }) => (
+                    <div
+                      key={label}
+                      className={`rounded-xl border p-3 ${
+                        highlight
+                          ? "border-[#C9A227]/40 bg-[#C9A227]/10"
+                          : "border-[#2a3550] bg-[#0B1F3A]"
+                      }`}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                        {label}
+                      </p>
+                      <p
+                        className={`mt-1 text-sm font-bold ${
+                          highlight ? "text-[#C9A227]" : "text-white"
+                        }`}
+                      >
+                        {value}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
 

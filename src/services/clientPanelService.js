@@ -96,6 +96,9 @@ function getProductImageUrl(files = []) {
 }
 
 function normalizeProductItem(item, product, files = [], sizeName = null) {
+  const hasSublimation = item.has_sublimation === true;
+  const hasEmbroidery = item.has_embroidery === true;
+
   return {
     id: item.quote_product_id,
     quoteProductId: item.quote_product_id,
@@ -110,6 +113,10 @@ function normalizeProductItem(item, product, files = [], sizeName = null) {
     ivaAmount: getNumber(item.iva_amount, 0),
     subtotal: getNumber(item.subtotal, 0),
     total: getNumber(item.total, 0),
+    hasSublimation,
+    hasEmbroidery,
+    sublimationPrice: hasSublimation ? getNumber(product?.sublimation_price, 0) : 0,
+    embroideryPrice: hasEmbroidery ? getNumber(product?.embroidery_price, 0) : 0,
   };
 }
 
@@ -122,7 +129,7 @@ async function getQuotationProducts(quotationIds = []) {
     await supabase
       .from("quote_products")
       .select(
-        "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, created_at, updated_at",
+        "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery, created_at, updated_at",
       )
       .in("quotation_id", quotationIds),
     "No fue posible cargar los productos cotizados",
@@ -136,7 +143,9 @@ async function getQuotationProducts(quotationIds = []) {
       ? throwIfError(
           await supabase
             .from("textile_products")
-            .select("product_id, sku, product_name, description, price, iva_amount")
+            .select(
+              "product_id, sku, product_name, description, price, iva_amount, sublimation_price, embroidery_price",
+            )
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos",
         )
@@ -225,7 +234,14 @@ function normalizeQuotationDetail({ quotation, business, branch, representative,
     createdAt: quotation.created_at,
     updatedAt: quotation.updated_at,
     itemsCount: items.length,
-    total: getItemTotal(items),
+    subtotal: getNumber(quotation.subtotal, null) ?? getItemTotal(items),
+    ivaAmount:
+      getNumber(quotation.iva_amount, null) ??
+      items.reduce((sum, item) => sum + getNumber(item.ivaAmount, 0), 0),
+    total: getNumber(quotation.total, null) ?? getItemTotal(items),
+    advancePayment:
+      getNumber(quotation.advance_payment, null) ??
+      (getNumber(quotation.total, null) ?? getItemTotal(items)) / 2,
     business: business
       ? {
           id: business.business_id,
@@ -278,7 +294,7 @@ export async function getMyQuotations() {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id",
+        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id, iva_amount, subtotal, total, advance_payment",
       )
       .eq("user_id", userId)
       .eq("is_active", true)
@@ -308,7 +324,14 @@ export async function getMyQuotations() {
       createdAt: quotation.created_at,
       updatedAt: quotation.updated_at,
       itemsCount: items.length,
-      total: getItemTotal(items),
+      subtotal: getNumber(quotation.subtotal, null) ?? getItemTotal(items),
+      ivaAmount:
+        getNumber(quotation.iva_amount, null) ??
+        items.reduce((sum, item) => sum + getNumber(item.ivaAmount, 0), 0),
+      total: getNumber(quotation.total, null) ?? getItemTotal(items),
+      advancePayment:
+        getNumber(quotation.advance_payment, null) ??
+        (getNumber(quotation.total, null) ?? getItemTotal(items)) / 2,
       items,
     };
   });
@@ -365,7 +388,7 @@ export async function getMyQuotationDetail(quotationId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id",
+        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id, iva_amount, subtotal, total, advance_payment",
       )
       .eq("quotation_id", quotationId)
       .eq("user_id", userId)

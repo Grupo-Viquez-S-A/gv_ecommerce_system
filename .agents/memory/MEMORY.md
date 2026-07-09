@@ -1,3 +1,4 @@
 - [Supabase schema corporate data](supabase-schema.md) — confirmed table structure: profiles, roles, companies, departments, user_memberships
 - [Supabase RLS & empty tables](supabase-rls-empty.md) — tables exist but are empty; RLS blocks anon-key inserts; need service role key or admin panel for seeding
 - [Auth HMR compatibility](auth-hmr-js.md) — AuthContext.js (no JSX export) + AuthProvider.jsx (JSX only) avoids Vite Fast Refresh invalidation
+- [Quotation schema volatility](quotation-schema-volatility.md) — user iterates quotations/quote_products/textile_products columns directly in DB; always re-check schema via user screenshots before editing quotationService.js
