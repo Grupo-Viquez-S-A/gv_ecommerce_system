@@ -14,6 +14,7 @@ import {
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
+import { isClientAccount, hasSystemAccess } from "../utils/roles.js";
 
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
@@ -21,12 +22,6 @@ const DEFAULT_COMPANY = {
   name: "Grupo Víquez S.A",
   color: "#C9A227",
 };
-function isClientAccount(user) {
-  const roleCode = String(user?.role?.code || "").trim().toLowerCase();
-  const roleName = String(user?.role?.name || "").trim().toLowerCase();
-
-  return roleCode === "client" || roleName === "cliente";
-}
 
 function getUserInitials(fullName) {
   if (!fullName) {
@@ -123,7 +118,7 @@ function DashSideBar({
 
   const activeCompany = currentCompany || DEFAULT_COMPANY;
   const isClientUser = isClientAccount(user);
-  const canAccessUserAdministration = !isClientUser;
+  const canAccessUserAdministration = !isClientUser && hasSystemAccess(user);
 
   const handleCloseMobileSidebar = () => {
     setSidebarOpen?.(false);

@@ -1,5 +1,6 @@
 ﻿import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
+import { isClientAccount, hasSystemAccess } from "../utils/roles.js";
 
 const CLIENT_ALLOWED_ROUTES = [
   "/mis-pedidos",
@@ -7,11 +8,12 @@ const CLIENT_ALLOWED_ROUTES = [
   "/cliente/catalogo",
 ];
 
-function isClientAccount(user) {
-  const roleCode = String(user?.role?.code || "").trim().toLowerCase();
-  const roleName = String(user?.role?.name || "").trim().toLowerCase();
+const SYSTEM_ONLY_ROUTES = ["/admin/usuarios"];
 
-  return roleCode === "client" || roleName === "cliente";
+function isSystemOnlyRoute(pathname) {
+  return SYSTEM_ONLY_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 }
 
 function isAllowedClientRoute(pathname) {
@@ -41,6 +43,14 @@ function ProtectedRoute({ children }) {
 
   if (isClientAccount(user) && !isAllowedClientRoute(location.pathname)) {
     return <Navigate to="/mis-pedidos" replace />;
+  }
+
+  if (
+    !isClientAccount(user) &&
+    isSystemOnlyRoute(location.pathname) &&
+    !hasSystemAccess(user)
+  ) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
