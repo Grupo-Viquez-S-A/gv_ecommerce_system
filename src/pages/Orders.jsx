@@ -1,18 +1,15 @@
-﻿import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
-  RiAddFill,
   RiArrowDownSFill,
   RiArrowLeftSLine,
   RiArrowRightSFill,
   RiCalendarLine,
   RiDownloadFill,
-  RiEditFill,
   RiExportFill,
   RiEyeFill,
-  RiMoneyDollarCircleFill,
+  RiRefreshLine,
   RiSearchLine,
-  RiUserFill,
 } from "react-icons/ri";
 
 import {
@@ -25,153 +22,96 @@ import {
   YAxis,
 } from "recharts";
 
-/* --- MOCK DATA: PEDIDOS --- */
-const MOCK_ORDERS = [
-  {
-    id: 1,
-    number: "PED-000247",
-    client: "María Fernández",
-    date: "30/06/2024 14:30",
-    total: "₡45.200.000",
-    status: "En proceso",
-    payment: "Pagado",
-    agent: "Ana Gómez",
-    avatar: "AG",
-  },
-  {
-    id: 2,
-    number: "PED-000246",
-    client: "Constructora Solís",
-    date: "30/06/2024 11:12",
-    total: "₡28.750.000",
-    status: "Pendiente",
-    payment: "Pendiente",
-    agent: "Manuel Rojas",
-    avatar: "MR",
-  },
-  {
-    id: 3,
-    number: "PED-000245",
-    client: "Hotel Los Laureles",
-    date: "29/06/2024 16:45",
-    total: "₡15.600.000",
-    status: "Enviado",
-    payment: "Pagado",
-    agent: "Laura Gómez",
-    avatar: "LG",
-  },
-  {
-    id: 4,
-    number: "PED-000244",
-    client: "Pacific Pet Food",
-    date: "27/06/2024 09:20",
-    total: "₡37.100.000",
-    status: "Enviado",
-    payment: "Pagado",
-    agent: "Ana Gómez",
-    avatar: "AG",
-  },
-  {
-    id: 5,
-    number: "PED-000243",
-    client: "Distribuidora del Norte",
-    date: "28/06/2024 10:35",
-    total: "₡9.850.000",
-    status: "Entregado",
-    payment: "Pagado",
-    agent: "Manuel Rojas",
-    avatar: "MR",
-  },
-  {
-    id: 6,
-    number: "PED-000242",
-    client: "Farmacia La Salud",
-    date: "27/06/2024 15:18",
-    total: "₡6.450.000",
-    status: "Cancelado",
-    payment: "Reembolsado",
-    agent: "Laura Gómez",
-    avatar: "LG",
-  },
-  {
-    id: 7,
-    number: "PED-000241",
-    client: "Grupo Alimenticio S.A.",
-    date: "27/06/2024 12:54",
-    total: "₡18.500.000",
-    status: "Entregado",
-    payment: "Pagado",
-    agent: "Ana Gómez",
-    avatar: "AG",
-  },
-];
+import { getSalesOrders } from "../services/orderService.js";
 
 /* --- CONFIGURACIÓN DE ESTADOS --- */
 const STATUS_CONFIG = {
-  Pendiente: {
-    bg: "bg-red-500/10",
-    text: "text-red-400",
-    border: "border-red-500/20",
-  },
-  "En proceso": {
+  pendiente: {
     bg: "bg-yellow-500/10",
     text: "text-yellow-400",
     border: "border-yellow-500/20",
   },
-  Enviado: {
+  en_proceso: {
     bg: "bg-[#C9A227]/10",
     text: "text-[#C9A227]",
     border: "border-[#C9A227]/20",
   },
-  Entregado: {
-    bg: "bg-green-500/10",
-    text: "text-green-400",
-    border: "border-green-500/20",
-  },
-  Cancelado: {
-    bg: "bg-gray-500/10",
-    text: "text-gray-400",
-    border: "border-gray-500/20",
-  },
 };
 
 const PAYMENT_CONFIG = {
-  Pagado: {
-    bg: "bg-green-500/10",
-    text: "text-green-400",
-    border: "border-green-500/20",
+  pendiente: {
+    bg: "bg-red-500/10",
+    text: "text-red-400",
+    border: "border-red-500/20",
   },
-  Pendiente: {
+  parcial: {
     bg: "bg-yellow-500/10",
     text: "text-yellow-400",
     border: "border-yellow-500/20",
   },
-  Reembolsado: {
+  pagado: {
+    bg: "bg-green-500/10",
+    text: "text-green-400",
+    border: "border-green-500/20",
+  },
+  vencido: {
     bg: "bg-orange-500/10",
     text: "text-orange-400",
     border: "border-orange-500/20",
   },
 };
 
-/* --- DATOS DEL GRÁFICO --- */
-const dailyOrdersData = [
-  { name: "01 Jun", value: 8 },
-  { name: "03 Jun", value: 12 },
-  { name: "05 Jun", value: 15 },
-  { name: "07 Jun", value: 18 },
-  { name: "09 Jun", value: 22 },
-  { name: "11 Jun", value: 25 },
-  { name: "13 Jun", value: 20 },
-  { name: "15 Jun", value: 28 },
-  { name: "17 Jun", value: 32 },
-  { name: "19 Jun", value: 38 },
-  { name: "21 Jun", value: 28 },
-  { name: "23 Jun", value: 25 },
-  { name: "25 Jun", value: 18 },
-  { name: "27 Jun", value: 15 },
-  { name: "29 Jun", value: 10 },
-  { name: "30 Jun", value: 8 },
-];
+function formatCurrency(amount) {
+  const numericAmount = Number(amount) || 0;
+
+  return `₡${numericAmount.toLocaleString("es-CR", {
+    maximumFractionDigits: 0,
+  })}`;
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "Sin fecha";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Sin fecha";
+  }
+
+  return date.toLocaleString("es-CR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function buildDailyOrdersData(orders) {
+  const countsByDay = orders.reduce((acc, order) => {
+    const date = order.createdAt ? new Date(order.createdAt) : null;
+
+    if (!date || Number.isNaN(date.getTime())) {
+      return acc;
+    }
+
+    const key = date.toLocaleDateString("es-CR", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    acc[key] = (acc[key] || 0) + 1;
+
+    return acc;
+  }, {});
+
+  return Object.entries(countsByDay).map(([name, value]) => ({
+    name,
+    value,
+  }));
+}
 
 /* --- COMPONENTES AUXILIARES --- */
 function PagBtn({ icon, label, active = false }) {
@@ -189,206 +129,143 @@ function PagBtn({ icon, label, active = false }) {
   );
 }
 
-function StatusBadge({ status, config }) {
-  const selectedConfig = config[status] || config.Pendiente;
+function StatusBadge({ status, label, config }) {
+  const selectedConfig = config[status] || config.pendiente;
 
   return (
     <span
       className={`inline-block text-xs font-medium px-2.5 py-1 rounded-md border ${selectedConfig.bg} ${selectedConfig.text} ${selectedConfig.border}`}
     >
-      {status}
+      {label || status}
     </span>
-  );
-}
-
-function Field({
-  icon,
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-        {label}
-      </label>
-
-      <div className="relative">
-        {icon && (
-          <span className="absolute left-3 top-3 text-gray-500">
-            {icon}
-          </span>
-        )}
-
-        <input
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          className={`w-full bg-[#222e44] border border-[#2a3550] rounded-lg ${
-            icon ? "pl-9" : "pl-3"
-          } pr-3 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors`}
-        />
-      </div>
-    </div>
   );
 }
 
 /* --- PÁGINA PRINCIPAL --- */
 export default function Orders() {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
   const [paymentFilter, setPaymentFilter] = useState("Todos");
   const [agentFilter, setAgentFilter] = useState("Todos");
-  const [dateFrom, setDateFrom] = useState("01/06/2024");
-  const [dateTo, setDateTo] = useState("30/06/2024");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState("create");
   const [viewOrder, setViewOrder] = useState(null);
-  const [editOrder, setEditOrder] = useState(null);
 
-  const [orders, setOrders] = useState(MOCK_ORDERS);
-  const [nextId, setNextId] = useState(248);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const [form, setForm] = useState({
-    client: "",
-    date: "",
-    total: "",
-    status: "Pendiente",
-    payment: "Pagado",
-    agent: "",
-  });
+  const loadOrders = async () => {
+    setLoading(true);
+    setLoadError(null);
 
-  const agents = [
-    "Todos",
-    "Ana Gómez",
-    "Manuel Rojas",
-    "Laura Gómez",
-  ];
+    try {
+      const salesOrders = await getSalesOrders();
+      setOrders(salesOrders);
+    } catch (error) {
+      setLoadError(
+        error?.message ||
+          "No fue posible cargar las ordenes de venta pendientes.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const metrics = [
-    {
-      label: "PEDIDOS TOTALES",
-      value: "247",
-      growth: "+12%",
-      growthColor: "text-green-400",
-      color: "#C9A227",
-      iconColor: "text-[#C9A227]",
-      bg: "bg-[#C9A227]/10",
-    },
-    {
-      label: "VENTAS TOTALES",
-      value: "₡185 M",
-      growth: "+14%",
-      growthColor: "text-green-400",
-      color: "#22c55e",
-      iconColor: "text-[#22c55e]",
-      bg: "bg-[#22c55e]/10",
-    },
-    {
-      label: "PEDIDOS PENDIENTES",
-      value: "38",
-      growth: "+8%",
-      growthColor: "text-green-400",
-      color: "#f59e0b",
-      iconColor: "text-[#f59e0b]",
-      bg: "bg-[#f59e0b]/10",
-    },
-    {
-      label: "EN PROCESO",
-      value: "45",
-      growth: "+15%",
-      growthColor: "text-green-400",
-      color: "#f97316",
-      iconColor: "text-[#f97316]",
-      bg: "bg-[#f97316]/10",
-    },
-    {
-      label: "ENVIADOS",
-      value: "112",
-      growth: "-10%",
-      growthColor: "text-red-400",
-      color: "#C9A227",
-      iconColor: "text-[#C9A227]",
-      bg: "bg-[#C9A227]/10",
-    },
-    {
-      label: "ENTREGADOS",
-      value: "47",
-      growth: "+17%",
-      growthColor: "text-green-400",
-      color: "#ef4444",
-      iconColor: "text-[#ef4444]",
-      bg: "bg-[#ef4444]/10",
-    },
-  ];
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const agents = useMemo(() => {
+    const uniqueAgents = [
+      ...new Set(orders.map((order) => order.agent).filter(Boolean)),
+    ];
+
+    return ["Todos", ...uniqueAgents];
+  }, [orders]);
+
+  const dailyOrdersData = useMemo(() => buildDailyOrdersData(orders), [orders]);
+
+  const metrics = useMemo(() => {
+    const totalVentas = orders.reduce((sum, order) => sum + order.total, 0);
+    const pendientesDePago = orders.filter(
+      (order) => order.paymentStatus === "pendiente",
+    ).length;
+    const pagoAdelantado = orders.filter(
+      (order) => order.paymentStatus === "parcial",
+    ).length;
+    const enProceso = orders.filter(
+      (order) => order.productionStatus === "en_proceso",
+    ).length;
+    const saldoPendiente = orders.reduce(
+      (sum, order) => sum + order.balance,
+      0,
+    );
+
+    return [
+      {
+        label: "ORDENES PENDIENTES DE PAGO",
+        value: String(pendientesDePago),
+        color: "#ef4444",
+        bg: "bg-red-500/10",
+        iconColor: "text-red-400",
+      },
+      {
+        label: "ORDENES CON PAGO ADELANTADO",
+        value: String(pagoAdelantado),
+        color: "#f59e0b",
+        bg: "bg-[#f59e0b]/10",
+        iconColor: "text-[#f59e0b]",
+      },
+      {
+        label: "TOTAL DE ORDENES",
+        value: String(orders.length),
+        color: "#C9A227",
+        bg: "bg-[#C9A227]/10",
+        iconColor: "text-[#C9A227]",
+      },
+      {
+        label: "EN PROCESO DE PRODUCCION",
+        value: String(enProceso),
+        color: "#f97316",
+        bg: "bg-[#f97316]/10",
+        iconColor: "text-[#f97316]",
+      },
+      {
+        label: "VENTAS EN ESTAS ORDENES",
+        value: formatCurrency(totalVentas),
+        color: "#22c55e",
+        bg: "bg-[#22c55e]/10",
+        iconColor: "text-[#22c55e]",
+      },
+      {
+        label: "SALDO PENDIENTE",
+        value: formatCurrency(saldoPendiente),
+        color: "#6366f1",
+        bg: "bg-[#6366f1]/10",
+        iconColor: "text-[#6366f1]",
+      },
+    ];
+  }, [orders]);
 
   const filteredOrders = orders.filter((order) => {
     const normalizedSearch = search.trim().toLowerCase();
 
     const matchesSearch =
       !normalizedSearch ||
-      order.number.toLowerCase().includes(normalizedSearch) ||
+      order.code.toLowerCase().includes(normalizedSearch) ||
+      order.quotationNumber.toLowerCase().includes(normalizedSearch) ||
       order.client.toLowerCase().includes(normalizedSearch);
 
-    const matchesStatus =
-      statusFilter === "Todos" || order.status === statusFilter;
-
     const matchesPayment =
-      paymentFilter === "Todos" || order.payment === paymentFilter;
+      paymentFilter === "Todos" || order.paymentStatus === paymentFilter;
 
-    const matchesAgent =
-      agentFilter === "Todos" || order.agent === agentFilter;
+    const matchesAgent = agentFilter === "Todos" || order.agent === agentFilter;
 
-    return (
-      matchesSearch &&
-      matchesStatus &&
-      matchesPayment &&
-      matchesAgent
-    );
+    return matchesSearch && matchesPayment && matchesAgent;
   });
 
-  const openCreateDrawer = () => {
-    setDrawerMode("create");
-    setViewOrder(null);
-    setEditOrder(null);
-
-    setForm({
-      client: "",
-      date: "",
-      total: "",
-      status: "Pendiente",
-      payment: "Pagado",
-      agent: "",
-    });
-
-    setDrawerOpen(true);
-  };
-
-  const openEditDrawer = (order) => {
-    setDrawerMode("edit");
-    setEditOrder(order);
-    setViewOrder(null);
-
-    setForm({
-      client: order.client,
-      date: order.date,
-      total: order.total,
-      status: order.status,
-      payment: order.payment,
-      agent: order.agent,
-    });
-
-    setDrawerOpen(true);
-  };
-
   const openViewDrawer = (order) => {
-    setDrawerMode("view");
     setViewOrder(order);
-    setEditOrder(null);
     setDrawerOpen(true);
   };
 
@@ -396,81 +273,14 @@ export default function Orders() {
     setDrawerOpen(false);
 
     window.setTimeout(() => {
-      setDrawerMode("create");
       setViewOrder(null);
-      setEditOrder(null);
     }, 300);
-  };
-
-  const handleSaveOrder = () => {
-    if (!form.client.trim()) {
-      window.alert("Ingresa el nombre del cliente.");
-      return;
-    }
-
-    if (!form.agent.trim()) {
-      window.alert("Selecciona un vendedor.");
-      return;
-    }
-
-    const avatar =
-      form.agent
-        .split(" ")
-        .filter(Boolean)
-        .map((name) => name[0])
-        .join("")
-        .toUpperCase() || "NA";
-
-    if (drawerMode === "create") {
-      const newOrder = {
-        id: nextId,
-        number: `PED-${String(nextId).padStart(6, "0")}`,
-        client: form.client.trim(),
-        date: form.date.trim(),
-        total: form.total.trim(),
-        status: form.status,
-        payment: form.payment,
-        agent: form.agent,
-        avatar,
-      };
-
-      setOrders((previousOrders) => [
-        newOrder,
-        ...previousOrders,
-      ]);
-
-      setNextId((previousId) => previousId + 1);
-    }
-
-    if (drawerMode === "edit" && editOrder) {
-      setOrders((previousOrders) =>
-        previousOrders.map((order) =>
-          order.id === editOrder.id
-            ? {
-                ...order,
-                client: form.client.trim(),
-                date: form.date.trim(),
-                total: form.total.trim(),
-                status: form.status,
-                payment: form.payment,
-                agent: form.agent,
-                avatar,
-              }
-            : order,
-        ),
-      );
-    }
-
-    closeDrawer();
   };
 
   const clearFilters = () => {
     setSearch("");
-    setStatusFilter("Todos");
     setPaymentFilter("Todos");
     setAgentFilter("Todos");
-    setDateFrom("01/06/2024");
-    setDateTo("30/06/2024");
   };
 
   return (
@@ -482,35 +292,43 @@ export default function Orders() {
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
               <span>Comercial</span>
               <span>/</span>
-              <span className="text-gray-300">Pedidos</span>
+              <span className="text-gray-300">Ordenes de venta</span>
             </div>
 
-            <h1 className="text-xl font-bold text-white">Pedidos</h1>
+            <h1 className="text-xl font-bold text-white">
+              Ordenes de venta
+            </h1>
 
             <p className="text-sm text-gray-400 mt-0.5">
-              Consulta y gestiona todos los pedidos realizados.
+              Ordenes de produccion pendientes de pago o con pago adelantado.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={loadOrders}
               className="flex items-center gap-2 bg-[#1c2538] border border-[#2a3550] hover:bg-[#C9A227]/15 text-gray-300 hover:text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors cursor-pointer"
             >
-              <RiExportFill size={15} />
-              Exportar
+              <RiRefreshLine size={15} />
+              Actualizar
             </button>
 
             <button
               type="button"
-              onClick={openCreateDrawer}
               className="flex items-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20 cursor-pointer"
             >
-              <RiAddFill size={16} />
-              Nuevo Pedido
+              <RiExportFill size={16} />
+              Exportar
             </button>
           </div>
         </div>
+
+        {loadError && (
+          <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {loadError}
+          </div>
+        )}
 
         {/* Métricas */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
@@ -537,12 +355,6 @@ export default function Orders() {
               <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mt-1">
                 {metric.label}
               </div>
-
-              <div
-                className={`text-xs font-medium mt-1 ${metric.growthColor}`}
-              >
-                {metric.growth} vs. mes anterior
-              </div>
             </div>
           ))}
         </div>
@@ -551,16 +363,8 @@ export default function Orders() {
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-white">
-              Pedidos por día
+              Ordenes de venta por dia de creacion
             </h3>
-
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
-            >
-              Este mes
-              <RiArrowDownSFill size={12} />
-            </button>
           </div>
 
           <div className="h-48">
@@ -604,6 +408,7 @@ export default function Orders() {
                   tick={{ fontSize: 10, fill: "#6b7280" }}
                   axisLine={false}
                   tickLine={false}
+                  allowDecimals={false}
                 />
 
                 <Tooltip
@@ -615,7 +420,7 @@ export default function Orders() {
                     color: "#fff",
                   }}
                   itemStyle={{ color: "#fff" }}
-                  formatter={(value) => [`${value} pedidos`, "Pedidos"]}
+                  formatter={(value) => [`${value} ordenes`, "Ordenes"]}
                 />
 
                 <Area
@@ -632,7 +437,7 @@ export default function Orders() {
 
         {/* Filtros */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="relative lg:col-span-2">
               <RiSearchLine
                 size={14}
@@ -641,65 +446,11 @@ export default function Orders() {
 
               <input
                 type="text"
-                placeholder="Buscar por número o cliente..."
+                placeholder="Buscar por codigo, cotizacion o cliente..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#C9A227] transition-colors"
               />
-            </div>
-
-            <div>
-              <div className="relative">
-                <RiCalendarLine
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                />
-
-                <input
-                  type="text"
-                  value={dateFrom}
-                  onChange={(event) => setDateFrom(event.target.value)}
-                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="relative">
-                <RiCalendarLine
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                />
-
-                <input
-                  type="text"
-                  value={dateTo}
-                  onChange={(event) => setDateTo(event.target.value)}
-                  className="w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-9 pr-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
-                  className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                >
-                  <option value="Todos">Todos los estados</option>
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="En proceso">En proceso</option>
-                  <option value="Enviado">Enviado</option>
-                  <option value="Entregado">Entregado</option>
-                  <option value="Cancelado">Cancelado</option>
-                </select>
-
-                <RiArrowDownSFill
-                  size={14}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                />
-              </div>
             </div>
 
             <div>
@@ -710,9 +461,8 @@ export default function Orders() {
                   className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
                 >
                   <option value="Todos">Todos los pagos</option>
-                  <option value="Pagado">Pagado</option>
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="Reembolsado">Reembolsado</option>
+                  <option value="pendiente">Pendiente de pago</option>
+                  <option value="parcial">Pago adelantado</option>
                 </select>
 
                 <RiArrowDownSFill
@@ -741,20 +491,13 @@ export default function Orders() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 lg:col-span-2 lg:col-start-5">
+            <div className="flex items-center gap-2 lg:col-span-4">
               <button
                 type="button"
                 onClick={clearFilters}
-                className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none sm:px-6 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2 rounded-lg transition-colors cursor-pointer"
               >
                 Limpiar filtros
-              </button>
-
-              <button
-                type="button"
-                className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2 rounded-lg transition-colors cursor-pointer"
-              >
-                Buscar
               </button>
             </div>
           </div>
@@ -764,7 +507,7 @@ export default function Orders() {
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-4">
           <div className="flex items-center justify-between px-5 py-3 border-b border-[#2a3550]">
             <h3 className="text-sm font-semibold text-white">
-              Listado de Pedidos
+              Listado de ordenes de venta
             </h3>
 
             <button
@@ -781,7 +524,7 @@ export default function Orders() {
             <thead>
               <tr className="border-b border-[#2a3550]">
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  #
+                  Orden
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                   Cliente
@@ -793,7 +536,7 @@ export default function Orders() {
                   Total
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Estado
+                  Produccion
                 </th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
                   Pago
@@ -814,7 +557,7 @@ export default function Orders() {
                   className="hover:bg-[#1c2538]/50 transition-colors"
                 >
                   <td className="px-4 py-3 text-sm text-gray-300 font-mono">
-                    {order.number}
+                    {order.code}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-white">
@@ -822,23 +565,25 @@ export default function Orders() {
                   </td>
 
                   <td className="px-4 py-3 text-sm text-gray-400">
-                    {order.date}
+                    {formatDate(order.createdAt)}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-white font-semibold">
-                    {order.total}
+                    {formatCurrency(order.total)}
                   </td>
 
                   <td className="px-4 py-3">
                     <StatusBadge
-                      status={order.status}
+                      status={order.productionStatus}
+                      label={order.productionStatusLabel}
                       config={STATUS_CONFIG}
                     />
                   </td>
 
                   <td className="px-4 py-3">
                     <StatusBadge
-                      status={order.payment}
+                      status={order.paymentStatus}
+                      label={order.paymentStatusLabel}
                       config={PAYMENT_CONFIG}
                     />
                   </td>
@@ -868,15 +613,6 @@ export default function Orders() {
 
                       <button
                         type="button"
-                        onClick={() => openEditDrawer(order)}
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Editar"
-                      >
-                        <RiEditFill size={13} />
-                      </button>
-
-                      <button
-                        type="button"
                         className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
                         title="Descargar"
                       >
@@ -889,12 +625,21 @@ export default function Orders() {
             </tbody>
           </table>
 
-          {filteredOrders.length === 0 && (
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-14 gap-3">
+              <p className="text-sm text-gray-500">
+                Cargando ordenes de venta...
+              </p>
+            </div>
+          )}
+
+          {!loading && filteredOrders.length === 0 && (
             <div className="flex flex-col items-center justify-center py-14 gap-3">
               <RiSearchLine size={28} className="text-gray-600" />
 
               <p className="text-sm text-gray-500">
-                No se encontraron pedidos
+                No se encontraron ordenes de venta pendientes de pago o con
+                pago adelantado
               </p>
 
               <button
@@ -909,24 +654,12 @@ export default function Orders() {
 
           <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
             <span className="text-xs text-gray-500">
-              Mostrando 1 a {filteredOrders.length} de 247 pedidos
+              Mostrando {filteredOrders.length} de {orders.length} ordenes
             </span>
 
             <div className="flex items-center gap-1">
               <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-
-              {[1, 2, 3].map((page) => (
-                <PagBtn
-                  key={page}
-                  label={page}
-                  active={page === 1}
-                />
-              ))}
-
-              <span className="text-gray-600 px-1">...</span>
-
-              <PagBtn label={25} />
-
+              <PagBtn label={1} active />
               <PagBtn icon={<RiArrowRightSFill size={14} />} />
             </div>
           </div>
@@ -939,7 +672,7 @@ export default function Orders() {
           type="button"
           onClick={closeDrawer}
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-default"
-          aria-label="Cerrar panel de pedido"
+          aria-label="Cerrar panel de orden"
         />
       )}
 
@@ -952,34 +685,12 @@ export default function Orders() {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              {drawerMode === "create" && (
-                <>
-                  <RiAddFill size={20} className="text-[#C9A227]" />
-                  Nuevo Pedido
-                </>
-              )}
-
-              {drawerMode === "edit" && (
-                <>
-                  <RiEditFill size={20} className="text-[#C9A227]" />
-                  Editar Pedido
-                </>
-              )}
-
-              {drawerMode === "view" && (
-                <>
-                  <RiEyeFill size={20} className="text-[#C9A227]" />
-                  Detalle del Pedido
-                </>
-              )}
+              <RiEyeFill size={20} className="text-[#C9A227]" />
+              Detalle de la orden
             </h2>
 
             <p className="text-sm text-gray-400 mt-0.5">
-              {drawerMode === "create"
-                ? "Registra un nuevo pedido."
-                : drawerMode === "edit"
-                  ? "Modifica los datos del pedido."
-                  : "Información completa del pedido."}
+              Informacion completa de la orden de venta.
             </p>
           </div>
 
@@ -994,154 +705,22 @@ export default function Orders() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {(drawerMode === "create" || drawerMode === "edit") && (
-            <div className="space-y-4">
-              <Field
-                icon={<RiUserFill size={14} />}
-                label="Cliente"
-                placeholder="Nombre del cliente"
-                value={form.client}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    client: event.target.value,
-                  })
-                }
-              />
-
-              <Field
-                icon={<RiCalendarLine size={14} />}
-                label="Fecha"
-                placeholder="DD/MM/YYYY HH:mm"
-                value={form.date}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    date: event.target.value,
-                  })
-                }
-              />
-
-              <Field
-                icon={<RiMoneyDollarCircleFill size={14} />}
-                label="Total"
-                placeholder="₡0.000.000"
-                value={form.total}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    total: event.target.value,
-                  })
-                }
-              />
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                  Estado
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={form.status}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        status: event.target.value,
-                      })
-                    }
-                    className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                  >
-                    <option>Pendiente</option>
-                    <option>En proceso</option>
-                    <option>Enviado</option>
-                    <option>Entregado</option>
-                    <option>Cancelado</option>
-                  </select>
-
-                  <RiArrowDownSFill
-                    size={16}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                  Pago
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={form.payment}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        payment: event.target.value,
-                      })
-                    }
-                    className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                  >
-                    <option>Pagado</option>
-                    <option>Pendiente</option>
-                    <option>Reembolsado</option>
-                  </select>
-
-                  <RiArrowDownSFill
-                    size={16}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                  Vendedor
-                </label>
-
-                <div className="relative">
-                  <select
-                    value={form.agent}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        agent: event.target.value,
-                      })
-                    }
-                    className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2.5 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                  >
-                    <option value="">Seleccionar vendedor</option>
-
-                    {agents
-                      .filter((agent) => agent !== "Todos")
-                      .map((agent) => (
-                        <option key={agent}>{agent}</option>
-                      ))}
-                  </select>
-
-                  <RiArrowDownSFill
-                    size={16}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {drawerMode === "view" && viewOrder && (
+          {viewOrder && (
             <div className="space-y-5">
               <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
                 <div className="w-14 h-14 rounded-xl bg-[#C9A227]/15 flex items-center justify-center text-lg font-bold text-[#C9A227]">
-                  {viewOrder.number.slice(-3)}
+                  {viewOrder.code.slice(-3)}
                 </div>
 
                 <div>
                   <h3 className="text-lg font-bold text-white">
-                    {viewOrder.number}
+                    {viewOrder.code}
                   </h3>
 
                   <StatusBadge
-                    status={viewOrder.status}
-                    config={STATUS_CONFIG}
+                    status={viewOrder.paymentStatus}
+                    label={viewOrder.paymentStatusLabel}
+                    config={PAYMENT_CONFIG}
                   />
                 </div>
               </div>
@@ -1154,24 +733,48 @@ export default function Orders() {
                   </span>
                 </div>
 
+                {viewOrder.branchLabel && (
+                  <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                    <span className="text-xs text-gray-500">Sucursal</span>
+                    <span className="text-sm text-white font-medium text-right">
+                      {viewOrder.branchLabel}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">Cotizacion</span>
+                  <span className="text-sm text-white font-medium text-right">
+                    {viewOrder.quotationNumber}
+                  </span>
+                </div>
+
                 <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
                   <span className="text-xs text-gray-500">Fecha</span>
                   <span className="text-sm text-white font-medium text-right">
-                    {viewOrder.date}
+                    {formatDate(viewOrder.createdAt)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
                   <span className="text-xs text-gray-500">Total</span>
                   <span className="text-sm text-white font-medium text-right">
-                    {viewOrder.total}
+                    {formatCurrency(viewOrder.total)}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
-                  <span className="text-xs text-gray-500">Estado</span>
+                  <span className="text-xs text-gray-500">Saldo pendiente</span>
+                  <span className="text-sm text-white font-medium text-right">
+                    {formatCurrency(viewOrder.balance)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">Produccion</span>
                   <StatusBadge
-                    status={viewOrder.status}
+                    status={viewOrder.productionStatus}
+                    label={viewOrder.productionStatusLabel}
                     config={STATUS_CONFIG}
                   />
                 </div>
@@ -1179,7 +782,8 @@ export default function Orders() {
                 <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
                   <span className="text-xs text-gray-500">Pago</span>
                   <StatusBadge
-                    status={viewOrder.payment}
+                    status={viewOrder.paymentStatus}
+                    label={viewOrder.paymentStatusLabel}
                     config={PAYMENT_CONFIG}
                   />
                 </div>
@@ -1190,63 +794,31 @@ export default function Orders() {
                     {viewOrder.agent}
                   </span>
                 </div>
+
+                {viewOrder.overdueDays > 0 && (
+                  <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                    <span className="text-xs text-gray-500">
+                      Dias de atraso
+                    </span>
+                    <span className="text-sm text-red-400 font-medium text-right">
+                      {viewOrder.overdueDays}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {(drawerMode === "create" || drawerMode === "edit") && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSaveOrder}
-              className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              {drawerMode === "create"
-                ? "Guardar Pedido"
-                : "Guardar Cambios"}
-            </button>
-          </div>
-        )}
-
-        {drawerMode === "view" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                const orderToEdit = viewOrder;
-
-                closeDrawer();
-
-                window.setTimeout(() => {
-                  if (orderToEdit) {
-                    openEditDrawer(orderToEdit);
-                  }
-                }, 350);
-              }}
-              className="flex-1 flex items-center justify-center gap-2 bg-[#C9A227]/15 text-[#C9A227] hover:bg-[#C9A227] hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              <RiEditFill size={15} />
-              Editar Pedido
-            </button>
-
-            <button
-              type="button"
-              onClick={closeDrawer}
-              className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
-            >
-              Cerrar
-            </button>
-          </div>
-        )}
+        <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+          <button
+            type="button"
+            onClick={closeDrawer}
+            className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
     </>
   );

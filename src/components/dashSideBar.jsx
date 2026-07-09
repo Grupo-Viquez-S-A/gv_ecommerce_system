@@ -262,7 +262,7 @@ function DashSideBar({
 
           <NavItem
             icon={<RiFileListFill size={18} />}
-            label="Pedidos"
+            label="Ordenes de venta"
             to="/pedidos"
             collapsed={sidebarCollapsed}
           />
@@ -507,7 +507,7 @@ function DashSideBar({
 
             <NavItem
               icon={<RiFileListFill size={18} />}
-              label="Pedidos"
+              label="Ordenes de venta"
               to="/pedidos"
               collapsed={false}
             />

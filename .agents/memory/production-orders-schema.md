@@ -11,3 +11,8 @@ There is **no `payment_method` column** on this table, even though earlier clien
 **Why:** Payment method belongs to the quotation (`quotations.method_id` → `payment_methods.method_name`), not the production order. Selecting a nonexistent column either errors or silently returns nothing depending on the PostgREST version/config — don't trust that a `select()` string matches real columns without checking the schema first.
 
 **How to apply:** When reading/writing `production_orders`, join through the related `quotations` row (via `quotation_id`) to get `method_id`/payment method info. Before adding new columns to a `select()` string on any Supabase table, verify the column exists via the OpenAPI schema endpoint (`GET {SUPABASE_URL}/rest/v1/` with `Accept: application/openapi+json`) rather than assuming.
+
+**Check-constraint enums (verified by insert-probing with the service role key, since no `.sql` migrations exist in the repo):**
+- `payment_status` only accepts: `pendiente`, `parcial`, `pagado`, `vencido`. (`adelantado`, `completado` are rejected.) UI mapping used: pendiente="Pendiente de pago", parcial="Pago adelantado", pagado="Pagado", vencido="Vencido".
+- `production_order_status` only accepts: `pendiente`, `en_proceso`. All other guesses (enviado, entregado, cancelado, completado, terminado, listo, en_produccion, etc.) are rejected by the DB check constraint.
+- To probe unknown check-constraint values safely: insert a test row with the service role key, inspect the 400 error's constraint name, then immediately delete any row that returns 201. Always verify no `TEST*`-coded rows remain afterward.
