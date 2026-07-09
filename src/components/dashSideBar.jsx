@@ -201,12 +201,14 @@ function DashSideBar({
             collapsed={sidebarCollapsed}
           />
 
+          {/* Reportes: oculto del sidebar por pedido del usuario, ruta y componente intactos
           <NavItem
             icon={<RiBarChartFill size={18} />}
             label="Reportes"
             to="/reportes"
             collapsed={sidebarCollapsed}
           />
+          */}
 
           {/* VENTAS */}
           {!sidebarCollapsed ? (
@@ -436,12 +438,14 @@ function DashSideBar({
               collapsed={false}
             />
 
+            {/* Reportes: oculto del sidebar por pedido del usuario, ruta y componente intactos
             <NavItem
               icon={<RiBarChartFill size={18} />}
               label="Reportes"
               to="/reportes"
               collapsed={false}
             />
+            */}
 
             {/* VENTAS */}
             <div className="px-4 pb-1 pt-4">
