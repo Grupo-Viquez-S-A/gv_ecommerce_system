@@ -295,6 +295,8 @@ function normalizeQuotation({
       getNumber(quotation.advance_payment, null) !== null
         ? getNumber(quotation.advance_payment, 0)
         : (total !== null ? total : itemsTotal) / 2,
+    methodId: quotation.method_id || null,
+    paymentMethod: quotation.payment_methods?.method_name || null,
     status: getQuotationStatusLabel(quotation.state || quotation.status),
     dbStatus: quotation.state || quotation.status || "pending",
 
@@ -369,6 +371,7 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       earlyDelivery: getBoolean(client.earlyDelivery),
       earlyDeliveryDate: getText(client.earlyDeliveryDate),
       validUntil: getText(client.validUntil),
+      methodId: getText(client.methodId),
     },
 
     items: items.map((item) => {
@@ -463,6 +466,19 @@ async function rollbackQuotation({
       rollbackError,
     );
   }
+}
+
+export async function getPaymentMethods() {
+  const paymentMethods = throwIfError(
+    await supabase
+      .from("payment_methods")
+      .select("method_id, method_name, is_active")
+      .eq("is_active", true)
+      .order("method_name", { ascending: true }),
+    "No fue posible cargar los metodos de pago",
+  );
+
+  return paymentMethods || [];
 }
 
 export async function getQuotationCompanies() {
@@ -652,7 +668,12 @@ export async function getQuotations() {
         iva_amount,
         subtotal,
         total,
-        advance_payment
+        advance_payment,
+        method_id,
+        payment_methods:method_id (
+          method_id,
+          method_name
+        )
       `,
       )
       .eq("is_active", true)
@@ -995,6 +1016,7 @@ export async function createBusinessQuotation(payload) {
         iva_amount: ivaAmount,
         total,
         advance_payment: advancePayment,
+        method_id: client.methodId || null,
       })
       .select(
         `
@@ -1006,7 +1028,8 @@ export async function createBusinessQuotation(payload) {
         subtotal,
         iva_amount,
         total,
-        advance_payment
+        advance_payment,
+        method_id
       `,
       )
       .single();
@@ -1037,6 +1060,7 @@ export async function createBusinessQuotation(payload) {
       earlyDelivery: quotation.early_delivery,
       earlyDeliveryDate: quotation.early_delivery_date,
       validUntil: quotation.valid_until,
+      methodId: quotation.method_id,
     };
   } catch (error) {
     await rollbackQuotation({

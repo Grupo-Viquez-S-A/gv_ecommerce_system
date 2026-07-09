@@ -38,6 +38,7 @@ import {
 } from "../services/catalogService.js";
 import {
   createBusinessQuotation,
+  getPaymentMethods,
   getQuotationClientByLegalId,
   getQuotationCompanies,
 } from "../services/quotationService.js";
@@ -63,6 +64,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   representativeEmail: "",
   notes: "",
   earlyDelivery: false,
+  methodId: "",
 };
 
 function getCartProductId(product) {
@@ -140,6 +142,7 @@ export default function Catalog() {
   const [cartItems, setCartItems] = useState([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [quotationCompanies, setQuotationCompanies] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
   const [quotationClientForm, setQuotationClientForm] = useState(
     EMPTY_QUOTATION_CLIENT_FORM,
   );
@@ -248,6 +251,16 @@ export default function Catalog() {
       })
       .catch((error) => {
         console.error("Quotation companies loading error:", error);
+      });
+
+    getPaymentMethods()
+      .then((methods) => {
+        if (isMounted) {
+          setPaymentMethods(methods || []);
+        }
+      })
+      .catch((error) => {
+        console.error("Payment methods loading error:", error);
       });
 
     return () => {
@@ -1617,6 +1630,32 @@ export default function Catalog() {
                         />
                       </label>
 
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Metodo de pago
+                        </span>
+                        <select
+                          value={quotationClientForm.methodId}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "methodId",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+                        >
+                          <option value="">Seleccionar metodo de pago</option>
+                          {paymentMethods.map((method) => (
+                            <option
+                              key={method.method_id}
+                              value={method.method_id}
+                            >
+                              {method.method_name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
                       <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
                         <input
                           type="checkbox"
@@ -2207,6 +2246,32 @@ export default function Catalog() {
                           className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
                           placeholder="Observaciones para la cotizacion"
                         />
+                      </label>
+
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Metodo de pago
+                        </span>
+                        <select
+                          value={quotationClientForm.methodId}
+                          onChange={(event) =>
+                            handleQuotationClientFormChange(
+                              "methodId",
+                              event.target.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+                        >
+                          <option value="">Seleccionar metodo de pago</option>
+                          {paymentMethods.map((method) => (
+                            <option
+                              key={method.method_id}
+                              value={method.method_id}
+                            >
+                              {method.method_name}
+                            </option>
+                          ))}
+                        </select>
                       </label>
 
                       <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
