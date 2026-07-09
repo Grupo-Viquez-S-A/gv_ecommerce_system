@@ -553,6 +553,7 @@ export async function getMyQuotationDetail(quotationId) {
 
 export async function getMyOrderDetail(productionOrderId) {
   const userId = await getAuthenticatedUserId();
+  const representativeIds = await getMyRepresentativeIds(userId);
 
   if (!productionOrderId) {
     throw new Error("No se encontro el pedido seleccionado.");
@@ -570,8 +571,14 @@ export async function getMyOrderDetail(productionOrderId) {
     "No fue posible cargar el detalle del pedido",
   );
 
-  if (!order) {
+  if (!order || !order.quotation_id) {
     throw new Error("No se encontro el pedido seleccionado.");
+  }
+
+  const ownerFilters = [`user_id.eq.${userId}`];
+
+  if (representativeIds.length) {
+    ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
   }
 
   const quotation = throwIfError(
@@ -581,7 +588,7 @@ export async function getMyOrderDetail(productionOrderId) {
         "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", order.quotation_id)
-      .eq("user_id", userId)
+      .or(ownerFilters.join(","))
       .eq("is_active", true)
       .maybeSingle(),
     "No fue posible validar la cotizacion relacionada",
