@@ -247,25 +247,25 @@ export default function CatalogProductDetailsModal({
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <section>
               <div className="overflow-hidden rounded-2xl border border-[#29466F] bg-[#091A31]">
-                <div className="aspect-[4/3]">
-                  {productImage ? (
+                {productImage ? (
+                  <div className="flex max-h-[420px] min-h-[240px] w-full items-center justify-center p-2 sm:max-h-[520px]">
                     <img
                       src={productImage}
                       alt={productName}
-                      className="h-full w-full object-cover"
+                      className="max-h-[404px] w-full object-contain sm:max-h-[504px]"
                     />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-slate-500">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#35547E] bg-[#102441]">
-                        <ImageOff className="h-6 w-6" />
-                      </div>
-
-                      <span className="text-sm font-medium">
-                        Imagen no disponible
-                      </span>
+                  </div>
+                ) : (
+                  <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 text-slate-500">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#35547E] bg-[#102441]">
+                      <ImageOff className="h-6 w-6" />
                     </div>
-                  )}
-                </div>
+
+                    <span className="text-sm font-medium">
+                      Imagen no disponible
+                    </span>
+                  </div>
+                )}
               </div>
 
               {isTextileProduct ? (
