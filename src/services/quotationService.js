@@ -741,12 +741,11 @@ export async function getQuotationClientByLegalId(legalId) {
   };
 }
 
-export async function getQuotations() {
-  const quotations = throwIfError(
-    await supabase
-      .from("quotations")
-      .select(
-        `
+export async function getQuotations({ ownerUserId } = {}) {
+  let quotationsQuery = supabase
+    .from("quotations")
+    .select(
+      `
         quotation_id,
         business_id,
         branch_id,
@@ -773,9 +772,16 @@ export async function getQuotations() {
           method_name
         )
       `,
-      )
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
+    )
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (ownerUserId) {
+    quotationsQuery = quotationsQuery.eq("user_id", ownerUserId);
+  }
+
+  const quotations = throwIfError(
+    await quotationsQuery,
     "No fue posible cargar las cotizaciones",
   );
 

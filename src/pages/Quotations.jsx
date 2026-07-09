@@ -33,6 +33,7 @@ import {
 } from "recharts";
 
 import { useAuth } from "../context/AuthContext.js";
+import { hasSystemAccess } from "../utils/roles.js";
 import {
   getPaymentMethods,
   getQuotations,
@@ -609,7 +610,11 @@ export default function Quotations() {
     try {
       setLoading(true);
       setError("");
-      setQuotations(await getQuotations());
+      setQuotations(
+        await getQuotations({
+          ownerUserId: hasSystemAccess(user) ? null : user?.id,
+        }),
+      );
     } catch (loadError) {
       console.error("Quotations loading error:", loadError);
       setError(
@@ -621,10 +626,11 @@ export default function Quotations() {
   };
 
   useEffect(() => {
+    if (!user) return;
     Promise.resolve().then(() => {
       loadQuotations();
     });
-  }, []);
+  }, [user]);
 
   const companyOptions = useMemo(
     () => [
