@@ -1,5 +1,4 @@
 import { supabase } from "./primarySupabaseClient.js";
-import { serviceSupabase } from "./serviceSupabaseClient.js";
 import { createRepresentativeUser } from "./representativeUserService.js";
 
 function getText(value) {
@@ -491,10 +490,21 @@ export async function reportPayment({
   notes,
   receiptFile,
 }) {
+  const refreshResult = await supabase.auth.refreshSession();
+  console.log("[reportPayment] refreshSession:", {
+    refreshError: refreshResult.error?.message || null,
+  });
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
   const authUserId = session?.user?.id || null;
+
+  console.log("[reportPayment] session info:", {
+    hasSession: !!session,
+    authUserId,
+    userEmail: session?.user?.email || null,
+  });
 
   if (!authUserId) {
     throw new Error("Debes iniciar sesion para reportar un pago.");
@@ -556,12 +566,8 @@ export async function reportPayment({
       );
     }
 
-    if (!serviceSupabase) {
-      throw new Error("Servicio de comprobantes no disponible. Contacte al administrador.");
-    }
-
     throwIfError(
-      await serviceSupabase.from("payment_receipts").insert({
+      await supabase.from("payment_receipts").insert({
         payment_id: paymentId,
         bucket_name: "Ecommerce",
         folder_name: "Comprobantes",
