@@ -133,10 +133,29 @@ Deno.serve(async (request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const redirectTo =
-    Deno.env.get("ECOMMERCE_CLIENT_REDIRECT_URL") ||
-    Deno.env.get("SITE_URL") ||
-    undefined;
+  const RESET_PASSWORD_PATH = "/restablecer-contrasena";
+
+  function buildRedirectTo() {
+    const explicitRedirect = Deno.env.get("ECOMMERCE_CLIENT_REDIRECT_URL");
+
+    if (explicitRedirect) {
+      return explicitRedirect;
+    }
+
+    const siteUrl = Deno.env.get("SITE_URL");
+
+    if (!siteUrl) {
+      return undefined;
+    }
+
+    try {
+      return new URL(RESET_PASSWORD_PATH, siteUrl).toString();
+    } catch {
+      return `${siteUrl.replace(/\/+$/, "")}${RESET_PASSWORD_PATH}`;
+    }
+  }
+
+  const redirectTo = buildRedirectTo();
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     return errorResponse(
