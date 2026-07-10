@@ -1,0 +1,555 @@
+Necesito que implementes en el proyecto actual el cálculo automático de penalizaciones por atraso para las órdenes de producción.
+
+Trabaja directamente sobre el proyecto existente. No quiero solamente una explicación, pseudocódigo ni recomendaciones. Debes inspeccionar la base de código, modificar los archivos necesarios, crear la migración SQL para Supabase, integrar el cálculo con los pagos y dejar el proyecto compilando correctamente.
+
+No crees un proyecto nuevo, no uses datos ficticios y no rompas los módulos actuales de órdenes de producción, cotizaciones, pagos, ventas, créditos, portal del cliente, roles, permisos ni actualización del saldo pendiente.
+
+Antes de modificar código, revisa:
+
+- La estructura real de la tabla production_orders.
+- Los nombres reales de las columnas existentes.
+- El servicio que crea y actualiza órdenes.
+- La tabla y el servicio de pagos.
+- Los triggers actuales de production_orders y payments.
+- Las políticas RLS existentes.
+- El formulario de creación y edición de órdenes.
+- La vista interna de órdenes.
+- La vista del cliente en /mis-pedidos o su equivalente real.
+
+La tabla production_orders ya tiene una columna para guardar los días de atraso y otra columna para guardar el monto de penalización. Identifica y reutiliza esas columnas. No crees columnas duplicadas.
+
+OBJETIVO FUNCIONAL
+
+Cada orden de producción debe permitir asignar un porcentaje de penalización distinto.
+
+Cuando la fecha límite de pago haya vencido y todavía exista saldo pendiente:
+
+1. Calcular los días de atraso.
+2. Guardar los días de atraso en production_orders.
+3. Calcular el monto de penalización.
+4. Guardar el monto de penalización en production_orders.
+5. Actualizar el cálculo automáticamente cada día.
+6. Recalcular cuando se registre, modifique, elimine o anule un pago.
+7. Mostrar la información en el panel interno y en el portal del cliente.
+
+PORCENTAJE DE PENALIZACIÓN
+
+Verifica si production_orders ya tiene una columna equivalente a penalty_percentage, late_fee_percentage o porcentaje_penalizacion.
+
+Si existe, utiliza esa columna.
+
+Si no existe, crea una migración para agregar una columna llamada penalty_percentage con tipo numeric(5,2), NOT NULL y valor por defecto 0.
+
+Agregar una restricción CHECK para permitir únicamente porcentajes entre 0 y 100.
+
+Debe permitir valores decimales, por ejemplo:
+
+- 0
+- 1.5
+- 2.75
+- 5
+- 12.50
+
+Cada orden debe guardar su propio porcentaje. No debe existir un porcentaje global fijo.
+
+REGLA DE NEGOCIO
+
+Una orden está atrasada únicamente cuando:
+
+- Tiene una fecha límite de pago.
+- La fecha actual en Costa Rica es posterior a la fecha límite.
+- Tiene saldo pendiente mayor que cero.
+- No está cancelada, anulada o rechazada.
+- No está completamente pagada.
+
+Usar la zona horaria America/Costa_Rica.
+
+La fórmula para los días de atraso debe ser:
+
+días de atraso = fecha actual en Costa Rica - fecha límite de pago
+
+Ejemplos:
+
+- Fecha límite 10 de julio y fecha actual 10 de julio: 0 días.
+- Fecha límite 10 de julio y fecha actual 11 de julio: 1 día.
+- Fecha límite 10 de julio y fecha actual 15 de julio: 5 días.
+
+Nunca guardar días negativos.
+
+La fórmula del monto de penalización debe ser:
+
+monto de penalización = saldo pendiente × porcentaje de penalización ÷ 100
+
+Ejemplo:
+
+- Saldo pendiente: ₡500 000
+- Porcentaje: 5 %
+- Días de atraso: 3
+- Penalización: ₡25 000
+
+IMPORTANTE: los días de atraso solamente activan la penalización y se guardan como información. Los días no deben multiplicar el porcentaje.
+
+Con 1, 5 o 20 días de atraso, si el saldo y el porcentaje son iguales, la penalización debe ser la misma.
+
+SALDO Y TOTAL ADEUDADO
+
+No sumes automáticamente la penalización dentro de la columna balance o saldo pendiente.
+
+Mantén separados:
+
+- Saldo pendiente.
+- Monto de penalización.
+
+El total adeudado se debe calcular para mostrarlo así:
+
+total adeudado = saldo pendiente + monto de penalización
+
+No actualices balance con este total.
+
+Esto debe evitar:
+
+- Penalización sobre penalización.
+- Duplicar el monto.
+- Aumentar el saldo en cada ejecución del trigger.
+- Crear cálculos circulares.
+
+COMPORTAMIENTO SEGÚN EL ESTADO
+
+Orden dentro del plazo:
+
+- Días de atraso = 0.
+- Monto de penalización = 0.
+
+Orden vencida con saldo pendiente:
+
+- Días de atraso = diferencia entre fecha actual y fecha límite.
+- Penalización = saldo pendiente × porcentaje ÷ 100.
+
+Orden vencida con porcentaje 0:
+
+- Los días de atraso sí se calculan.
+- La penalización debe ser 0.
+
+Pago parcial:
+
+1. Recalcular primero el saldo pendiente.
+2. Calcular la penalización sobre el nuevo saldo.
+3. No usar el monto original de la orden.
+4. No duplicar la penalización.
+
+Ejemplo:
+
+- Saldo anterior: ₡500 000.
+- Pago: ₡200 000.
+- Nuevo saldo: ₡300 000.
+- Porcentaje: 5 %.
+- Nueva penalización: ₡15 000.
+
+Pago completo:
+
+Cuando el saldo llegue a cero:
+
+- Detener el conteo de nuevos días.
+- Registrar la fecha en que quedó completamente pagada.
+- Mantener los días finales de atraso como historial.
+- Mantener el monto final de penalización como historial.
+- No seguir recalculando diariamente la orden.
+
+Verifica si ya existe una columna como paid_at, payment_completed_at o fully_paid_at.
+
+Si existe, úsala.
+
+Si no existe y es necesaria para congelar el cálculo, agrega paid_at con tipo timestamptz y valor NULL.
+
+Cuando el saldo cambie de un valor mayor que cero a cero:
+
+- Guardar paid_at una sola vez.
+- No sobrescribir esa fecha posteriormente.
+
+Si un pago se elimina o anula y la orden vuelve a tener saldo pendiente, revisar correctamente si paid_at debe limpiarse de acuerdo con el flujo real del proyecto y volver a activar el cálculo.
+
+Órdenes canceladas, anuladas o rechazadas:
+
+- No deben generar nuevos días de atraso.
+- No deben generar penalización.
+- Adapta esta condición a los estados reales utilizados por el proyecto.
+
+FUNCIÓN SQL CENTRALIZADA
+
+Crear una función PostgreSQL para recalcular una orden individual. Puede llamarse recalculate_production_order_penalty, adaptando el tipo del identificador al esquema real.
+
+La función debe:
+
+1. Recibir el ID de la orden.
+2. Consultar la orden.
+3. Leer la fecha límite.
+4. Leer el saldo pendiente.
+5. Leer el porcentaje.
+6. Leer el estado.
+7. Leer paid_at o su equivalente.
+8. Calcular los días de atraso.
+9. Calcular el monto de penalización.
+10. Redondear el monto a dos decimales.
+11. Actualizar únicamente la orden correspondiente.
+12. Ser idempotente.
+13. Manejar valores nulos.
+14. Usar America/Costa_Rica.
+15. No modificar el saldo pendiente.
+16. Evitar recursión infinita con triggers.
+
+La base de datos debe ser la fuente real del cálculo. React solamente debe mostrar los valores.
+
+TRIGGER DE PRODUCTION_ORDERS
+
+Crear o adaptar un trigger para recalcular cuando:
+
+- Se inserte una orden.
+- Cambie la fecha límite.
+- Cambie el saldo pendiente.
+- Cambie el porcentaje.
+- Cambie el estado.
+- Cambie paid_at o su equivalente.
+
+El trigger debe ejecutarse solamente cuando cambien campos relevantes.
+
+Evita ciclos infinitos cuando el cálculo actualice los días de atraso y el monto de penalización.
+
+Revisa los triggers existentes antes de crear uno nuevo. No crees triggers duplicados ni contradictorios.
+
+INTEGRACIÓN CON PAGOS
+
+Revisa la tabla payments y los triggers o servicios que actualizan el saldo de production_orders.
+
+Cada vez que:
+
+- Se registre un pago.
+- Se modifique un pago.
+- Se elimine un pago.
+- Se anule un pago.
+- Se recalcule el saldo.
+
+Debe seguirse este orden:
+
+1. Registrar o modificar el pago.
+2. Recalcular el saldo pendiente.
+3. Determinar si la orden quedó completamente pagada.
+4. Registrar paid_at cuando corresponda.
+5. Recalcular los días de atraso.
+6. Recalcular el monto de penalización.
+
+No permitir:
+
+- Restar un pago dos veces.
+- Duplicar pagos por reintentos.
+- Duplicar penalizaciones.
+- Sumar repetidamente la penalización al saldo.
+- Calcular penalización sobre otra penalización.
+
+Si ya existe un trigger para actualizar balance, integra el recálculo después de que ese trigger determine el saldo final.
+
+ACTUALIZACIÓN AUTOMÁTICA DIARIA
+
+Un trigger no se ejecuta solo porque pasa un día.
+
+Crear una función global llamada recalculate_all_overdue_production_orders o un nombre equivalente.
+
+Esta función debe recalcular únicamente órdenes que:
+
+- Tengan fecha límite.
+- Tengan saldo pendiente mayor que cero.
+- No estén completamente pagadas.
+- No estén canceladas, anuladas o rechazadas.
+
+Debe actualizar:
+
+- Días de atraso.
+- Monto de penalización.
+
+La función debe ser idempotente. Ejecutarla varias veces el mismo día no debe duplicar montos ni incrementar incorrectamente los días.
+
+Configurar una tarea diaria con pg_cron.
+
+El cron debe ejecutarse aproximadamente a las 12:05 a. m. de Costa Rica.
+
+Supabase programa pg_cron usando UTC. Costa Rica utiliza UTC-6, por lo que 12:05 a. m. de Costa Rica corresponde normalmente a las 06:05 UTC.
+
+Usar una expresión cron equivalente a:
+
+5 6 * * *
+
+Nombre sugerido del cron:
+
+recalculate-production-order-penalties-daily
+
+Antes de crearlo:
+
+- Verifica si pg_cron está habilitado.
+- Incluye el SQL para habilitarlo si es necesario.
+- Busca y elimina una tarea anterior con el mismo nombre.
+- Evita crear cron jobs duplicados.
+- Documenta los pasos manuales que debo ejecutar en Supabase.
+
+ACTUALIZACIÓN DE REGISTROS EXISTENTES
+
+La migración debe recalcular las órdenes existentes.
+
+Después de crear o modificar:
+
+- Columnas.
+- Restricciones.
+- Funciones.
+- Triggers.
+- Cron.
+
+Ejecuta la función global para normalizar las órdenes existentes.
+
+No elimines información existente.
+
+Antes de establecer NOT NULL, convierte valores nulos existentes a valores seguros.
+
+FORMULARIO DE ÓRDENES
+
+Localiza el formulario real de creación y edición de órdenes de producción.
+
+Agregar el campo:
+
+Porcentaje de penalización
+
+Características:
+
+- Input numérico.
+- Mínimo 0.
+- Máximo 100.
+- step="0.01".
+- Permitir decimales.
+- Mostrar el símbolo %.
+- Valor por defecto 0.
+- Validar antes de guardar.
+- Editable únicamente por usuarios internos autorizados.
+
+Texto de ayuda:
+
+Este porcentaje se aplicará sobre el saldo pendiente si la orden supera su fecha límite de pago.
+
+Mensajes de validación:
+
+- El porcentaje no puede ser negativo.
+- El porcentaje no puede ser mayor a 100.
+- Ingrese un porcentaje válido.
+
+Guardar el valor en production_orders.
+
+LISTA Y DETALLE DE ÓRDENES
+
+En la lista y en el detalle de órdenes mostrar:
+
+- Fecha límite de pago.
+- Saldo pendiente.
+- Porcentaje de penalización.
+- Días de atraso.
+- Monto de penalización.
+- Total adeudado.
+
+Los campos calculados deben ser de solo lectura:
+
+- Días de atraso.
+- Monto de penalización.
+- Total adeudado.
+
+Mostrar el total así:
+
+Total adeudado = saldo pendiente + monto de penalización
+
+Usar el formato CRC existente en el proyecto.
+
+No mostrar NaN, undefined, null ni [object Object].
+
+Cuando tenga atraso, mostrar:
+
+- Estado: En mora.
+- Texto: X días de atraso.
+
+Cuando no tenga atraso, mostrar:
+
+- Estado: Al día.
+
+Mantén el diseño y los colores actuales.
+
+PORTAL DEL CLIENTE
+
+En /mis-pedidos, o en la ruta real donde el cliente consulta sus órdenes, mostrar:
+
+- Fecha límite de pago.
+- Saldo pendiente.
+- Porcentaje de penalización.
+- Días de atraso.
+- Monto de penalización.
+- Total adeudado.
+
+El cliente solamente puede leer estos valores.
+
+El cliente no puede modificar:
+
+- Porcentaje.
+- Días de atraso.
+- Monto de penalización.
+- Fecha límite.
+- Saldo.
+- paid_at.
+
+RLS Y SEGURIDAD
+
+Revisa las políticas RLS existentes de production_orders.
+
+No elimines políticas necesarias para los usuarios internos.
+
+Los usuarios internos autorizados deben poder:
+
+- Asignar el porcentaje.
+- Modificar el porcentaje.
+- Modificar la fecha límite cuando su permiso actual lo permita.
+
+Los clientes deben poder:
+
+- Consultar únicamente sus propias órdenes.
+- Ver los datos de atraso y penalización.
+
+Los clientes no deben poder editar production_orders ni los campos calculados.
+
+La seguridad no debe depender únicamente de ocultar inputs en React.
+
+Si utilizas SECURITY DEFINER:
+
+- Configura un search_path seguro.
+- Limita los permisos de ejecución.
+- No permitas que cualquier usuario autenticado altere órdenes arbitrarias.
+- Revoca permisos públicos cuando sea necesario.
+- Permite que los triggers y el cron ejecuten el cálculo de forma segura.
+
+MANEJO DE ERRORES
+
+Manejar correctamente:
+
+- Fecha límite nula.
+- Saldo nulo.
+- Porcentaje nulo.
+- Porcentaje negativo.
+- Porcentaje mayor a 100.
+- Saldo negativo.
+- Orden pagada.
+- Orden cancelada.
+- Pago parcial.
+- Pago eliminado.
+- Pago anulado.
+- Datos antiguos.
+- RLS bloqueando una operación.
+- Error en trigger.
+- Error en función SQL.
+- Cron duplicado.
+- Ejecución repetida.
+- Nombres de columnas distintos a los esperados.
+
+No ocultes errores de Supabase.
+
+Muestra mensajes comprensibles en español.
+
+PRUEBAS OBLIGATORIAS
+
+Prueba 1: orden dentro del plazo.
+
+- Saldo: ₡500 000.
+- Porcentaje: 5 %.
+- Fecha futura.
+- Días: 0.
+- Penalización: ₡0.
+
+Prueba 2: primer día de atraso.
+
+- Saldo: ₡500 000.
+- Porcentaje: 5 %.
+- Fecha límite: ayer.
+- Días: 1.
+- Penalización: ₡25 000.
+- Total adeudado: ₡525 000.
+
+Prueba 3: varios días.
+
+- Saldo: ₡500 000.
+- Porcentaje: 5 %.
+- Días: 10.
+- Penalización: ₡25 000.
+
+Confirmar que los días no multiplican el porcentaje.
+
+Prueba 4: pago parcial.
+
+- Saldo inicial: ₡500 000.
+- Pago: ₡200 000.
+- Nuevo saldo: ₡300 000.
+- Porcentaje: 5 %.
+- Penalización: ₡15 000.
+
+Prueba 5: pago completo.
+
+- El saldo llega a cero.
+- Se registra paid_at.
+- Se detiene el conteo.
+- Se conservan los días finales.
+- La penalización deja de cambiar diariamente.
+
+Prueba 6: porcentaje 0.
+
+- La orden está vencida.
+- Los días se calculan.
+- La penalización es 0.
+
+Prueba 7: función diaria.
+
+- Ejecutar manualmente la función global.
+- Verificar los resultados.
+- Ejecutarla nuevamente el mismo día.
+- Confirmar que no duplica montos ni días.
+
+Prueba 8: seguridad.
+
+- Un cliente no puede editar el porcentaje.
+- Un cliente no puede editar los días.
+- Un cliente no puede editar el monto.
+- Un cliente no puede ver órdenes de otro cliente.
+- Un usuario interno autorizado sí puede asignar el porcentaje.
+
+COMPILACIÓN Y ENTREGA
+
+Al finalizar:
+
+1. Ejecuta npm run build.
+2. Corrige todos los errores de compilación.
+3. Enumera los archivos modificados.
+4. Enumera los archivos creados.
+5. Entrega la migración SQL completa.
+6. Entrega las funciones SQL completas.
+7. Indica los triggers creados o modificados.
+8. Indica el nombre exacto del cron.
+9. Indica los cambios realizados en el formulario.
+10. Indica los cambios realizados en la lista y detalle.
+11. Indica los cambios realizados en el portal del cliente.
+12. Indica las políticas RLS creadas o modificadas.
+13. Explica los pasos manuales para Supabase.
+14. Reporta el resultado de npm run build.
+15. Reporta cualquier prueba que no pueda ejecutarse automáticamente.
+
+No declares la tarea terminada si:
+
+- El proyecto no compila.
+- Creaste columnas duplicadas.
+- El cálculo solo existe en React.
+- No existe actualización diaria.
+- El pago parcial no recalcula la penalización.
+- La penalización se suma repetidamente al saldo.
+- Los días multiplican el porcentaje.
+- Un cliente puede modificar los valores.
+- Existen triggers duplicados.
+- Quedan conflictos de Git.
+- Quedan datos ficticios.
+
+Empieza inspeccionando el esquema, los servicios y los triggers reales antes de crear la migración.

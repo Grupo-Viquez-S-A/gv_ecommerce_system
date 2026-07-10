@@ -151,6 +151,34 @@ export default function OrderDetailModal({
             </div>
           )}
 
+          {order.overdueDays > 0 && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-400">
+                Pedido en mora
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-gray-400">Dias de atraso</p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {order.overdueDays}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Penalizacion</p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {formatCurrency(order.penaltyAmount, "CRC 0")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Total adeudado</p>
+                  <p className="mt-1 text-sm font-bold text-white">
+                    {formatCurrency(order.totalOwed, "CRC 0")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <DetailInfoCard
               label="Cotizacion"

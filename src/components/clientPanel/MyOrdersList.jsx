@@ -49,6 +49,9 @@ export default function MyOrdersList({ orders, onSelectOrder }) {
               Saldo
             </th>
             <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+              Mora
+            </th>
+            <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
               Produccion
             </th>
             <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
@@ -89,6 +92,18 @@ export default function MyOrdersList({ orders, onSelectOrder }) {
 
               <td className="px-4 py-3 text-sm text-white font-semibold">
                 {formatCurrency(order.balance, "CRC 0")}
+              </td>
+
+              <td className="px-4 py-3">
+                {order.overdueDays > 0 ? (
+                  <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-md border bg-red-500/10 text-red-400 border-red-500/20">
+                    En mora ({order.overdueDays}d)
+                  </span>
+                ) : (
+                  <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-md border bg-green-500/10 text-green-400 border-green-500/20">
+                    Al dia
+                  </span>
+                )}
               </td>
 
               <td className="px-4 py-3">
@@ -150,6 +165,13 @@ export default function MyOrdersList({ orders, onSelectOrder }) {
                 <p className="text-xs uppercase tracking-wider text-gray-500">Saldo</p>
                 <p className="mt-1 font-bold text-white">{formatCurrency(order.balance, "CRC 0")}</p>
               </div>
+              {order.overdueDays > 0 && (
+                <div className="col-span-2">
+                  <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-md border bg-red-500/10 text-red-400 border-red-500/20">
+                    En mora ({order.overdueDays}d) — penalizacion {formatCurrency(order.penaltyAmount, "CRC 0")}
+                  </span>
+                </div>
+              )}
             </div>
           </article>
         ))}

@@ -437,7 +437,7 @@ export async function getMyProductionOrders() {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount",
+        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
       )
       .in("quotation_id", quotationIds)
       .eq("is_active", true)
@@ -462,6 +462,9 @@ export async function getMyProductionOrders() {
     balance: getNumber(order.balance, 0),
     overdueDays: getNumber(order.overdue_days, 0),
     penaltyAmount: getNumber(order.penalty_amount, 0),
+    penaltyPercentage: getNumber(order.penalty_percentage, 0),
+    totalOwed: getNumber(order.balance, 0) + getNumber(order.penalty_amount, 0),
+    paidAt: order.paid_at,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
   }));
@@ -525,7 +528,7 @@ export async function getMyOrderDetail(productionOrderId) {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount",
+        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
       )
       .eq("production_order_id", productionOrderId)
       .eq("is_active", true)
@@ -602,6 +605,9 @@ export async function getMyOrderDetail(productionOrderId) {
     amountPaid,
     overdueDays: getNumber(order.overdue_days, 0),
     penaltyAmount: getNumber(order.penalty_amount, 0),
+    penaltyPercentage: getNumber(order.penalty_percentage, 0),
+    totalOwed: getNumber(order.balance, 0) + getNumber(order.penalty_amount, 0),
+    paidAt: order.paid_at,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
     total: quotationDetail.total,

@@ -129,7 +129,7 @@ export async function getSalesOrders({
   let ordersQuery = supabase
     .from("production_orders")
     .select(
-      "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount",
+      "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
     )
     .eq("is_active", true)
     .order("created_at", { ascending: false });
@@ -256,6 +256,9 @@ export async function getSalesOrders({
       nextPaymentDate: order.next_payment_date,
       overdueDays: getNumber(order.overdue_days, 0),
       penaltyAmount: getNumber(order.penalty_amount, 0),
+      penaltyPercentage: getNumber(order.penalty_percentage, 0),
+      totalOwed: getNumber(order.balance, 0) + getNumber(order.penalty_amount, 0),
+      paidAt: order.paid_at,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
     };
@@ -271,7 +274,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount",
+        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
       )
       .eq("production_order_id", productionOrderId)
       .eq("is_active", true)
@@ -399,6 +402,9 @@ export async function getSalesOrderDetail(productionOrderId) {
     amountPaid,
     overdueDays: getNumber(order.overdue_days, 0),
     penaltyAmount: getNumber(order.penalty_amount, 0),
+    penaltyPercentage: getNumber(order.penalty_percentage, 0),
+    totalOwed: getNumber(order.balance, 0) + getNumber(order.penalty_amount, 0),
+    paidAt: order.paid_at,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
     total: getNumber(quotation.total, 0),
@@ -406,4 +412,46 @@ export async function getSalesOrderDetail(productionOrderId) {
     notes: quotation.notes || "",
     items,
   };
+}
+
+/**
+ * Actualiza el porcentaje de penalizacion de una orden de produccion.
+ * Solo debe invocarse desde pantallas restringidas a usuarios internos
+ * autorizados (ver src/utils/roles.js -> hasSystemAccess). La base de datos
+ * tambien protege esta columna mediante un trigger que rechaza el cambio
+ * si quien ejecuta la actualizacion es una cuenta de cliente.
+ */
+export async function updateProductionOrderPenaltyPercentage(
+  productionOrderId,
+  penaltyPercentage,
+) {
+  if (!productionOrderId) {
+    throw new Error("Se requiere el identificador de la orden de produccion");
+  }
+
+  const numericPercentage = Number(penaltyPercentage);
+
+  if (!Number.isFinite(numericPercentage)) {
+    throw new Error("Ingrese un porcentaje valido.");
+  }
+
+  if (numericPercentage < 0) {
+    throw new Error("El porcentaje no puede ser negativo.");
+  }
+
+  if (numericPercentage > 100) {
+    throw new Error("El porcentaje no puede ser mayor a 100.");
+  }
+
+  const rounded = Math.round(numericPercentage * 100) / 100;
+
+  throwIfError(
+    await supabase
+      .from("production_orders")
+      .update({ penalty_percentage: rounded })
+      .eq("production_order_id", productionOrderId),
+    "No fue posible actualizar el porcentaje de penalizacion",
+  );
+
+  return rounded;
 }

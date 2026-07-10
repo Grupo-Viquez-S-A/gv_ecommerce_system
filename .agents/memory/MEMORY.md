@@ -5,5 +5,5 @@
 - [Quotation notification system](quotation-notifications.md) — shared raw SMTP pattern for invite vs. new-quotation emails, branch on representative.user_id
 - [Quotation schema volatility](quotation-schema-volatility.md) — user iterates quotations/quote_products/textile_products columns directly in DB; always re-check schema via user screenshots before editing quotationService.js
 - [quote_products generated columns](quote-products-generated-columns.md) — subtotal/total are Postgres GENERATED ALWAYS AS columns; never insert/update them manually, DB computes from quantity*unit_price(+iva_amount)
-- [production_orders schema mismatch](production-orders-schema.md) — table has no payment_method column; code selecting it silently returned wrong/errored data — derive payment method from quotations.method_id instead
+- [production_orders schema mismatch](production-orders-schema.md) — no payment_method column (join quotations.method_id instead); also covers late-payment penalty trigger/cron design and that agent has no direct DDL access to Supabase
 - [Dashboard real-data source of truth](dashboard-real-data.md) — company/advisor breakdowns derive company via businesses.company_id, not a mock company list; no sales-goal table exists

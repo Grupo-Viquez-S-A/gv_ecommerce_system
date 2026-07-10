@@ -23,7 +23,10 @@ import {
   YAxis,
 } from "recharts";
 
-import { getSalesOrders } from "../services/orderService.js";
+import {
+  getSalesOrders,
+  updateProductionOrderPenaltyPercentage,
+} from "../services/orderService.js";
 import {
   getOrderPayments,
   importOrderPayments,
@@ -33,6 +36,8 @@ import {
   formatDateTimeCR,
   toDateInputValueCR,
 } from "../utils/dateUtils.js";
+import { useAuth } from "../context/AuthContext.js";
+import { hasSystemAccess } from "../utils/roles.js";
 
 /* --- CONFIGURACIÓN DE ESTADOS --- */
 const STATUS_CONFIG = {
@@ -189,6 +194,9 @@ function StatusBadge({ status, label, config }) {
 
 /* --- PÁGINA PRINCIPAL --- */
 export default function Orders() {
+  const { user } = useAuth();
+  const canManagePenalty = hasSystemAccess(user);
+
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("Todos");
   const [agentFilter, setAgentFilter] = useState("Todos");
@@ -210,6 +218,11 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+
+  const [penaltyPercentageInput, setPenaltyPercentageInput] = useState("");
+  const [penaltySaving, setPenaltySaving] = useState(false);
+  const [penaltyError, setPenaltyError] = useState(null);
+  const [penaltySuccess, setPenaltySuccess] = useState(null);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -369,6 +382,9 @@ export default function Orders() {
 
   const openViewDrawer = (order) => {
     setViewOrder(order);
+    setPenaltyPercentageInput(String(order.penaltyPercentage ?? 0));
+    setPenaltyError(null);
+    setPenaltySuccess(null);
     setDrawerOpen(true);
   };
 
@@ -381,7 +397,41 @@ export default function Orders() {
       setOrderPayments([]);
       setPaymentsError(null);
       setImportResult(null);
+      setPenaltyError(null);
+      setPenaltySuccess(null);
     }, 300);
+  };
+
+  const handleSavePenaltyPercentage = async () => {
+    if (!viewOrder) {
+      return;
+    }
+
+    setPenaltyError(null);
+    setPenaltySuccess(null);
+    setPenaltySaving(true);
+
+    try {
+      const updatedPercentage = await updateProductionOrderPenaltyPercentage(
+        viewOrder.productionOrderId,
+        penaltyPercentageInput,
+      );
+
+      setViewOrder((current) =>
+        current
+          ? { ...current, penaltyPercentage: updatedPercentage }
+          : current,
+      );
+      setPenaltySuccess("Porcentaje de penalizacion actualizado.");
+      await loadOrders();
+    } catch (error) {
+      setPenaltyError(
+        error?.message ||
+          "No fue posible actualizar el porcentaje de penalizacion.",
+      );
+    } finally {
+      setPenaltySaving(false);
+    }
   };
 
   const openPaymentsDrawer = async (order) => {
@@ -1048,6 +1098,65 @@ export default function Orders() {
                 </div>
 
                 <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">Estado de mora</span>
+                  <span
+                    className={`inline-block text-xs font-medium px-2.5 py-1 rounded-md border ${
+                      viewOrder.overdueDays > 0
+                        ? "bg-red-500/10 text-red-400 border-red-500/20"
+                        : "bg-green-500/10 text-green-400 border-green-500/20"
+                    }`}
+                  >
+                    {viewOrder.overdueDays > 0 ? "En mora" : "Al dia"}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
+                  <span className="text-xs text-gray-500">
+                    Porcentaje de penalizacion
+                  </span>
+                  <span className="text-sm text-white font-medium text-right">
+                    {viewOrder.penaltyPercentage}%
+                  </span>
+                </div>
+
+                {canManagePenalty && (
+                  <div className="flex flex-col gap-2 py-2 border-b border-[#2a3550]">
+                    <span className="text-xs text-gray-500">
+                      Configurar porcentaje de penalizacion (solo interno)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={penaltyPercentageInput}
+                        onChange={(event) =>
+                          setPenaltyPercentageInput(event.target.value)
+                        }
+                        className="w-full bg-[#0f1626] border border-[#2a3550] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSavePenaltyPercentage}
+                        disabled={penaltySaving}
+                        className="whitespace-nowrap bg-[#C9A227] hover:bg-[#B8921F] disabled:opacity-60 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                      >
+                        {penaltySaving ? "Guardando..." : "Guardar"}
+                      </button>
+                    </div>
+                    {penaltyError && (
+                      <p className="text-xs text-red-400">{penaltyError}</p>
+                    )}
+                    {penaltySuccess && (
+                      <p className="text-xs text-green-400">
+                        {penaltySuccess}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 py-2 border-b border-[#2a3550]">
                   <span className="text-xs text-gray-500">
                     Monto de penalizacion
                   </span>
@@ -1059,6 +1168,15 @@ export default function Orders() {
                     }`}
                   >
                     {formatCurrency(viewOrder.penaltyAmount)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-2">
+                  <span className="text-xs text-gray-500 font-semibold">
+                    Total adeudado (saldo + penalizacion)
+                  </span>
+                  <span className="text-sm text-white font-bold text-right">
+                    {formatCurrency(viewOrder.totalOwed)}
                   </span>
                 </div>
               </div>
