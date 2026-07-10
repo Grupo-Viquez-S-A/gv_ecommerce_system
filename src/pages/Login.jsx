@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.js";
-import { signInWithEmail } from "../services/loginService";
+import { signInWithEmail, sendPasswordResetEmail } from "../services/loginService";
 import { isClientAccount } from "../utils/roles.js";
 
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
@@ -20,6 +20,12 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [infoMessage, setInfoMessage] = useState("");
+
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
 
   useEffect(() => {
     const storedMessage = window.sessionStorage.getItem("activationSuccessMessage");
@@ -76,6 +82,42 @@ function Login() {
     }
 
     navigate("/dashboard");
+  };
+
+  const handleForgotPasswordSubmit = async (event) => {
+    event.preventDefault();
+    setForgotError("");
+    setForgotSuccess("");
+
+    if (!forgotEmail) {
+      setForgotError("Ingresa tu correo electronico.");
+      return;
+    }
+
+    setForgotLoading(true);
+
+    const { error: resetError } = await sendPasswordResetEmail(forgotEmail);
+
+    setForgotLoading(false);
+
+    if (resetError) {
+      setForgotError(
+        resetError.message ||
+          "No fue posible enviar el correo de restablecimiento.",
+      );
+      return;
+    }
+
+    setForgotSuccess(
+      "Si el correo existe en el sistema, te enviamos un enlace para restablecer tu contrasena.",
+    );
+  };
+
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false);
+    setForgotEmail("");
+    setForgotError("");
+    setForgotSuccess("");
   };
 
   return (
@@ -158,12 +200,13 @@ function Login() {
                   Contraseña
                 </label>
 
-                <a
-                  href="#"
-                  className="text-xs text-[#c9a227] hover:underline"
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="text-xs text-[#c9a227] hover:underline cursor-pointer"
                 >
                   ¿Olvidaste tu contraseña?
-                </a>
+                </button>
               </div>
 
               <div className="flex items-center border border-gray-300 rounded-xl px-3 py-3 gap-2 focus-within:border-[#c9a227] transition-colors">
@@ -313,6 +356,70 @@ function Login() {
           />
         </div>
       </div>
+
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold text-[#1a2f5e]">
+              Restablecer contraseña
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Ingresa tu correo electrónico y te enviaremos un enlace para
+              crear una nueva contraseña.
+            </p>
+
+            {forgotError && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                {forgotError}
+              </div>
+            )}
+
+            {forgotSuccess && (
+              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                {forgotSuccess}
+              </div>
+            )}
+
+            {!forgotSuccess && (
+              <form onSubmit={handleForgotPasswordSubmit} className="mt-4 space-y-3">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">
+                    Correo electrónico
+                  </label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(event) => setForgotEmail(event.target.value)}
+                    placeholder="ejemplo@correo.com"
+                    autoComplete="email"
+                    className="w-full rounded-xl border border-gray-300 px-3 py-3 text-sm text-gray-700 outline-none focus:border-[#c9a227]"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, #c9a227 0%, #e6bb45 100%)",
+                  }}
+                >
+                  {forgotLoading ? "Enviando..." : "Enviar enlace"}
+                </button>
+              </form>
+            )}
+
+            <button
+              type="button"
+              onClick={closeForgotPassword}
+              className="mt-4 w-full text-center text-sm font-semibold text-gray-500 hover:text-gray-700 cursor-pointer"
+            >
+              {forgotSuccess ? "Cerrar" : "Cancelar"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
