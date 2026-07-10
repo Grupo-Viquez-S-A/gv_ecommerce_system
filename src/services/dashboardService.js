@@ -1,5 +1,6 @@
 import { supabase } from "./primarySupabaseClient.js";
 import { getPaidSales } from "./salesService.js";
+import { formatRelativeDateTimeCR } from "../utils/dateUtils.js";
 
 const COMPANY_COLORS = [
   "#6366f1",
@@ -560,30 +561,7 @@ function formatRelativeTime(isoDate) {
     return "";
   }
 
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const isYesterday = date.toDateString() === yesterday.toDateString();
-
-  const time = date.toLocaleTimeString("es-CR", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-
-  if (isToday) {
-    return `Hoy, ${time}`;
-  }
-
-  if (isYesterday) {
-    return `Ayer, ${time}`;
-  }
-
-  return date.toLocaleDateString("es-CR", {
-    day: "numeric",
-    month: "short",
-  });
+  return formatRelativeDateTimeCR(date);
 }
 
 /**

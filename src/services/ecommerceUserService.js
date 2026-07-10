@@ -1,4 +1,5 @@
 import { supabase } from "./primarySupabaseClient";
+import { formatDateCR, getTodayCRDateString } from "../utils/dateUtils.js";
 
 const AVATAR_COLORS = [
   "#C9A227",
@@ -68,7 +69,7 @@ function getRoleBadge(roleName = "", roleCode = "") {
 }
 
 function isDateRangeActive(startDate, endDate) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayCRDateString();
 
   const hasStarted = !startDate || startDate <= today;
   const hasNotExpired = !endDate || endDate >= today;
@@ -81,11 +82,7 @@ function formatDate(dateValue) {
     return "Sin fecha";
   }
 
-  return new Intl.DateTimeFormat("es-CR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(dateValue));
+  return formatDateCR(dateValue);
 }
 
 function formatActivityDate(dateValue) {
@@ -93,13 +90,11 @@ function formatActivityDate(dateValue) {
     return "Sin actividad registrada";
   }
 
-  return new Intl.DateTimeFormat("es-CR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+  return `${formatDateCR(dateValue)} ${new Intl.DateTimeFormat("es-CR", {
+    timeZone: "America/Costa_Rica",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(dateValue));
+  }).format(new Date(dateValue))}`;
 }
 
 export async function getEcommerceUsers() {

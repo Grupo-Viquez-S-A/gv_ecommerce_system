@@ -28,6 +28,11 @@ import {
   getOrderPayments,
   importOrderPayments,
 } from "../services/paymentService.js";
+import {
+  formatDateShortCR,
+  formatDateTimeCR,
+  toDateInputValueCR,
+} from "../utils/dateUtils.js";
 
 /* --- CONFIGURACIÓN DE ESTADOS --- */
 const STATUS_CONFIG = {
@@ -105,13 +110,7 @@ function formatDate(value) {
     return "Sin fecha";
   }
 
-  return date.toLocaleString("es-CR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeCR(date) || "Sin fecha";
 }
 
 function formatFileSize(value) {
@@ -147,10 +146,7 @@ function buildDailyOrdersData(orders) {
       return acc;
     }
 
-    const key = date.toLocaleDateString("es-CR", {
-      day: "2-digit",
-      month: "short",
-    });
+    const key = formatDateShortCR(date);
 
     acc[key] = (acc[key] || 0) + 1;
 

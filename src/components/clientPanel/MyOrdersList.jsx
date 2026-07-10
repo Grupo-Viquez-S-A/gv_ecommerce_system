@@ -1,6 +1,7 @@
 ﻿import { RiEyeFill } from "react-icons/ri";
 
 import formatCurrency from "../../utils/formatCurrency.js";
+import { formatDateCR } from "../../utils/dateUtils.js";
 import EmptyClientState from "./EmptyClientState.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 
@@ -9,17 +10,9 @@ function formatDate(dateValue) {
     return "Sin fecha";
   }
 
-  const date = new Date(dateValue);
+  const formatted = formatDateCR(dateValue);
 
-  if (Number.isNaN(date.getTime())) {
-    return "Sin fecha";
-  }
-
-  return new Intl.DateTimeFormat("es-CR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  return formatted || "Sin fecha";
 }
 
 export default function MyOrdersList({ orders, onSelectOrder }) {

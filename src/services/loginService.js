@@ -1,4 +1,5 @@
 ﻿import { supabase } from "./primarySupabaseClient";
+import { getTodayCRDateString } from "../utils/dateUtils.js";
 
 const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
 
@@ -7,7 +8,7 @@ function isActiveByDates(record) {
     return false;
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayCRDateString();
   const hasStarted = !record.start_date || record.start_date <= today;
   const hasNotExpired = !record.end_date || record.end_date >= today;
 

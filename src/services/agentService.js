@@ -1,4 +1,5 @@
 import { supabase } from "./primarySupabaseClient.js";
+import { getTodayCRDateString } from "../utils/dateUtils.js";
 
 const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
 
@@ -42,7 +43,7 @@ function isSalesAgentRole(role = {}) {
 }
 
 function isDateRangeActive(startDate, endDate) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getTodayCRDateString();
   const hasStarted = !startDate || startDate <= today;
   const hasNotExpired = !endDate || endDate >= today;
 

@@ -1139,6 +1139,7 @@ export default function Catalog() {
                     ? `Última actualización: ${lastUpdated.toLocaleTimeString(
                         "es-CR",
                         {
+                          timeZone: "America/Costa_Rica",
                           hour: "2-digit",
                           minute: "2-digit",
                           second: "2-digit",

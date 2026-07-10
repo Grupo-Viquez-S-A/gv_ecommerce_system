@@ -1,6 +1,7 @@
 - [Supabase schema corporate data](supabase-schema.md) — confirmed table structure: profiles, roles, companies, departments, user_memberships
 - [Supabase RLS & empty tables](supabase-rls-empty.md) — tables exist but are empty; RLS blocks anon-key inserts; need service role key or admin panel for seeding
 - [Auth HMR compatibility](auth-hmr-js.md) — AuthContext.js (no JSX export) + AuthProvider.jsx (JSX only) avoids Vite Fast Refresh invalidation
+- [Date formatting & CR timezone](dateutils-cr-timezone.md) — all dates use dd/MM/yyyy + America/Costa_Rica via src/utils/dateUtils.js; never use toISOString().slice(0,10) for "today"
 - [Quotation notification system](quotation-notifications.md) — shared raw SMTP pattern for invite vs. new-quotation emails, branch on representative.user_id
 - [Quotation schema volatility](quotation-schema-volatility.md) — user iterates quotations/quote_products/textile_products columns directly in DB; always re-check schema via user screenshots before editing quotationService.js
 - [quote_products generated columns](quote-products-generated-columns.md) — subtotal/total are Postgres GENERATED ALWAYS AS columns; never insert/update them manually, DB computes from quantity*unit_price(+iva_amount)

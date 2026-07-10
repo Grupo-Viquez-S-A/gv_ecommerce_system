@@ -1,5 +1,6 @@
 import { supabase } from "./primarySupabaseClient.js";
 import { createRepresentativeUser, notifyNewQuotation } from "./representativeUserService.js";
+import { addDaysCRDateString, getTodayCRDateString } from "../utils/dateUtils.js";
 
 const QUOTATION_VALIDITY_DAYS = 2;
 
@@ -20,15 +21,11 @@ function getBoolean(value) {
 }
 
 function getTodayDate() {
-  return new Date().toISOString().slice(0, 10);
+  return getTodayCRDateString();
 }
 
 function getDatePlusDays(days = QUOTATION_VALIDITY_DAYS) {
-  const date = new Date();
-
-  date.setDate(date.getDate() + days);
-
-  return date.toISOString().slice(0, 10);
+  return addDaysCRDateString(days);
 }
 
 function throwIfError(response, actionMessage) {
@@ -41,8 +38,16 @@ function throwIfError(response, actionMessage) {
 
 function createQuotationNumber(prefix = "COT") {
   const now = new Date();
-  const date = now.toISOString().slice(0, 10).replaceAll("-", "");
-  const time = now.toTimeString().slice(0, 8).replaceAll(":", "");
+  const date = getTodayCRDateString().replaceAll("-", "");
+  const time = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Costa_Rica",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+    .format(now)
+    .replaceAll(":", "");
 
   return `${prefix}-${date}-${time}`;
 }
@@ -157,9 +162,7 @@ function getValidityDate(createdAt) {
     return null;
   }
 
-  date.setDate(date.getDate() + QUOTATION_VALIDITY_DAYS);
-
-  return date.toISOString();
+  return addDaysCRDateString(QUOTATION_VALIDITY_DAYS, date);
 }
 
 function getQuotationTotal(items = []) {

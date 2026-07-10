@@ -20,6 +20,11 @@ import {
 } from "recharts";
 
 import { getPaidSales } from "../services/salesService.js";
+import {
+  formatDateShortCR,
+  formatDateTimeCR,
+  toDateInputValueCR,
+} from "../utils/dateUtils.js";
 
 const STATUS_CONFIG = {
   pendiente: {
@@ -92,13 +97,7 @@ function formatDate(value) {
     return "Sin fecha";
   }
 
-  return date.toLocaleString("es-CR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeCR(date) || "Sin fecha";
 }
 
 function buildDailySalesData(sales) {
@@ -109,10 +108,7 @@ function buildDailySalesData(sales) {
       return totals;
     }
 
-    const label = date.toLocaleDateString("es-CR", {
-      day: "2-digit",
-      month: "short",
-    });
+    const label = formatDateShortCR(date);
 
     totals[label] = (totals[label] || 0) + sale.total;
 

@@ -222,6 +222,7 @@ const currencyFormatter = new Intl.NumberFormat("es-CR", {
 });
 
 const dateFormatter = new Intl.DateTimeFormat("es-CR", {
+  timeZone: "America/Costa_Rica",
   day: "2-digit",
   month: "2-digit",
   year: "numeric",

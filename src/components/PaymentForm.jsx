@@ -7,6 +7,8 @@ import {
   RiUploadCloud2Line,
 } from "react-icons/ri";
 
+import { getTodayCRDateString } from "../utils/dateUtils.js";
+
 export default function PaymentForm({
   quotation,
   paymentMethods,
@@ -18,9 +20,7 @@ export default function PaymentForm({
 }) {
   const [methodId, setMethodId] = useState("");
   const [amount, setAmount] = useState("");
-  const [paymentDate, setPaymentDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [paymentDate, setPaymentDate] = useState(getTodayCRDateString());
   const [referenceNumber, setReferenceNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [receiptFile, setReceiptFile] = useState(null);
