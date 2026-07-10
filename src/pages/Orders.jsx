@@ -209,6 +209,7 @@ export default function Orders() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [previewReceipt, setPreviewReceipt] = useState(null);
+  const [expandedPaymentId, setExpandedPaymentId] = useState(null);
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -396,6 +397,9 @@ export default function Orders() {
     try {
       const payments = await getOrderPayments(order.productionOrderId);
       setOrderPayments(payments);
+      setExpandedPaymentId(
+        payments.length > 0 ? payments[0].paymentId : null,
+      );
     } catch (error) {
       setPaymentsError(
         error?.message || "No fue posible cargar los pagos de la orden.",
@@ -412,6 +416,7 @@ export default function Orders() {
       setOrderPayments([]);
       setPaymentsError(null);
       setImportResult(null);
+      setExpandedPaymentId(null);
     }, 300);
   };
 
@@ -1210,127 +1215,156 @@ export default function Orders() {
           )}
 
           {!paymentsLoading &&
-            orderPayments.map((payment) => (
-              <div
-                key={payment.paymentId}
-                className="rounded-lg border border-[#2a3550] bg-[#1c2538] px-4 py-4 space-y-4"
-              >
-                <div className="flex items-start justify-between gap-4 pb-3 border-b border-[#2a3550]">
-                  <div>
-                    <span className="block text-xs text-gray-500">
-                      Pago reportado
-                    </span>
-                    <span className="text-lg font-semibold text-white">
-                      {formatCurrency(payment.amount)}
-                    </span>
-                  </div>
+            orderPayments.map((payment) => {
+              const isExpanded = expandedPaymentId === payment.paymentId;
 
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded-md border ${
-                      payment.isValid
-                        ? "bg-green-500/10 text-green-400 border-green-500/20"
-                        : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                    }`}
+              return (
+                <div
+                  key={payment.paymentId}
+                  className="rounded-xl border border-[#2a3550] bg-[#1c2538] overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedPaymentId(
+                        isExpanded ? null : payment.paymentId,
+                      )
+                    }
+                    className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer hover:bg-[#22304a] transition-colors"
                   >
-                    {payment.isValid ? "Validado" : "Pendiente de validar"}
-                  </span>
-                </div>
+                    <div className="flex items-center gap-4 min-w-0">
+                      <RiArrowDownSFill
+                        size={20}
+                        className={`flex-shrink-0 text-gray-400 transition-transform duration-200 ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                      />
 
-                <div className="space-y-3">
-                  <DetailRow label="Metodo" value={payment.methodName} />
-                  <DetailRow label="Fecha reportada">
-                    {formatDate(payment.paymentDate)}
-                  </DetailRow>
+                      <div className="min-w-0">
+                        <span className="block text-xs text-gray-500">
+                          Pago reportado
+                        </span>
+                        <span className="text-xl font-semibold text-white">
+                          {formatCurrency(payment.amount)}
+                        </span>
+                      </div>
+                    </div>
 
-                  {payment.referenceNumber && (
-                    <DetailRow label="Referencia">
-                      {payment.referenceNumber}
-                    </DetailRow>
-                  )}
+                    <span
+                      className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-md border ${
+                        payment.isValid
+                          ? "bg-green-500/10 text-green-400 border-green-500/20"
+                          : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                      }`}
+                    >
+                      {payment.isValid ? "Validado" : "Pendiente de validar"}
+                    </span>
+                  </button>
 
-                  <DetailRow label="Archivos adjuntos">
-                    {payment.receipts.length}
-                  </DetailRow>
+                  {isExpanded && (
+                    <div className="px-5 pb-5 pt-1 space-y-4 border-t border-[#2a3550]">
+                      <div className="space-y-3 pt-4">
+                        <DetailRow label="Metodo" value={payment.methodName} />
+                        <DetailRow label="Fecha reportada">
+                          {formatDate(payment.paymentDate)}
+                        </DetailRow>
 
-                  {payment.notes && (
-                    <div className="rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2">
-                      <span className="block text-xs text-gray-500 mb-1">
-                        Notas del pago
-                      </span>
-                      <p className="text-sm text-gray-300 leading-relaxed">
-                        {payment.notes}
-                      </p>
+                        {payment.referenceNumber && (
+                          <DetailRow label="Referencia">
+                            {payment.referenceNumber}
+                          </DetailRow>
+                        )}
+
+                        <DetailRow label="Archivos adjuntos">
+                          {payment.receipts.length}
+                        </DetailRow>
+
+                        {payment.notes && (
+                          <div className="rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2">
+                            <span className="block text-xs text-gray-500 mb-1">
+                              Notas del pago
+                            </span>
+                            <p className="text-sm text-gray-300 leading-relaxed">
+                              {payment.notes}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {payment.receipts.length > 0 && (
+                        <div className="space-y-3 pt-1">
+                          <div>
+                            <span className="text-xs font-medium uppercase tracking-widest text-[#C9A227]/80">
+                              Comprobantes
+                            </span>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Puedes abrir una imagen para revisarla en
+                              pantalla completa o descargar el archivo
+                              original.
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {payment.receipts.map((receipt) => {
+                              const isImage = (
+                                receipt.mimeType || ""
+                              ).startsWith("image/");
+
+                              if (isImage && receipt.signedUrl) {
+                                return (
+                                  <button
+                                    key={receipt.receiptId}
+                                    type="button"
+                                    onClick={() => setPreviewReceipt(receipt)}
+                                    className="group relative aspect-[4/3] min-h-36 rounded-lg overflow-hidden border border-[#2a3550] hover:border-[#C9A227] transition-colors cursor-pointer bg-black/20"
+                                    title={receipt.fileName || "Comprobante"}
+                                  >
+                                    <img
+                                      src={receipt.signedUrl}
+                                      alt={
+                                        receipt.fileName ||
+                                        "Comprobante de pago"
+                                      }
+                                      className="w-full h-full object-contain"
+                                    />
+
+                                    <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                                    <span className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-left text-[11px] text-white truncate">
+                                      {receipt.fileName || "Comprobante"}
+                                    </span>
+                                  </button>
+                                );
+                              }
+
+                              return (
+                                <a
+                                  key={receipt.receiptId}
+                                  href={receipt.signedUrl || "#"}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="min-h-24 rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2 text-xs text-[#C9A227] hover:border-[#C9A227] transition-colors flex flex-col justify-between"
+                                >
+                                  <span className="inline-flex items-center gap-1">
+                                    <RiDownloadFill size={12} />
+                                    Descargar archivo
+                                  </span>
+                                  <span className="text-gray-300 break-all">
+                                    {receipt.fileName || "Comprobante"}
+                                  </span>
+                                  <span className="text-gray-500">
+                                    {formatFileSize(receipt.fileSize)}
+                                  </span>
+                                </a>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {payment.receipts.length > 0 && (
-                  <div className="space-y-3 pt-1">
-                    <div>
-                      <span className="text-xs font-medium uppercase tracking-widest text-[#C9A227]/80">
-                        Comprobantes
-                      </span>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Puedes abrir una imagen para revisarla en pantalla
-                        completa o descargar el archivo original.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {payment.receipts.map((receipt) => {
-                        const isImage = (receipt.mimeType || "").startsWith(
-                          "image/",
-                        );
-
-                        if (isImage && receipt.signedUrl) {
-                          return (
-                            <button
-                              key={receipt.receiptId}
-                              type="button"
-                              onClick={() => setPreviewReceipt(receipt)}
-                              className="group relative aspect-[4/3] min-h-36 rounded-lg overflow-hidden border border-[#2a3550] hover:border-[#C9A227] transition-colors cursor-pointer bg-black/20"
-                              title={receipt.fileName || "Comprobante"}
-                            >
-                              <img
-                                src={receipt.signedUrl}
-                                alt={receipt.fileName || "Comprobante de pago"}
-                                className="w-full h-full object-contain"
-                              />
-
-                              <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                              <span className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-left text-[11px] text-white truncate">
-                                {receipt.fileName || "Comprobante"}
-                              </span>
-                            </button>
-                          );
-                        }
-
-                        return (
-                          <a
-                            key={receipt.receiptId}
-                            href={receipt.signedUrl || "#"}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="min-h-24 rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2 text-xs text-[#C9A227] hover:border-[#C9A227] transition-colors flex flex-col justify-between"
-                          >
-                            <span className="inline-flex items-center gap-1">
-                              <RiDownloadFill size={12} />
-                              Descargar archivo
-                            </span>
-                            <span className="text-gray-300 break-all">
-                              {receipt.fileName || "Comprobante"}
-                            </span>
-                            <span className="text-gray-500">
-                              {formatFileSize(receipt.fileSize)}
-                            </span>
-                          </a>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
         </div>
 
         <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
