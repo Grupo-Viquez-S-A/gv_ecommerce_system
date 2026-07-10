@@ -1,4 +1,4 @@
-﻿import { supabase } from "./primarySupabaseClient.js";
+import { supabase } from "./primarySupabaseClient.js";
 
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
@@ -305,20 +305,6 @@ async function getMyRepresentativeIds(userId) {
   return representatives.map((representative) => representative.representative_id);
 }
 
-function createProductionOrderCode() {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10).replaceAll("-", "");
-  const time = now.toTimeString().slice(0, 8).replaceAll(":", "");
-
-  return `OP-${date}-${time}`;
-}
-
-function getDatePlusDays(days) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-
-  return date.toISOString().slice(0, 10);
-}
 
 export async function acceptMyQuotation(quotationId) {
   const userId = await getAuthenticatedUserId();
@@ -337,7 +323,7 @@ export async function acceptMyQuotation(quotationId) {
   const quotation = throwIfError(
     await supabase
       .from("quotations")
-      .select("quotation_id, total, state, is_active")
+      .select("quotation_id, state, is_active")
       .eq("quotation_id", quotationId)
       .or(ownerFilters.join(","))
       .in("state", APPROVED_QUOTATION_STATES)
@@ -347,52 +333,28 @@ export async function acceptMyQuotation(quotationId) {
   );
 
   if (!quotation) {
-    throw new Error("No se encontro la cotizacion o no puede ser aceptada.");
+    throw new Error("No se encontro la cotizacion aprobada o no pertenece a tu usuario.");
   }
 
-  throwIfError(
+  const productionOrder = throwIfError(
     await supabase
-      .from("quotations")
-      .update({ state: "converted" })
-      .eq("quotation_id", quotationId),
-    "No fue posible actualizar el estado de la cotizacion",
+      .from("production_orders")
+      .select("production_order_id, production_order_code")
+      .eq("quotation_id", quotationId)
+      .eq("is_active", true)
+      .maybeSingle(),
+    "No fue posible validar la orden de produccion asociada",
   );
 
-  try {
-    const productionOrder = throwIfError(
-      await supabase
-        .from("production_orders")
-        .insert({
-          quotation_id: quotationId,
-          production_order_code: createProductionOrderCode(),
-          committed_delivery_date: null,
-          unexpected_delivery_date: null,
-          production_order_status: "pendiente",
-          payment_status: "pendiente",
-          next_payment_date: getDatePlusDays(15),
-          is_active: true,
-          balance: getNumber(quotation.total, 0),
-          overdue_days: 0,
-          penalty_amount: 0,
-        })
-        .select("production_order_id, production_order_code")
-        .single(),
-      "No fue posible crear la orden de produccion",
-    );
-
-    return {
-      quotationId,
-      productionOrderId: productionOrder?.production_order_id ?? productionOrder?.[0]?.production_order_id,
-      productionOrderCode: productionOrder?.production_order_code ?? productionOrder?.[0]?.production_order_code,
-    };
-  } catch (insertError) {
-    await supabase
-      .from("quotations")
-      .update({ state: quotation.state })
-      .eq("quotation_id", quotationId);
-
-    throw insertError;
+  if (!productionOrder) {
+    throw new Error("La orden de produccion aun no ha sido generada por el area comercial.");
   }
+
+  return {
+    quotationId,
+    productionOrderId: productionOrder.production_order_id,
+    productionOrderCode: productionOrder.production_order_code,
+  };
 }
 
 async function fetchOwnedQuotations({ statesFilter = null } = {}) {

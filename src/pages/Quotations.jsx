@@ -32,6 +32,7 @@ import {
   YAxis,
 } from "recharts";
 
+import OrderDetailModal from "../components/clientPanel/OrderDetailModal.jsx";
 import { useAuth } from "../context/AuthContext.js";
 import { hasSystemAccess } from "../utils/roles.js";
 import {
@@ -39,6 +40,7 @@ import {
   getQuotations,
   reportPayment,
 } from "../services/quotationService.js";
+import { getSalesOrderDetail, getSalesOrders } from "../services/orderService.js";
 
 /* --- MOCK DATA: COTIZACIONES --- */
 const MOCK_QUOTATIONS = [
@@ -596,9 +598,17 @@ export default function Quotations() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [quotations, setQuotations] = useState([]);
+  const [productionOrders, setProductionOrders] = useState([]);
+  const [activeProductionTab, setActiveProductionTab] = useState("quotations");
   const [loading, setLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [error, setError] = useState("");
+  const [ordersError, setOrdersError] = useState("");
   const [selectedQuotation, setSelectedQuotation] = useState(null);
+  const [selectedProductionOrder, setSelectedProductionOrder] = useState(null);
+  const [productionOrderDetail, setProductionOrderDetail] = useState(null);
+  const [productionOrderDetailLoading, setProductionOrderDetailLoading] = useState(false);
+  const [productionOrderDetailError, setProductionOrderDetailError] = useState("");
   const { user } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -625,12 +635,69 @@ export default function Quotations() {
     }
   };
 
+
+  const loadProductionOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      setOrdersError("");
+      setProductionOrders(await getSalesOrders({ paymentStatuses: [] }));
+    } catch (loadError) {
+      console.error("Production orders loading error:", loadError);
+      setOrdersError(
+        loadError?.message || "No fue posible cargar las órdenes de producción.",
+      );
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
   useEffect(() => {
     if (!user) return;
     Promise.resolve().then(() => {
       loadQuotations();
+      loadProductionOrders();
     });
   }, [user]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadProductionOrderDetail() {
+      if (!selectedProductionOrder?.productionOrderId) {
+        setProductionOrderDetail(null);
+        setProductionOrderDetailError("");
+        setProductionOrderDetailLoading(false);
+        return;
+      }
+
+      try {
+        setProductionOrderDetailLoading(true);
+        setProductionOrderDetailError("");
+        const detail = await getSalesOrderDetail(selectedProductionOrder.productionOrderId);
+
+        if (mounted) {
+          setProductionOrderDetail(detail);
+        }
+      } catch (detailError) {
+        if (mounted) {
+          console.error("Production order detail loading error:", detailError);
+          setProductionOrderDetail(null);
+          setProductionOrderDetailError(
+            detailError?.message || "No fue posible cargar el detalle de la orden.",
+          );
+        }
+      } finally {
+        if (mounted) {
+          setProductionOrderDetailLoading(false);
+        }
+      }
+    }
+
+    loadProductionOrderDetail();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedProductionOrder]);
 
   const companyOptions = useMemo(
     () => [
@@ -837,6 +904,17 @@ export default function Quotations() {
     statusFilter,
   ]);
 
+
+  const filteredProductionOrders = useMemo(() => {
+    const normalizedSearch = normalizeSearchText(search);
+
+    if (!normalizedSearch) return productionOrders;
+
+    return productionOrders.filter((order) =>
+      [order.code, order.quotationNumber, order.client, order.agent]
+        .some((value) => normalizeSearchText(value).includes(normalizedSearch)),
+    );
+  }, [productionOrders, search]);
   const openQuotationModal = (quotation) => {
     setSelectedQuotation(quotation);
   };
@@ -846,6 +924,12 @@ export default function Quotations() {
     setShowPaymentForm(false);
     setPaymentError("");
     setPaymentSuccess("");
+  };
+
+  const closeProductionOrderModal = () => {
+    setSelectedProductionOrder(null);
+    setProductionOrderDetail(null);
+    setProductionOrderDetailError("");
   };
 
 
@@ -878,25 +962,28 @@ export default function Quotations() {
             <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
               <span>Comercial</span>
               <span>/</span>
-              <span className="text-gray-300">Cotizaciones</span>
+              <span className="text-gray-300">Producción</span>
             </div>
 
             <h1 className="text-xl font-bold text-white">
-              Cotizaciones
+              Producción
             </h1>
 
             <p className="text-sm text-gray-400 mt-0.5">
-              Gestiona y da seguimiento a todas las cotizaciones del grupo.
+              Gestiona cotizaciones aprobadas y órdenes de producción del e-commerce.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={loadQuotations}
+            onClick={() => {
+              loadQuotations();
+              loadProductionOrders();
+            }}
             className="flex items-center justify-center gap-2 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium px-4 py-2.5 rounded-lg transition-colors shadow-lg shadow-[#C9A227]/20 cursor-pointer"
           >
             <RiDownloadFill size={16} />
-            Actualizar cotizaciones
+            Actualizar producción
           </button>
         </div>
 
@@ -1121,22 +1208,46 @@ export default function Quotations() {
           </div>
         </div>
 
-        {error && (
+        {(error || ordersError) && (
           <div className="mb-6 rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-            {error}
+            {error || ordersError}
           </div>
         )}
 
-        {/* Tabla de cotizaciones */}
+        {/* Listados de producción */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-6">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[#2a3550]">
-            <h3 className="text-sm font-semibold text-white">
-              Listado de Cotizaciones
-            </h3>
+          <div className="flex items-end justify-between gap-3 px-5 pt-3 border-b border-[#2a3550]">
+            <div className="flex gap-1 overflow-x-auto">
+              <button
+                type="button"
+                onClick={() => setActiveProductionTab("quotations")}
+                className={`rounded-t-lg border border-b-0 px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                  activeProductionTab === "quotations"
+                    ? "border-[#C9A227]/70 bg-[#0b1424] text-white"
+                    : "border-[#2a3550] bg-[#101827] text-gray-400 hover:text-white"
+                }`}
+              >
+                Listado de Cotizaciones
+                <span className="ml-2 text-xs text-[#C9A227]">{filtered.length}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveProductionTab("orders")}
+                className={`rounded-t-lg border border-b-0 px-4 py-2 text-sm font-semibold transition-colors cursor-pointer ${
+                  activeProductionTab === "orders"
+                    ? "border-[#C9A227]/70 bg-[#0b1424] text-white"
+                    : "border-[#2a3550] bg-[#101827] text-gray-400 hover:text-white"
+                }`}
+              >
+                Listado de Órdenes de Producción
+                <span className="ml-2 text-xs text-[#C9A227]">{filteredProductionOrders.length}</span>
+              </button>
+            </div>
 
             <button
               type="button"
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
+              className="mb-2 flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors cursor-pointer"
             >
               <RiExportFill size={13} />
               Exportar
@@ -1144,180 +1255,177 @@ export default function Quotations() {
             </button>
           </div>
 
-          <table className="w-full text-left hidden md:table">
-            <thead>
-              <tr className="border-b border-[#2a3550]">
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  #
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Cliente
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Empresa
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Vigencia
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Total
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-                  Vendedor
-                </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
+          {activeProductionTab === "quotations" && (
+            <>
+              <table className="w-full text-left hidden md:table">
+                <thead>
+                  <tr className="border-b border-[#2a3550]">
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Vigencia</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Vendedor</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
+                  </tr>
+                </thead>
 
-            <tbody className="divide-y divide-[#2a3550]">
-              {filtered.map((quotation) => (
-                <tr
-                  key={quotation.id}
-                  onClick={() => openQuotationModal(quotation)}
-                  className="hover:bg-[#1c2538]/50 transition-colors cursor-pointer"
-                >
-                  <td className="px-4 py-3 text-sm text-gray-300 font-mono">
-                    {quotation.number}
-                  </td>
+                <tbody className="divide-y divide-[#2a3550]">
+                  {filtered.map((quotation) => (
+                    <tr
+                      key={quotation.id}
+                      onClick={() => openQuotationModal(quotation)}
+                      className="hover:bg-[#1c2538]/50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-300 font-mono">{quotation.number}</td>
+                      <td className="px-4 py-3 text-sm text-white">{quotation.client}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300">{quotation.company}</td>
+                      <td className="px-4 py-3 text-sm text-gray-400">{formatDate(quotation.date)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-400">{formatDate(quotation.validity)}</td>
+                      <td className="px-4 py-3 text-sm text-white font-semibold">{formatCurrency(quotation.total)}</td>
+                      <td className="px-4 py-3"><StatusBadge status={quotation.status} /></td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[10px] font-bold text-[#C9A227]">
+                            {quotation.avatar}
+                          </div>
+                          <span className="text-sm text-gray-300">{quotation.agent}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openQuotationModal(quotation);
+                            }}
+                            className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
+                            title="Ver"
+                          >
+                            <RiEyeFill size={13} />
+                          </button>
+                          <button type="button" className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Descargar">
+                            <RiDownloadFill size={13} />
+                          </button>
+                          <button type="button" className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Enviar">
+                            <RiMailSendFill size={13} />
+                          </button>
+                          <button type="button" className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Más opciones">
+                            <RiMoreFill size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-                  <td className="px-4 py-3 text-sm text-white">
-                    {quotation.client}
-                  </td>
+              {loading && (
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                  <RiSearchLine size={28} className="text-gray-600 animate-pulse" />
+                  <p className="text-sm text-gray-500">Cargando cotizaciones...</p>
+                </div>
+              )}
 
-                  <td className="px-4 py-3 text-sm text-gray-300">
-                    {quotation.company}
-                  </td>
+              {!loading && filtered.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                  <RiSearchLine size={28} className="text-gray-600" />
+                  <p className="text-sm text-gray-500">No se encontraron cotizaciones</p>
+                  <button type="button" onClick={clearFilters} className="text-xs text-[#C9A227] hover:underline cursor-pointer">
+                    Limpiar filtros
+                  </button>
+                </div>
+              )}
 
-                  <td className="px-4 py-3 text-sm text-gray-400">
-                    {formatDate(quotation.date)}
-                  </td>
-
-                  <td className="px-4 py-3 text-sm text-gray-400">
-                    {formatDate(quotation.validity)}
-                  </td>
-
-                  <td className="px-4 py-3 text-sm text-white font-semibold">
-                    {formatCurrency(quotation.total)}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <StatusBadge status={quotation.status} />
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[10px] font-bold text-[#C9A227]">
-                        {quotation.avatar}
-                      </div>
-
-                      <span className="text-sm text-gray-300">
-                        {quotation.agent}
-                      </span>
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-0.5">
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openQuotationModal(quotation);
-                        }}
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Ver"
-                      >
-                        <RiEyeFill size={13} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Descargar"
-                      >
-                        <RiDownloadFill size={13} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Enviar"
-                      >
-                        <RiMailSendFill size={13} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Más opciones"
-                      >
-                        <RiMoreFill size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-14 gap-3">
-              <RiSearchLine size={28} className="text-gray-600 animate-pulse" />
-
-              <p className="text-sm text-gray-500">
-                Cargando cotizaciones...
-              </p>
-            </div>
+              <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
+                <span className="text-xs text-gray-500">
+                  Mostrando {filtered.length === 0 ? 0 : 1} a {filtered.length} de {quotations.length} cotizaciones
+                </span>
+                <div className="flex items-center gap-1">
+                  <PagBtn icon={<RiArrowLeftSLine size={14} />} />
+                  {[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}
+                  <PagBtn icon={<RiArrowRightSFill size={14} />} />
+                </div>
+              </div>
+            </>
           )}
 
-          {!loading && filtered.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-14 gap-3">
-              <RiSearchLine size={28} className="text-gray-600" />
+          {activeProductionTab === "orders" && (
+            <>
+              <table className="w-full text-left hidden md:table">
+                <thead>
+                  <tr className="border-b border-[#2a3550]">
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Orden</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cotización</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Producción</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Pago</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Saldo</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Vendedor</th>
+                  </tr>
+                </thead>
 
-              <p className="text-sm text-gray-500">
-                No se encontraron cotizaciones
-              </p>
+                <tbody className="divide-y divide-[#2a3550]">
+                  {filteredProductionOrders.map((order) => (
+                    <tr
+                      key={order.id}
+                      onClick={() => setSelectedProductionOrder(order)}
+                      className="cursor-pointer hover:bg-[#1c2538]/50 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-sm text-white font-mono">{order.code}</td>
+                      <td className="px-4 py-3 text-sm text-gray-300 font-mono">{order.quotationNumber}</td>
+                      <td className="px-4 py-3 text-sm text-white">{order.client}</td>
+                      <td className="px-4 py-3 text-sm text-gray-400">{formatDate(order.createdAt)}</td>
+                      <td className="px-4 py-3"><StatusBadge status={order.productionStatusLabel} /></td>
+                      <td className="px-4 py-3"><StatusBadge status={order.paymentStatusLabel} /></td>
+                      <td className="px-4 py-3 text-sm text-white font-semibold">{formatCurrency(order.balance)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[10px] font-bold text-[#C9A227]">
+                            {order.avatar}
+                          </div>
+                          <span className="text-sm text-gray-300">{order.agent}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-              <button
-                type="button"
-                onClick={clearFilters}
-                className="text-xs text-[#C9A227] hover:underline cursor-pointer"
-              >
-                Limpiar filtros
-              </button>
-            </div>
+              {ordersLoading && (
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                  <RiSearchLine size={28} className="text-gray-600 animate-pulse" />
+                  <p className="text-sm text-gray-500">Cargando órdenes de producción...</p>
+                </div>
+              )}
+
+              {!ordersLoading && filteredProductionOrders.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                  <RiSearchLine size={28} className="text-gray-600" />
+                  <p className="text-sm text-gray-500">No se encontraron órdenes de producción</p>
+                  <button type="button" onClick={clearFilters} className="text-xs text-[#C9A227] hover:underline cursor-pointer">
+                    Limpiar filtros
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
+                <span className="text-xs text-gray-500">
+                  Mostrando {filteredProductionOrders.length === 0 ? 0 : 1} a {filteredProductionOrders.length} de {productionOrders.length} órdenes
+                </span>
+                <div className="flex items-center gap-1">
+                  <PagBtn icon={<RiArrowLeftSLine size={14} />} />
+                  {[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}
+                  <PagBtn icon={<RiArrowRightSFill size={14} />} />
+                </div>
+              </div>
+            </>
           )}
-
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
-            <span className="text-xs text-gray-500">
-              Mostrando {filtered.length === 0 ? 0 : 1} a {filtered.length} de{" "}
-              {quotations.length} cotizaciones
-            </span>
-
-            <div className="flex items-center gap-1">
-              <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-
-              {[1, 2, 3, 4, 5].map((page) => (
-                <PagBtn
-                  key={page}
-                  label={page}
-                  active={page === 1}
-                />
-              ))}
-
-              <PagBtn icon={<RiArrowRightSFill size={14} />} />
-            </div>
-          </div>
         </div>
-
         {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4">
@@ -1642,6 +1750,14 @@ export default function Quotations() {
           </div>
         )}
       </div>
+
+      <OrderDetailModal
+        isOpen={Boolean(selectedProductionOrder)}
+        order={productionOrderDetail}
+        loading={productionOrderDetailLoading}
+        error={productionOrderDetailError}
+        onClose={closeProductionOrderModal}
+      />
 
       {selectedQuotation && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">

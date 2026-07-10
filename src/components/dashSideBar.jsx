@@ -244,7 +244,7 @@ function DashSideBar({
 
           <NavItem
             icon={<RiClipboardFill size={18} />}
-            label="Cotizaciones"
+            label="Producción"
             to="/cotizaciones"
             collapsed={sidebarCollapsed}
           />
@@ -477,7 +477,7 @@ function DashSideBar({
 
             <NavItem
               icon={<RiClipboardFill size={18} />}
-              label="Cotizaciones"
+              label="Producción"
               to="/cotizaciones"
               collapsed={false}
             />

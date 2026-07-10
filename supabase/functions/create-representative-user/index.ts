@@ -1,4 +1,4 @@
-﻿import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,6 +103,30 @@ function getErrorMessage(error: unknown, fallbackMessage: string) {
   return fallbackMessage;
 }
 
+
+async function findAuthUserIdByEmail(supabaseAdmin: any, email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const perPage = 1000;
+
+  for (let page = 1; page <= 10; page += 1) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) throw error;
+
+    const existingUser = data?.users?.find(
+      (user) => String(user.email || "").trim().toLowerCase() === normalizedEmail,
+    );
+
+    if (existingUser?.id) return existingUser.id;
+
+    if (!data?.users || data.users.length < perPage) break;
+  }
+
+  return null;
+}
 function errorResponse(message: string, status = 400, details?: unknown) {
   console.warn("create-representative-user rejected:", {
     status,
@@ -279,6 +303,10 @@ Deno.serve(async (request) => {
       }
 
       userId = existingProfile?.user_id || null;
+    }
+
+    if (!userId) {
+      userId = await findAuthUserIdByEmail(supabaseAdmin, email);
     }
 
     if (!userId) {

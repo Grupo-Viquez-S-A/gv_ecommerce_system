@@ -1,6 +1,8 @@
 import { supabase } from "./primarySupabaseClient.js";
 import { createRepresentativeUser } from "./representativeUserService.js";
 
+const QUOTATION_VALIDITY_DAYS = 2;
+
 function getText(value) {
   const normalizedValue = String(value || "").trim();
 
@@ -21,7 +23,7 @@ function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getDatePlusDays(days = 15) {
+function getDatePlusDays(days = QUOTATION_VALIDITY_DAYS) {
   const date = new Date();
 
   date.setDate(date.getDate() + days);
@@ -155,7 +157,7 @@ function getValidityDate(createdAt) {
     return null;
   }
 
-  date.setDate(date.getDate() + 15);
+  date.setDate(date.getDate() + QUOTATION_VALIDITY_DAYS);
 
   return date.toISOString();
 }
@@ -365,6 +367,7 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
 
       representativeName,
       representativeEmail: getText(client.representativeEmail),
+      representativeUserId: getText(client.representativeUserId),
 
       notes: getText(client.notes),
 
@@ -663,7 +666,7 @@ export async function getQuotationClientByLegalId(legalId) {
       await supabase
         .from("representatives")
         .select(
-          "representative_id, business_id, branch_id, name, email, is_active, created_at",
+          "representative_id, business_id, branch_id, user_id, name, email, is_active, created_at",
         )
         .eq("business_id", business.business_id)
         .order("created_at", { ascending: true }),
@@ -710,6 +713,7 @@ export async function getQuotationClientByLegalId(legalId) {
             representative_id: rep.representative_id,
             name: rep.name || "",
             email: rep.email || "",
+            user_id: rep.user_id || null,
           }
         : null,
     };
@@ -736,6 +740,7 @@ export async function getQuotationClientByLegalId(legalId) {
 
     representativeName: activeRepresentative?.name || "",
     representativeEmail: activeRepresentative?.email || "",
+    representativeUserId: activeRepresentative?.user_id || null,
 
     allBranches,
   };
@@ -975,7 +980,7 @@ export async function createBusinessQuotation(payload) {
     ? client.earlyDeliveryDate || getTodayDate()
     : null;
 
-  const validUntil = client.validUntil || getDatePlusDays(15);
+  const validUntil = client.validUntil || getDatePlusDays();
 
   const createdPhoneIds = [];
 
@@ -1082,9 +1087,10 @@ export async function createBusinessQuotation(payload) {
 
       representativeId = representative.representative_id;
       createdRepresentativeId = representativeId;
+      client.representativeUserId = null;
     }
 
-    if (representativeId && client.representativeEmail) {
+    if (representativeId && client.representativeEmail && !client.representativeUserId) {
       await createRepresentativeUser({
         representative_id: representativeId,
         business_id: businessId,

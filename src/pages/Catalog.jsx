@@ -64,6 +64,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   branchPhone: "",
   representativeName: "",
   representativeEmail: "",
+  representativeUserId: null,
   notes: "",
   earlyDelivery: false,
   methodId: "",
@@ -921,6 +922,7 @@ export default function Catalog() {
       representativeId: branch.representative?.representative_id || "",
       representativeName: branch.representative?.name || "",
       representativeEmail: branch.representative?.email || "",
+      representativeUserId: branch.representative?.user_id || null,
     }));
   };
 
@@ -936,6 +938,7 @@ export default function Catalog() {
       representativeId: "",
       representativeName: "",
       representativeEmail: "",
+      representativeUserId: null,
     }));
   };
 

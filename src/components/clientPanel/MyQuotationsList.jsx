@@ -1,14 +1,9 @@
-﻿import { RiCheckLine, RiEyeFill } from "react-icons/ri";
+import { RiEyeFill } from "react-icons/ri";
 
 import formatCurrency from "../../utils/formatCurrency.js";
 import EmptyClientState from "./EmptyClientState.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 
-const ACCEPTABLE_STATES = ["approved", "aprobada"];
-
-function canAcceptQuotation(status) {
-  return ACCEPTABLE_STATES.includes(String(status || "").toLowerCase());
-}
 
 function formatDate(dateValue) {
   if (!dateValue) {
@@ -31,8 +26,6 @@ function formatDate(dateValue) {
 export default function MyQuotationsList({
   quotations,
   onSelectQuotation,
-  onAcceptQuotation,
-  acceptingId,
 }) {
   if (!quotations.length) {
     return (
@@ -105,21 +98,6 @@ export default function MyQuotationsList({
 
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1.5">
-                  {canAcceptQuotation(quotation.status) && (
-                    <button
-                      type="button"
-                      disabled={acceptingId === quotation.quotationId}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onAcceptQuotation?.(quotation.quotationId);
-                      }}
-                      className="flex h-7 items-center gap-1 rounded-lg border border-green-500/40 bg-green-500/10 px-2 text-xs font-semibold text-green-300 transition-colors hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-                      title="Aceptar cotizacion"
-                    >
-                      <RiCheckLine size={13} />
-                      {acceptingId === quotation.quotationId ? "Procesando..." : "Aceptar"}
-                    </button>
-                  )}
                   <button
                     type="button"
                     onClick={(event) => {
@@ -166,20 +144,6 @@ export default function MyQuotationsList({
                 <p className="mt-1 font-bold text-white">{formatCurrency(quotation.total, "CRC 0")}</p>
               </div>
             </div>
-            {canAcceptQuotation(quotation.status) && (
-              <button
-                type="button"
-                disabled={acceptingId === quotation.quotationId}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onAcceptQuotation?.(quotation.quotationId);
-                }}
-                className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-green-500/40 bg-green-500/10 py-2 text-sm font-semibold text-green-300 transition-colors hover:bg-green-500/20 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
-              >
-                <RiCheckLine size={14} />
-                {acceptingId === quotation.quotationId ? "Procesando..." : "Aceptar cotizacion"}
-              </button>
-            )}
           </article>
         ))}
       </div>
