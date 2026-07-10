@@ -1,5 +1,8 @@
 import { supabase } from "./primarySupabaseClient.js";
-import { createRepresentativeUser } from "./representativeUserService.js";
+import {
+  createRepresentativeUser,
+  notifyNewQuotation,
+} from "./representativeUserService.js";
 import { addDaysCRDateString, getTodayCRDateString } from "../utils/dateUtils.js";
 
 const QUOTATION_VALIDITY_DAYS = 2;
@@ -1194,6 +1197,15 @@ export async function createBusinessQuotation(payload) {
         console.error("No fue posible crear el acceso del representante:", error);
         accessError =
           "La cotizacion fue creada correctamente, pero no se pudo crear el acceso del representante.";
+      }
+    } else if (representativeId && client.representativeUserId) {
+      try {
+        await notifyNewQuotation({ quotationId, representativeId });
+      } catch (error) {
+        console.error(
+          "No fue posible enviar la notificacion de nueva cotizacion:",
+          error,
+        );
       }
     }
 

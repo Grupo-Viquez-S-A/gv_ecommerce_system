@@ -6,4 +6,4 @@
 - [quote_products generated columns](quote-products-generated-columns.md) — subtotal/total are Postgres GENERATED ALWAYS AS columns; never insert/update them manually, DB computes from quantity*unit_price(+iva_amount)
 - [production_orders schema mismatch](production-orders-schema.md) — no payment_method column (join quotations.method_id instead); also covers late-payment penalty trigger/cron design and that agent has no direct DDL access to Supabase
 - [Dashboard real-data source of truth](dashboard-real-data.md) — company/advisor breakdowns derive company via businesses.company_id, not a mock company list; no sales-goal table exists
-- [No email sending policy](no-email-sending.md) — project deliberately has zero Supabase/SMTP email sending; representative/client access uses temp passwords shared manually, not invite/reset emails
+- [SMTP email sending via Edge Functions](smtp-email-sending.md) — email uses a hand-rolled raw-SMTP client in `_shared/mailer.ts`, not Supabase's built-in email APIs; secrets must be set in Supabase, not Replit

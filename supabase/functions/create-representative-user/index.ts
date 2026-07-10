@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getSmtpConfig, isSmtpConfigured, sendSmtpMail } from "../_shared/mailer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -103,13 +104,96 @@ function getErrorMessage(error: unknown, fallbackMessage: string) {
   return fallbackMessage;
 }
 
-// Genera una contrasena temporal segura para que el administrador la
-// comparta manualmente con el representante (no se envia ningun correo).
+// Genera una contrasena temporal segura. Se envia por correo al
+// representante y tambien se retorna en la respuesta por si el correo falla.
 function generateTempPassword() {
   const bytes = crypto.getRandomValues(new Uint8Array(9));
   const base = Array.from(bytes, (byte) => byte.toString(36)).join("").slice(0, 10);
 
   return `Gv${base}${Math.floor(Math.random() * 90 + 10)}!`;
+}
+
+function buildAccessEmailHtml({
+  representativeName,
+  email,
+  tempPassword,
+  loginUrl,
+}: {
+  representativeName: string;
+  email: string;
+  tempPassword: string;
+  loginUrl: string;
+}) {
+  return `
+    <div style="margin:0;padding:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+      <div style="max-width:640px;margin:0 auto;padding:28px 18px;">
+        <div style="background:#111827;border-radius:12px;padding:22px 24px;color:#ffffff;">
+          <p style="margin:0;color:#d1d5db;font-size:13px;">Grupo Viquez S.A</p>
+          <h1 style="margin:8px 0 0;font-size:22px;line-height:1.3;">Tu acceso al portal de cliente</h1>
+        </div>
+
+        <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;margin-top:16px;padding:24px;">
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+            Hola ${representativeName || "representante"}, se genero un acceso para que puedas revisar tus cotizaciones en el portal de cliente.
+          </p>
+
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid #edf0f5;color:#6b7280;">Correo</td>
+              <td style="padding:10px 0;border-bottom:1px solid #edf0f5;text-align:right;font-weight:600;">${email}</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid #edf0f5;color:#6b7280;">Contrasena temporal</td>
+              <td style="padding:10px 0;border-bottom:1px solid #edf0f5;text-align:right;font-weight:700;">${tempPassword}</td>
+            </tr>
+          </table>
+
+          ${
+            loginUrl
+              ? `<div style="margin-top:22px;text-align:center;">
+            <a href="${loginUrl}" style="display:inline-block;background:#c9a227;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700;font-size:14px;">
+              Iniciar sesion
+            </a>
+          </div>`
+              : ""
+          }
+
+          <p style="margin:18px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
+            Por seguridad, el sistema te pedira cambiar esta contrasena la primera vez que inicies sesion.
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function buildAccessEmailText({
+  representativeName,
+  email,
+  tempPassword,
+  loginUrl,
+}: {
+  representativeName: string;
+  email: string;
+  tempPassword: string;
+  loginUrl: string;
+}) {
+  return [
+    `Hola ${representativeName || "representante"},`,
+    "",
+    "Se genero un acceso para que puedas revisar tus cotizaciones en el portal de cliente.",
+    "",
+    `Correo: ${email}`,
+    `Contrasena temporal: ${tempPassword}`,
+    "",
+    loginUrl ? `Ingresa en: ${loginUrl}` : "",
+    "",
+    "Por seguridad, se te pedira cambiar esta contrasena la primera vez que inicies sesion.",
+    "",
+    "Grupo Viquez S.A",
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
 }
 
 async function findAuthUserIdByEmail(supabaseAdmin: any, email: string) {
@@ -550,11 +634,66 @@ Deno.serve(async (request) => {
       }
     }
 
+    let emailNotification: { sent: boolean; error: string | null } = {
+      sent: false,
+      error: null,
+    };
+
+    if (tempPassword) {
+      const smtpConfig = getSmtpConfig();
+
+      if (!isSmtpConfigured(smtpConfig)) {
+        emailNotification.error =
+          "Faltan variables SMTP: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD y SMTP_FROM_EMAIL.";
+      } else {
+        const loginUrl = (Deno.env.get("SITE_URL") || Deno.env.get("APP_URL") || "")
+          .trim()
+          .replace(/\/+$/, "");
+
+        try {
+          await sendSmtpMail({
+            host: smtpConfig.host,
+            port: smtpConfig.port,
+            username: smtpConfig.username,
+            password: smtpConfig.password,
+            fromEmail: smtpConfig.fromEmail,
+            fromName: smtpConfig.fromName,
+            to: email,
+            subject: "Tu acceso al portal de cliente - Grupo Viquez",
+            text: buildAccessEmailText({
+              representativeName: fullName,
+              email,
+              tempPassword,
+              loginUrl,
+            }),
+            html: buildAccessEmailHtml({
+              representativeName: fullName,
+              email,
+              tempPassword,
+              loginUrl,
+            }),
+          });
+
+          emailNotification.sent = true;
+        } catch (sendError) {
+          console.error(
+            "create-representative-user: fallo el envio de correo de acceso",
+            getErrorDetails(sendError),
+          );
+          emailNotification.error = getErrorMessage(
+            sendError,
+            "No fue posible enviar el correo con la contrasena temporal.",
+          );
+        }
+      }
+    }
+
     return jsonResponse({
       ok: true,
       account_state: accountState,
       must_change_password: finalMustChangePassword,
       temp_password: tempPassword,
+      email_notification: emailNotification,
       message: "Representante enlazado como cliente del e-commerce.",
       user: {
         user_id: userId,

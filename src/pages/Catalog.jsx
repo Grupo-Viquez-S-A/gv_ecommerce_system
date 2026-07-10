@@ -1333,7 +1333,8 @@ export default function Catalog() {
                         Contrasena temporal del representante:{" "}
                         <span className="font-mono font-bold">{representativeTempPassword}</span>
                         <br />
-                        Compartela manualmente; el representante debera cambiarla al iniciar sesion.
+                        Se le envio por correo automaticamente; si no le llega, comparte esta
+                        contrasena manualmente. El representante debera cambiarla al iniciar sesion.
                       </div>
                     )}
 
@@ -1974,7 +1975,8 @@ export default function Catalog() {
                         Contrasena temporal del representante:{" "}
                         <span className="font-mono font-bold">{representativeTempPassword}</span>
                         <br />
-                        Compartela manualmente; el representante debera cambiarla al iniciar sesion.
+                        Se le envio por correo automaticamente; si no le llega, comparte esta
+                        contrasena manualmente. El representante debera cambiarla al iniciar sesion.
                       </div>
                     )}
 
