@@ -60,6 +60,14 @@ export default function PaymentForm({
       alert("Selecciona la fecha de pago.");
       return;
     }
+    if (!referenceNumber.trim()) {
+      alert("Ingresa el numero de referencia del pago.");
+      return;
+    }
+    if (!receiptFile) {
+      alert("Adjunta el comprobante de pago.");
+      return;
+    }
     onSubmit({
       quotationId: quotation.quotationId,
       methodId,
@@ -150,10 +158,11 @@ export default function PaymentForm({
 
         <div>
           <label className="mb-1 block text-[10px] text-gray-500 uppercase tracking-wider">
-            Numero de referencia
+            Numero de referencia <span className="text-red-400">*</span>
           </label>
           <input
             type="text"
+            required
             value={referenceNumber}
             onChange={(e) => setReferenceNumber(e.target.value)}
             placeholder="Ej. 123456789"
@@ -177,7 +186,7 @@ export default function PaymentForm({
 
       <div>
         <label className="mb-1 block text-[10px] text-gray-500 uppercase tracking-wider">
-          Comprobante de pago
+          Comprobante de pago <span className="text-red-400">*</span>
         </label>
         <div className="rounded-lg border border-dashed border-[#2a3550] bg-[#091A31] p-4">
           {!receiptFile ? (

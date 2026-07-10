@@ -61,6 +61,10 @@ AS $$
 DECLARE
   v_payment_id UUID;
 BEGIN
+  IF p_reference_number IS NULL OR btrim(p_reference_number) = '' THEN
+    RAISE EXCEPTION 'El numero de referencia es obligatorio para reportar un pago.';
+  END IF;
+
   INSERT INTO public.payments (
     production_order_id,
     method_id,
