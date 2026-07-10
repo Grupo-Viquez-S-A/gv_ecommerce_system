@@ -1,4 +1,5 @@
 import {
+  RiBankCardFill,
   RiCalendarCheckFill,
   RiFileList3Fill,
   RiMoneyDollarCircleFill,
@@ -7,6 +8,7 @@ import {
   RiWallet3Fill,
 } from "react-icons/ri";
 
+import PaymentForm from "../PaymentForm.jsx";
 import formatCurrency from "../../utils/formatCurrency.js";
 import ClientDetailModal from "./ClientDetailModal.jsx";
 import DetailInfoCard from "./DetailInfoCard.jsx";
@@ -37,14 +39,42 @@ export default function OrderDetailModal({
   loading,
   error,
   onClose,
+  showPaymentActions = false,
+  showPaymentForm = false,
+  paymentMethods = [],
+  paymentLoading = false,
+  paymentError = "",
+  paymentSuccess = "",
+  onOpenPaymentForm,
+  onBackFromPaymentForm,
+  onSubmitPayment,
 }) {
   return (
     <ClientDetailModal
       isOpen={isOpen}
-      title={order?.code || "Pedido"}
-      subtitle={order ? `Cotizacion relacionada: ${order.quotationNumber}` : ""}
-      icon={<RiTruckFill size={24} />}
+      title={
+        showPaymentForm
+          ? "Reportar pago"
+          : order?.code || "Pedido"
+      }
+      subtitle={
+        showPaymentForm
+          ? order
+            ? `Orden ${order.code}`
+            : ""
+          : order
+          ? `Cotizacion relacionada: ${order.quotationNumber}`
+          : ""
+      }
+      icon={
+        showPaymentForm ? (
+          <RiBankCardFill size={24} />
+        ) : (
+          <RiTruckFill size={24} />
+        )
+      }
       badges={
+        !showPaymentForm &&
         order && (
           <>
             <StatusBadge status={order.productionStatus} />
@@ -55,8 +85,39 @@ export default function OrderDetailModal({
       loading={loading}
       error={error}
       onClose={onClose}
+      footer={
+        order &&
+        showPaymentActions &&
+        !showPaymentForm && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              Orden {order.code} — {order.paymentStatus}
+            </p>
+            <button
+              type="button"
+              onClick={onOpenPaymentForm}
+              className="flex items-center gap-2 rounded-lg bg-[#C9A227] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#B8921F] cursor-pointer"
+            >
+              <RiBankCardFill size={16} />
+              Reportar pago
+            </button>
+          </div>
+        )
+      }
     >
-      {order && (
+      {order && showPaymentForm && (
+        <PaymentForm
+          quotation={{ quotationId: order.quotationId }}
+          paymentMethods={paymentMethods}
+          loading={paymentLoading}
+          error={paymentError}
+          success={paymentSuccess}
+          onBack={onBackFromPaymentForm}
+          onSubmit={onSubmitPayment}
+        />
+      )}
+
+      {order && !showPaymentForm && (
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <DetailInfoCard

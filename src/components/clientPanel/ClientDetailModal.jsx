@@ -11,6 +11,7 @@ export default function ClientDetailModal({
   error,
   onClose,
   children,
+  footer,
 }) {
   useEffect(() => {
     if (!isOpen) {
@@ -92,6 +93,10 @@ export default function ClientDetailModal({
 
           {!loading && !error && children}
         </div>
+
+        {!loading && !error && footer && (
+          <div className="border-t border-[#2a3550] px-5 py-4">{footer}</div>
+        )}
       </div>
     </div>
   );
