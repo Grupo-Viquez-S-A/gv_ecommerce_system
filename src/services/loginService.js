@@ -92,14 +92,6 @@ export async function signOut() {
 }
 
 
-export async function sendPasswordResetEmail(email) {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/restablecer-contrasena`,
-  });
-
-  return { data, error };
-}
-
 export async function updatePasswordForCurrentUser(password) {
   const { data, error } = await supabase.auth.updateUser({ password });
 

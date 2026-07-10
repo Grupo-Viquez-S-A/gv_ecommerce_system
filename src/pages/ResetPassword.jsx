@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
 
@@ -8,96 +8,45 @@ import { supabase } from "../services/primarySupabaseClient";
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
-function getUrlAuthError() {
-  const params = new URLSearchParams(window.location.search);
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const errorCode = params.get("error_code") || hashParams.get("error_code");
-  const errorDescription = params.get("error_description") || hashParams.get("error_description");
-
-  if (!errorCode && !errorDescription) return "";
-
-  if (errorCode === "otp_expired") {
-    return "El enlace ya expiro o no es valido. Solicita un nuevo correo de recuperacion.";
-  }
-
-  return errorDescription?.replace(/\+/g, " ") || "El enlace de recuperacion no es valido.";
-}
-
 function ResetPassword() {
   const navigate = useNavigate();
-  const initialUrlError = useMemo(getUrlAuthError, []);
   const activationInFlight = useRef(false);
 
-  // "validating" mientras esperamos que Supabase procese el enlace del
-  // correo (intercambio de codigo / hash), "ready" cuando ya hay una
-  // sesion valida para restablecer la contrasena, "invalid" si el enlace
-  // no sirvio.
-  const [linkStatus, setLinkStatus] = useState(initialUrlError ? "invalid" : "validating");
+  // "validating" mientras confirmamos que hay una sesion activa (obtenida
+  // al iniciar sesion con la contrasena temporal), "ready" cuando ya se
+  // puede restablecer la contrasena, "invalid" si no hay sesion.
+  const [linkStatus, setLinkStatus] = useState("validating");
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(initialUrlError);
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (initialUrlError) {
-      setLinkStatus("invalid");
-      return undefined;
-    }
-
     let isMounted = true;
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!isMounted) return;
-
-      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
-        setLinkStatus("ready");
-      }
-    });
 
     const checkExistingSession = async () => {
       const { data, error: sessionError } = await supabase.auth.getSession();
 
       if (!isMounted) return;
 
-      if (sessionError) {
+      if (sessionError || !data?.session) {
         setLinkStatus("invalid");
-        setError("El enlace de recuperacion no es valido o ya expiro.");
+        setError("Debes iniciar sesion primero para poder cambiar tu contrasena.");
         return;
       }
 
-      if (data?.session) {
-        setLinkStatus("ready");
-        return;
-      }
-
-      // Le damos tiempo a Supabase para procesar el codigo/hash del enlace
-      // antes de decidir que no es valido.
-      window.setTimeout(async () => {
-        if (!isMounted) return;
-
-        const { data: retryData } = await supabase.auth.getSession();
-
-        if (!isMounted) return;
-
-        if (retryData?.session) {
-          setLinkStatus("ready");
-        } else {
-          setLinkStatus("invalid");
-          setError("El enlace de recuperacion no es valido o ya expiro. Solicita uno nuevo.");
-        }
-      }, 2500);
+      setLinkStatus("ready");
     };
 
     checkExistingSession();
 
     return () => {
       isMounted = false;
-      authListener?.subscription?.unsubscribe();
     };
-  }, [initialUrlError]);
+  }, []);
 
   const canSubmit =
     linkStatus === "ready" && password && confirmPassword && !loading && !success;

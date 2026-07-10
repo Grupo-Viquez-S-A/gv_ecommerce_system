@@ -1,5 +1,5 @@
 import { supabase } from "./primarySupabaseClient.js";
-import { createRepresentativeUser, notifyNewQuotation } from "./representativeUserService.js";
+import { createRepresentativeUser } from "./representativeUserService.js";
 import { addDaysCRDateString, getTodayCRDateString } from "../utils/dateUtils.js";
 
 const QUOTATION_VALIDITY_DAYS = 2;
@@ -7,12 +7,12 @@ const QUOTATION_VALIDITY_DAYS = 2;
 function getRepresentativeAccessMessage(accessResult) {
   if (!accessResult) return null;
 
-  if (accessResult.account_state === "invited") {
-    return "Cotizacion creada y correo de invitacion enviado al representante.";
+  if (accessResult.account_state === "new") {
+    return "Cotizacion creada. Se genero una contrasena temporal para el representante; compartela manualmente.";
   }
 
   if (accessResult.account_state === "pending") {
-    return "Cotizacion creada y enlace de activacion reenviado al representante.";
+    return "Cotizacion creada. Se genero una nueva contrasena temporal para el representante; compartela manualmente.";
   }
 
   if (accessResult.account_state === "active") {
@@ -984,67 +984,6 @@ export async function updateQuotationStatus(quotationId, status) {
   );
 }
 
-export async function retryQuotationNotification(quotationId) {
-  if (!quotationId) {
-    throw new Error("Falta el identificador de la cotizacion.");
-  }
-
-  const quotationResponse = await supabase
-    .from("quotations")
-    .select("quotation_id, quotation_number, business_id, branch_id, representative_id")
-    .eq("quotation_id", quotationId)
-    .single();
-
-  const quotation = throwIfError(
-    quotationResponse,
-    "No fue posible cargar la cotizacion.",
-  );
-
-  const representativeResponse = await supabase
-    .from("representatives")
-    .select("representative_id, business_id, branch_id, user_id, name, email")
-    .eq("representative_id", quotation.representative_id)
-    .single();
-
-  const representative = throwIfError(
-    representativeResponse,
-    "No fue posible cargar el representante de la cotizacion.",
-  );
-
-  if (representative.user_id) {
-    await notifyNewQuotation({
-      quotationId: quotation.quotation_id,
-      representativeId: representative.representative_id,
-    });
-
-    return { ok: true, alreadySent: false };
-  }
-
-  const businessResponse = await supabase
-    .from("businesses")
-    .select("business_id, company_id")
-    .eq("business_id", quotation.business_id)
-    .single();
-
-  const business = throwIfError(
-    businessResponse,
-    "No fue posible cargar el cliente de la cotizacion.",
-  );
-
-  await createRepresentativeUser({
-    representative_id: representative.representative_id,
-    business_id: quotation.business_id,
-    branch_id: quotation.branch_id,
-    company_id: business.company_id,
-    name: representative.name,
-    email: representative.email,
-    quotation_id: quotation.quotation_id,
-    quotation_number: quotation.quotation_number,
-  });
-
-  return { ok: true, alreadySent: false };
-}
-
 export async function createBusinessQuotation(payload) {
   const normalizedPayload = normalizeQuotationPayload(payload);
   const { client, items, status } = normalizedPayload;
@@ -1232,8 +1171,9 @@ export async function createBusinessQuotation(payload) {
       "No fue posible guardar los productos cotizados",
     );
 
-    let notificationError = null;
+    let accessError = null;
     let representativeAccessMessage = null;
+    let representativeTempPassword = null;
 
     if (representativeId && client.representativeEmail && !client.representativeUserId) {
       try {
@@ -1249,21 +1189,11 @@ export async function createBusinessQuotation(payload) {
         });
 
         representativeAccessMessage = getRepresentativeAccessMessage(accessResult);
+        representativeTempPassword = accessResult?.temp_password || null;
       } catch (error) {
-        console.error("No fue posible notificar al representante:", error);
-        notificationError =
-          "La cotizacion fue creada correctamente, pero no se pudo enviar el correo al representante.";
-      }
-    } else if (representativeId && client.representativeUserId) {
-      try {
-        await notifyNewQuotation({
-          quotationId,
-          representativeId,
-        });
-      } catch (error) {
-        console.error("No fue posible notificar la nueva cotizacion:", error);
-        notificationError =
-          "La cotizacion fue creada correctamente, pero no se pudo enviar el correo de nueva cotizacion al representante.";
+        console.error("No fue posible crear el acceso del representante:", error);
+        accessError =
+          "La cotizacion fue creada correctamente, pero no se pudo crear el acceso del representante.";
       }
     }
 
@@ -1277,8 +1207,9 @@ export async function createBusinessQuotation(payload) {
       earlyDeliveryDate: quotation.early_delivery_date,
       validUntil: quotation.valid_until,
       methodId: quotation.method_id,
-      notificationError,
+      accessError,
       representativeAccessMessage,
+      representativeTempPassword,
     };
   } catch (error) {
     await rollbackQuotation({

@@ -41,7 +41,6 @@ import {
   getPaymentMethods,
   getQuotationClientByLegalId,
   getQuotationCompanies,
-  retryQuotationNotification,
 } from "../services/quotationService.js";
 import { useAuth } from "../context/AuthContext.js";
 import { hasCatalogPurchaseAccess } from "../utils/roles.js";
@@ -155,9 +154,8 @@ export default function Catalog() {
   const [quotationError, setQuotationError] = useState("");
   const [quotationSuccess, setQuotationSuccess] = useState("");
   const [quotationSubmitting, setQuotationSubmitting] = useState(false);
-  const [notificationError, setNotificationError] = useState("");
-  const [notificationQuotationId, setNotificationQuotationId] = useState(null);
-  const [notificationRetrying, setNotificationRetrying] = useState(false);
+  const [accessError, setAccessError] = useState("");
+  const [representativeTempPassword, setRepresentativeTempPassword] = useState(null);
   const [clientLookupLoading, setClientLookupLoading] = useState(false);
   const [clientLookupMessage, setClientLookupMessage] = useState("");
   const [clientBranches, setClientBranches] = useState([]);
@@ -946,34 +944,13 @@ export default function Catalog() {
     }));
   };
 
-  const handleRetryQuotationNotification = async () => {
-    if (!notificationQuotationId || notificationRetrying) return;
-
-    try {
-      setNotificationRetrying(true);
-      await retryQuotationNotification(notificationQuotationId);
-      setNotificationError("");
-      setNotificationQuotationId(null);
-      setQuotationSuccess(
-        "El correo de invitacion fue reenviado al representante.",
-      );
-    } catch (error) {
-      console.error("Retry notification error:", error);
-      setNotificationError(
-        error?.message || "No fue posible reenviar el correo al representante.",
-      );
-    } finally {
-      setNotificationRetrying(false);
-    }
-  };
-
   const handleSaveCartQuotation = async (status) => {
     try {
       setQuotationSubmitting(true);
       setQuotationError("");
       setQuotationSuccess("");
-      setNotificationError("");
-      setNotificationQuotationId(null);
+      setAccessError("");
+      setRepresentativeTempPassword(null);
 
       let clientForm = quotationClientForm;
 
@@ -1012,9 +989,12 @@ export default function Catalog() {
           : baseSuccessMessage,
       );
 
-      if (quotation.notificationError) {
-        setNotificationError(quotation.notificationError);
-        setNotificationQuotationId(quotation.quotationId);
+      if (quotation.accessError) {
+        setAccessError(quotation.accessError);
+      }
+
+      if (quotation.representativeTempPassword) {
+        setRepresentativeTempPassword(quotation.representativeTempPassword);
       }
 
       setCartItems([]);
@@ -1342,17 +1322,18 @@ export default function Catalog() {
                       </div>
                     )}
 
-                    {notificationError && (
-                      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                        <span>{notificationError}</span>
-                        <button
-                          type="button"
-                          onClick={handleRetryQuotationNotification}
-                          disabled={notificationRetrying}
-                          className="w-fit rounded-lg border border-amber-300/40 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-amber-100 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {notificationRetrying ? "Reintentando..." : "Reintentar envio"}
-                        </button>
+                    {accessError && (
+                      <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                        {accessError}
+                      </div>
+                    )}
+
+                    {representativeTempPassword && (
+                      <div className="mt-4 rounded-xl border border-sky-400/35 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+                        Contrasena temporal del representante:{" "}
+                        <span className="font-mono font-bold">{representativeTempPassword}</span>
+                        <br />
+                        Compartela manualmente; el representante debera cambiarla al iniciar sesion.
                       </div>
                     )}
 
@@ -1982,17 +1963,18 @@ export default function Catalog() {
                       </div>
                     )}
 
-                    {notificationError && (
-                      <div className="mt-4 flex flex-col gap-2 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                        <span>{notificationError}</span>
-                        <button
-                          type="button"
-                          onClick={handleRetryQuotationNotification}
-                          disabled={notificationRetrying}
-                          className="w-fit rounded-lg border border-amber-300/40 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.08em] text-amber-100 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {notificationRetrying ? "Reintentando..." : "Reintentar envio"}
-                        </button>
+                    {accessError && (
+                      <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                        {accessError}
+                      </div>
+                    )}
+
+                    {representativeTempPassword && (
+                      <div className="mt-4 rounded-xl border border-sky-400/35 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+                        Contrasena temporal del representante:{" "}
+                        <span className="font-mono font-bold">{representativeTempPassword}</span>
+                        <br />
+                        Compartela manualmente; el representante debera cambiarla al iniciar sesion.
                       </div>
                     )}
 

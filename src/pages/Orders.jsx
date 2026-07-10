@@ -1315,16 +1315,6 @@ export default function Orders() {
                   : "Pago parcial registrado, la orden quedo en Pago adelantado."}
               </p>
 
-              {importResult.emailNotification?.sent ? (
-                <p className="text-xs text-green-300">
-                  Correo enviado a {importResult.emailNotification.recipient}.
-                </p>
-              ) : (
-                <p className="text-xs text-yellow-300">
-                  El pago se importo, pero no se pudo enviar el correo:{" "}
-                  {importResult.emailNotification?.error || "error no indicado"}
-                </p>
-              )}
             </div>
           )}
 

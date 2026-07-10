@@ -2,9 +2,8 @@
 - [Supabase RLS & empty tables](supabase-rls-empty.md) — tables exist but are empty; RLS blocks anon-key inserts; need service role key or admin panel for seeding
 - [Auth HMR compatibility](auth-hmr-js.md) — AuthContext.js (no JSX export) + AuthProvider.jsx (JSX only) avoids Vite Fast Refresh invalidation
 - [Date formatting & CR timezone](dateutils-cr-timezone.md) — all dates use dd/MM/yyyy + America/Costa_Rica via src/utils/dateUtils.js; never use toISOString().slice(0,10) for "today"
-- [Quotation notification system](quotation-notifications.md) — shared raw SMTP pattern for invite vs. new-quotation emails, branch on representative.user_id
 - [Quotation schema volatility](quotation-schema-volatility.md) — user iterates quotations/quote_products/textile_products columns directly in DB; always re-check schema via user screenshots before editing quotationService.js
 - [quote_products generated columns](quote-products-generated-columns.md) — subtotal/total are Postgres GENERATED ALWAYS AS columns; never insert/update them manually, DB computes from quantity*unit_price(+iva_amount)
 - [production_orders schema mismatch](production-orders-schema.md) — no payment_method column (join quotations.method_id instead); also covers late-payment penalty trigger/cron design and that agent has no direct DDL access to Supabase
 - [Dashboard real-data source of truth](dashboard-real-data.md) — company/advisor breakdowns derive company via businesses.company_id, not a mock company list; no sales-goal table exists
-- [Edge Function invite/reset redirect](edge-function-redirect-url.md) — build redirectTo from single required APP_URL secret, never SITE_URL/ambiguous vars; agent cannot deploy Edge Functions, user must do it manually
+- [No email sending policy](no-email-sending.md) — project deliberately has zero Supabase/SMTP email sending; representative/client access uses temp passwords shared manually, not invite/reset emails

@@ -9,7 +9,6 @@ const corsHeaders = {
 
 const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
 const CLIENT_ROLE_ID = "7fa43251-f748-4dfa-b0b4-448231d1954d";
-const RESET_PASSWORD_PATH = "/restablecer-contrasena";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -104,6 +103,15 @@ function getErrorMessage(error: unknown, fallbackMessage: string) {
   return fallbackMessage;
 }
 
+// Genera una contrasena temporal segura para que el administrador la
+// comparta manualmente con el representante (no se envia ningun correo).
+function generateTempPassword() {
+  const bytes = crypto.getRandomValues(new Uint8Array(9));
+  const base = Array.from(bytes, (byte) => byte.toString(36)).join("").slice(0, 10);
+
+  return `Gv${base}${Math.floor(Math.random() * 90 + 10)}!`;
+}
+
 async function findAuthUserIdByEmail(supabaseAdmin: any, email: string) {
   const normalizedEmail = email.trim().toLowerCase();
   const perPage = 1000;
@@ -146,11 +154,6 @@ function errorResponse(message: string, status = 400, details?: unknown) {
   );
 }
 
-function buildRedirectTo(appUrl: string) {
-  const normalizedBase = appUrl.endsWith("/") ? appUrl : `${appUrl}/`;
-  return new URL(RESET_PASSWORD_PATH, normalizedBase).toString();
-}
-
 // Determina si la cuenta ya completo su activacion.
 function isAccountActive(appMetadata: Record<string, unknown>, lastSignInAt: string | null) {
   if (appMetadata?.must_change_password === false) return true;
@@ -169,17 +172,6 @@ function isAccountActive(appMetadata: Record<string, unknown>, lastSignInAt: str
   return false;
 }
 
-function isAccountPending(appMetadata: Record<string, unknown>, lastSignInAt: string | null) {
-  if (appMetadata?.must_change_password === true) return true;
-  if (appMetadata?.activation_status === "pending") return true;
-
-  // Usuario legado nunca inicio sesion y no tiene metadata clara: se
-  // considera pendiente para poder enviarle un enlace de activacion.
-  if (!lastSignInAt) return true;
-
-  return false;
-}
-
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -192,31 +184,11 @@ Deno.serve(async (request) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const appUrl = Deno.env.get("APP_URL");
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
     return errorResponse(
       "Faltan SUPABASE_URL, SUPABASE_ANON_KEY o SUPABASE_SERVICE_ROLE_KEY.",
       500,
-    );
-  }
-
-  if (!appUrl) {
-    return errorResponse(
-      "Falta configurar el secreto APP_URL en la Edge Function. Debe contener el origen de la aplicacion, por ejemplo https://tu-dominio.replit.app",
-      500,
-    );
-  }
-
-  let redirectTo: string;
-
-  try {
-    redirectTo = buildRedirectTo(appUrl);
-  } catch (buildError) {
-    return errorResponse(
-      "APP_URL no es una URL valida.",
-      500,
-      buildError,
     );
   }
 
@@ -235,15 +207,6 @@ Deno.serve(async (request) => {
   });
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  // Cliente publico independiente para enviar correos de recuperacion sin
-  // reutilizar el Authorization del usuario interno que esta autenticado.
-  const supabasePublic = createClient(supabaseUrl, anonKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -280,7 +243,6 @@ Deno.serve(async (request) => {
     const companyId = getRequiredString(body?.company_id);
     const fullName = getRequiredString(body?.name);
     const email = getRequiredString(body?.email).toLowerCase();
-    const quotationId = getOptionalString(body?.quotation_id);
 
     const missingFields: string[] = [];
 
@@ -351,127 +313,58 @@ Deno.serve(async (request) => {
       userId = await findAuthUserIdByEmail(supabaseAdmin, email);
     }
 
-    let accountState: "invited" | "pending" | "active" = "active";
-    let invitationSent = false;
-    let emailType: "invite" | "recovery" | null = null;
+    let accountState: "new" | "pending" | "active" = "active";
     let finalMustChangePassword = false;
-
-    let notificationId: string | null = null;
-
-    if (quotationId) {
-      const { data: notificationRow, error: notificationInsertError } =
-        await supabaseAdmin
-          .from("quotation_notifications")
-          .insert({
-            quotation_id: quotationId,
-            representative_id: representativeId,
-            email,
-            notification_type: "invite",
-            status: "pending",
-            attempt_count: 1,
-            created_by: currentUserData.user.id,
-          })
-          .select("notification_id")
-          .maybeSingle();
-
-      if (notificationInsertError) {
-        console.warn(
-          "No fue posible registrar la notificacion pendiente:",
-          getErrorDetails(notificationInsertError),
-        );
-      } else {
-        notificationId = notificationRow?.notification_id || null;
-      }
-    }
+    let tempPassword: string | null = null;
 
     if (!userId) {
       // ===================================================
-      // CUENTA NUEVA: invitar y marcar activacion pendiente.
+      // CUENTA NUEVA: se crea directamente con contrasena
+      // temporal. No se envia ningun correo.
       // ===================================================
-      console.log("create-representative-user: invitando cuenta nueva", {
-        redirectTo,
+      tempPassword = generateTempPassword();
+
+      console.log("create-representative-user: creando cuenta nueva sin correo", {
         email,
-        accountState: "invited",
+        accountState: "new",
       });
 
-      const { data: invitationData, error: invitationError } =
-        await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-          redirectTo,
-          data: {
+      const { data: createdUserData, error: createUserError } =
+        await supabaseAdmin.auth.admin.createUser({
+          email,
+          password: tempPassword,
+          email_confirm: true,
+          app_metadata: {
             created_from: "quotation_representative",
             role: "client",
             representative_id: representativeId,
             business_id: businessId,
             branch_id: branchId,
             application_id: ECOMMERCE_APPLICATION_ID,
-            full_name: fullName,
-          },
-        });
-
-      if (invitationError || !invitationData?.user) {
-        if (notificationId) {
-          await supabaseAdmin
-            .from("quotation_notifications")
-            .update({
-              status: "failed",
-              error_message: getErrorMessage(
-                invitationError,
-                "No fue posible enviar la invitacion.",
-              ),
-            })
-            .eq("notification_id", notificationId);
-        }
-
-        return errorResponse(
-          getErrorMessage(
-            invitationError,
-            "No fue posible crear la invitacion del representante en Supabase Auth.",
-          ),
-          400,
-          invitationError,
-        );
-      }
-
-      userId = invitationData.user.id;
-
-      const invitedAppMetadata = invitationData.user.app_metadata || {};
-
-      const { error: appMetadataError } = await supabaseAdmin.auth.admin.updateUserById(
-        userId,
-        {
-          app_metadata: {
-            ...invitedAppMetadata,
             must_change_password: true,
             activation_status: "pending",
             role_code: "cliente",
             application_code: "ecommerce",
           },
-        },
-      );
+          user_metadata: {
+            full_name: fullName,
+          },
+        });
 
-      if (appMetadataError) {
+      if (createUserError || !createdUserData?.user) {
         return errorResponse(
-          "No fue posible configurar el acceso del representante.",
-          500,
-          appMetadataError,
+          getErrorMessage(
+            createUserError,
+            "No fue posible crear la cuenta del representante en Supabase Auth.",
+          ),
+          400,
+          createUserError,
         );
       }
 
-      accountState = "invited";
-      invitationSent = true;
-      emailType = "invite";
+      userId = createdUserData.user.id;
+      accountState = "new";
       finalMustChangePassword = true;
-
-      if (notificationId) {
-        await supabaseAdmin
-          .from("quotation_notifications")
-          .update({
-            status: "sent",
-            auth_user_id: userId,
-            sent_at: new Date().toISOString(),
-          })
-          .eq("notification_id", notificationId);
-      }
     } else {
       // ===================================================
       // USUARIO EXISTENTE: revisar si esta activo o pendiente.
@@ -492,40 +385,27 @@ Deno.serve(async (request) => {
       const lastSignInAt = existingUser.last_sign_in_at || null;
 
       const active = isAccountActive(currentAppMetadata, lastSignInAt);
-      const pending = !active && isAccountPending(currentAppMetadata, lastSignInAt);
 
       if (active) {
-        // CASO A: cuenta ya activa. No se envia ningun correo ni se
-        // modifica must_change_password.
+        // Cuenta ya activa: no se genera contrasena nueva ni se modifica
+        // must_change_password.
         accountState = "active";
-        invitationSent = false;
-        emailType = null;
         finalMustChangePassword = false;
+      } else {
+        // Cuenta pendiente (invitada/creada sin activar, o legado sin
+        // metadata clara). Se genera una nueva contrasena temporal
+        // directamente en Auth, sin enviar ningun correo.
+        tempPassword = generateTempPassword();
 
-        if (notificationId) {
-          await supabaseAdmin
-            .from("quotation_notifications")
-            .update({
-              status: "skipped",
-              auth_user_id: userId,
-              error_message: "La cuenta ya esta activa; no se reenvio correo.",
-            })
-            .eq("notification_id", notificationId);
-        }
-      } else if (pending) {
-        // CASO B / C: cuenta pendiente (invitada sin activar, o legado sin
-        // metadata clara que nunca inicio sesion). Se mantiene
-        // must_change_password en true y se reenvia un enlace de
-        // recuperacion usando un cliente publico independiente.
-        console.log("create-representative-user: reenviando activacion pendiente", {
-          redirectTo,
+        console.log("create-representative-user: regenerando contrasena temporal", {
           email,
           accountState: "pending",
         });
 
-        const { error: appMetadataError } = await supabaseAdmin.auth.admin.updateUserById(
+        const { error: updateUserError } = await supabaseAdmin.auth.admin.updateUserById(
           userId,
           {
+            password: tempPassword,
             app_metadata: {
               ...currentAppMetadata,
               must_change_password: true,
@@ -536,67 +416,16 @@ Deno.serve(async (request) => {
           },
         );
 
-        if (appMetadataError) {
+        if (updateUserError) {
           return errorResponse(
-            "No fue posible actualizar el estado de activacion del representante.",
+            "No fue posible generar una nueva contrasena temporal para el representante.",
             500,
-            appMetadataError,
-          );
-        }
-
-        const { error: recoveryError } = await supabasePublic.auth.resetPasswordForEmail(
-          email,
-          { redirectTo },
-        );
-
-        if (recoveryError) {
-          if (notificationId) {
-            await supabaseAdmin
-              .from("quotation_notifications")
-              .update({
-                status: "failed",
-                auth_user_id: userId,
-                error_message: getErrorMessage(
-                  recoveryError,
-                  "No fue posible reenviar el enlace de activacion.",
-                ),
-              })
-              .eq("notification_id", notificationId);
-          }
-
-          return errorResponse(
-            getErrorMessage(
-              recoveryError,
-              "No fue posible reenviar el enlace de activacion al representante.",
-            ),
-            400,
-            recoveryError,
+            updateUserError,
           );
         }
 
         accountState = "pending";
-        invitationSent = true;
-        emailType = "recovery";
         finalMustChangePassword = true;
-
-        if (notificationId) {
-          await supabaseAdmin
-            .from("quotation_notifications")
-            .update({
-              status: "sent",
-              auth_user_id: userId,
-              notification_type: "recovery",
-              sent_at: new Date().toISOString(),
-            })
-            .eq("notification_id", notificationId);
-        }
-      } else {
-        // No deberia alcanzarse, pero por seguridad se trata como activo
-        // para no bloquear una cuenta funcional.
-        accountState = "active";
-        invitationSent = false;
-        emailType = null;
-        finalMustChangePassword = false;
       }
     }
 
@@ -724,9 +553,8 @@ Deno.serve(async (request) => {
     return jsonResponse({
       ok: true,
       account_state: accountState,
-      invitation_sent: invitationSent,
-      email_type: emailType,
       must_change_password: finalMustChangePassword,
+      temp_password: tempPassword,
       message: "Representante enlazado como cliente del e-commerce.",
       user: {
         user_id: userId,
