@@ -4,15 +4,19 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node server/dev-server.js",
     "build": "vite build",
+    "start": "node server/prod-server.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "@tailwindcss/vite": "^4.3.1",
+    "concurrently": "^9.2.3",
+    "express": "^5.2.1",
     "lucide-react": "^1.23.0",
+    "nodemailer": "^9.0.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-icons": "^5.7.0",
