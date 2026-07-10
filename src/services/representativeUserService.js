@@ -61,6 +61,35 @@ export async function createRepresentativeUser(payload) {
   return data;
 }
 
+export async function notifyNewQuotation({ quotationId, representativeId } = {}) {
+  const { data, error } = await supabase.functions.invoke(
+    "notify-new-quotation",
+    {
+      body: {
+        quotation_id: quotationId,
+        representative_id: representativeId,
+      },
+    },
+  );
+
+  if (error) {
+    throw new Error(
+      await getFunctionErrorMessage(
+        error,
+        "No fue posible notificar la nueva cotizacion al representante.",
+      ),
+    );
+  }
+
+  if (data?.ok === false) {
+    throw new Error(
+      data.error || "No fue posible notificar la nueva cotizacion al representante.",
+    );
+  }
+
+  return data;
+}
+
 export async function deleteRepresentativeUser({ representativeId, userId } = {}) {
   if (!representativeId && !userId) {
     return { ok: true, skipped: true };

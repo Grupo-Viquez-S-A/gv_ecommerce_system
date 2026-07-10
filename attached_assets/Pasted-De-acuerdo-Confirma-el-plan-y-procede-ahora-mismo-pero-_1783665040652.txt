@@ -1,0 +1,358 @@
+De acuerdo. Confirma el plan y procede ahora mismo, pero adapta la implementación a la arquitectura y nombres que ya existen en el proyecto.
+
+No crees rutas, páginas ni Edge Functions duplicadas cuando ya existe un equivalente. Conserva:
+
+- create-representative-user
+- /restablecer-contrasena
+- ResetPassword.jsx
+- /mis-cotizaciones
+- /mis-pedidos
+- la protección actual por roles
+- el portal de cliente actual
+
+La prioridad inmediata es dejar funcionando el flujo obligatorio de primera invitación:
+
+1. Un usuario interno crea una cotización.
+2. Se guarda correctamente la cotización.
+3. Se crea o vincula el representante mediante create-representative-user.
+4. Si el representante es un usuario nuevo, recibe la invitación.
+5. Al abrir la invitación debe llegar obligatoriamente a:
+   /restablecer-contrasena
+6. No debe poder entrar a ninguna ruta interna mientras:
+   app_metadata.must_change_password === true
+7. Establece su contraseña.
+8. Se elimina el flag obligatorio.
+9. Se cierra su sesión temporal.
+10. Se lo redirige al login.
+11. Inicia sesión manualmente.
+12. Entra al portal de cliente.
+13. Puede ver la cotización en /mis-cotizaciones.
+
+No vuelvas a preguntarme si deseas proceder. Implementa las fases en el orden indicado, ejecuta npm run build después de cada fase y corrige los errores antes de continuar.
+
+==================================================
+FASE 1 — CAMBIO OBLIGATORIO DE CONTRASEÑA
+==================================================
+
+Implementa esta fase completa ahora.
+
+A. Modificar create-representative-user
+
+Revisa la Edge Function existente y conserva toda su lógica idempotente.
+
+Cuando cree un usuario nuevo o cuando encuentre una cuenta invitada que todavía no haya terminado su activación:
+
+- establecer en app_metadata:
+
+{
+  must_change_password: true,
+  role_code: "cliente",
+  application_code: "ecommerce"
+}
+
+- combinar app_metadata con la metadata ya existente;
+- no sobrescribir valores existentes innecesariamente;
+- no guardar esta bandera únicamente en user_metadata;
+- usar auth.admin.updateUserById();
+- no colocar service_role en el frontend;
+- mantener la vinculación existente con:
+  - profiles
+  - representatives
+  - user_memberships
+  - user_applications
+
+Cuando invite al representante, utilizar:
+
+redirectTo: `${APP_URL}/restablecer-contrasena`
+
+APP_URL debe obtenerse de los secretos de la Edge Function, nunca escribirse directamente en el código.
+
+No marcar must_change_password=true en cada nueva cotización de un usuario que ya activó su cuenta.
+
+B. ResetPassword.jsx
+
+Reutiliza src/pages/ResetPassword.jsx. No crees SetPassword.jsx.
+
+Adapta la página para soportar tanto:
+
+- recuperación normal de contraseña;
+- primera activación mediante invitación.
+
+Debe:
+
+- esperar a que Supabase procese la sesión del enlace;
+- usar supabase.auth.getSession();
+- escuchar eventos de autenticación si es necesario;
+- validar que existe una sesión válida antes de mostrar el formulario;
+- mostrar nueva contraseña;
+- mostrar confirmar contraseña;
+- exigir al menos 8 caracteres;
+- comprobar que ambas contraseñas coinciden;
+- evitar doble envío;
+- mostrar mensajes claros en español.
+
+Al guardar la contraseña:
+
+1. Ejecutar:
+
+await supabase.auth.updateUser({
+  password: newPassword
+});
+
+2. Invocar una nueva Edge Function:
+
+complete-client-activation
+
+3. Después de una respuesta exitosa:
+
+await supabase.auth.signOut();
+
+4. Redirigir a:
+
+/
+
+5. Mostrar en el login:
+
+“Contraseña creada correctamente. Inicia sesión con tu correo y tu nueva contraseña.”
+
+Puede utilizarse navigation state, sessionStorage o el mecanismo existente del proyecto para mostrar el mensaje una sola vez.
+
+C. Crear complete-client-activation
+
+Crear:
+
+supabase/functions/complete-client-activation/index.ts
+
+Debe:
+
+- soportar CORS y OPTIONS;
+- exigir Authorization Bearer;
+- identificar al usuario desde el JWT;
+- no recibir userId desde React;
+- crear un cliente administrativo usando SUPABASE_SERVICE_ROLE_KEY;
+- consultar la metadata actual;
+- combinarla;
+- establecer:
+
+must_change_password: false
+activated_at: fecha ISO actual
+
+- preservar role_code, application_code y cualquier metadata existente;
+- devolver únicamente una respuesta segura;
+- no devolver tokens ni secretos.
+
+D. Protección global
+
+Revisar:
+
+- AuthProvider o AuthContext
+- ProtectedRoute
+- rutas por rol
+- Login
+- App.jsx
+
+Mientras exista una sesión con:
+
+user.app_metadata?.must_change_password === true
+
+el usuario únicamente puede acceder a:
+
+- /restablecer-contrasena
+- rutas técnicas necesarias para procesar autenticación
+- cerrar sesión
+
+Cualquier intento de abrir:
+
+- /dashboard
+- /mis-cotizaciones
+- /mis-pedidos
+- /catalogo
+- /clientes
+- /ventas
+- cualquier otra ruta interna
+
+debe redirigir a:
+
+/restablecer-contrasena
+
+Esta validación debe estar en la protección global, no repetida manualmente en cada página.
+
+También modificar el login:
+
+- si inicia sesión y must_change_password es true:
+  redirigir a /restablecer-contrasena;
+
+- si inicia sesión y es cliente:
+  redirigir a /mis-cotizaciones;
+
+- si es usuario interno:
+  conservar la redirección actual.
+
+Evita bucles de redirección mientras AuthProvider todavía está cargando.
+
+E. Configuración de la invitación
+
+Verifica que create-representative-user utilice realmente:
+
+redirectTo: `${APP_URL}/restablecer-contrasena`
+
+La plantilla de Supabase ya usa:
+
+{{ .ConfirmationURL }}
+
+No reemplaces ConfirmationURL por una dirección manual.
+
+El SMTP de invitaciones ya está configurado en Supabase y está enviando correos correctamente. Por lo tanto, la ausencia de secretos SMTP propios no bloquea esta primera fase.
+
+F. Pruebas de la fase 1
+
+Comprueba:
+
+1. Crear una cotización para un representante nuevo.
+2. Confirmar que se crea una sola cuenta.
+3. Confirmar que representatives.user_id queda vinculado.
+4. Confirmar que app_metadata.must_change_password es true.
+5. Confirmar que el correo llega.
+6. Confirmar que el botón abre /restablecer-contrasena.
+7. Confirmar que no puede abrir /mis-cotizaciones antes de establecer contraseña.
+8. Establecer contraseña.
+9. Confirmar que must_change_password cambia a false.
+10. Confirmar que la sesión se cierra.
+11. Confirmar que regresa al login.
+12. Iniciar sesión manualmente.
+13. Confirmar que entra a /mis-cotizaciones.
+14. Confirmar que aparece la cotización.
+15. Crear una segunda cotización para el mismo representante.
+16. Confirmar que no se crea otra cuenta.
+17. Confirmar que no vuelve a establecerse must_change_password=true.
+
+==================================================
+FASE 2 — REGISTRO Y REINTENTO DE NOTIFICACIONES
+==================================================
+
+Después de que la fase 1 compile y funcione, continúa automáticamente con esta fase.
+
+Crear una migración para quotation_notifications adaptada a los tipos reales del esquema.
+
+Debe incluir como mínimo:
+
+- notification_id
+- quotation_id
+- representative_id
+- auth_user_id
+- email
+- notification_type
+- status
+- error_message
+- attempt_count
+- created_by
+- sent_at
+- created_at
+- updated_at
+
+notification_type:
+
+- invite
+- activation
+- new_quotation
+
+status:
+
+- pending
+- sent
+- failed
+
+Agregar:
+
+- claves foráneas reales;
+- índices;
+- restricción idempotente;
+- RLS;
+- lectura para usuarios internos autorizados;
+- ninguna escritura directa desde clientes;
+- escritura administrativa desde Edge Functions.
+
+Integrar el registro con create-representative-user:
+
+- registrar pending antes del envío;
+- marcar sent solamente cuando el envío haya sido aceptado;
+- marcar failed y guardar un error sanitizado cuando falle;
+- incrementar attempt_count;
+- no duplicar invitaciones por doble clic.
+
+Crear en el servicio de cotizaciones:
+
+retryQuotationNotification(quotationId)
+
+El reintento no debe volver a crear la cotización.
+
+Si la cotización fue creada pero el correo falló, mostrar:
+
+“La cotización fue creada correctamente, pero no se pudo enviar el correo al representante.”
+
+y una acción:
+
+“Reintentar envío”
+
+==================================================
+FASE 3 — NOTIFICACIÓN DE NUEVA COTIZACIÓN
+==================================================
+
+Después de completar la fase 2, inspecciona primero si el proyecto ya tiene un mecanismo de correo transaccional distinto de Supabase Auth.
+
+- Si ya existe, reutilízalo.
+- Si no existe, no uses correos de recuperación como notificación de cotización.
+- No envíes una nueva invitación a usuarios activos.
+- No vuelvas a activar must_change_password.
+
+Para un representante que ya está activo:
+
+- registrar notification_type = new_quotation;
+- enviar un correo indicando que tiene una nueva cotización;
+- incluir el número de cotización;
+- incluir el nombre de la empresa;
+- incluir un botón hacia el login o /mis-cotizaciones;
+- mantener el correo idempotente.
+
+Si para esta parte hacen falta credenciales externas, prepara el código y enumera exactamente los secretos requeridos, sin inventar valores. Esta limitación no debe impedir completar las fases 1 y 2.
+
+==================================================
+REVISIÓN DEL SERVICIO DE COTIZACIONES
+==================================================
+
+Revisa el archivo real que crea la cotización.
+
+Asegúrate de que:
+
+- guarda quotations.user_id usando supabase.auth.getUser();
+- no recibe el user_id interno desde el formulario;
+- el correo del representante es obligatorio;
+- create-representative-user se invoca después de guardar la cotización;
+- no se duplica una cotización al reintentar el correo;
+- el botón permanece desactivado mientras se procesa;
+- no quedan marcadores:
+  <<<<<<<
+  =======
+  >>>>>>>
+
+Conserva toda la lógica existente y no renombres tablas o funciones sin necesidad.
+
+==================================================
+ENTREGA
+==================================================
+
+Al finalizar cada fase, informa:
+
+- archivos modificados;
+- archivos creados;
+- migraciones creadas;
+- Edge Functions creadas o modificadas;
+- secretos necesarios;
+- URLs que debo agregar a Supabase;
+- resultado de npm run build;
+- pruebas que pudiste ejecutar;
+- aspectos que solo pueden probarse manualmente desde Supabase o el correo.
+
+No declares que una fase está terminada si npm run build falla.
+
+Empieza ahora con la fase 1 y continúa con la fase 2 cuando la compilación sea exitosa.

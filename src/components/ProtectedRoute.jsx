@@ -24,7 +24,7 @@ function isAllowedClientRoute(pathname) {
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, user, mustChangePassword } = useAuth();
 
   if (loading) {
     return (
@@ -39,6 +39,10 @@ function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
+  }
+
+  if (mustChangePassword) {
+    return <Navigate to="/restablecer-contrasena" replace />;
   }
 
   if (isClientAccount(user) && !isAllowedClientRoute(location.pathname)) {

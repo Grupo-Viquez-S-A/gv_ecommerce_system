@@ -17,6 +17,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const mustChangePassword =
+    session?.user?.app_metadata?.must_change_password === true;
+
   const loadUserData = useCallback(async (session) => {
     if (!session?.user || isPasswordResetRoute()) {
       setUser(null);
@@ -76,6 +79,7 @@ export function AuthProvider({ children }) {
     user,
     loading,
     isAuthenticated: !!session,
+    mustChangePassword,
     signOut: handleSignOut,
   };
 

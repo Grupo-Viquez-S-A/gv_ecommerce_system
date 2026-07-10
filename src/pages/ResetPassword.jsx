@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
 
 import { signOut, updatePasswordForCurrentUser } from "../services/loginService";
+import { supabase } from "../services/primarySupabaseClient";
 
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
@@ -58,9 +59,24 @@ function ResetPassword() {
         return;
       }
 
+      const { data: activationData, error: activationError } =
+        await supabase.functions.invoke("complete-client-activation");
+
+      if (activationError || activationData?.ok === false) {
+        setError(
+          activationData?.error ||
+            "La contrasena se actualizo, pero no fue posible completar la activacion. Intenta de nuevo.",
+        );
+        return;
+      }
+
       setSuccess(true);
+      window.sessionStorage.setItem(
+        "activationSuccessMessage",
+        "Contrasena creada correctamente. Inicia sesion con tu correo y tu nueva contrasena.",
+      );
       await signOut();
-      window.setTimeout(() => navigate("/", { replace: true }), 1800);
+      window.setTimeout(() => navigate("/", { replace: true }), 1200);
     } finally {
       setLoading(false);
     }

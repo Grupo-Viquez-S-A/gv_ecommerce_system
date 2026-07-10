@@ -239,6 +239,7 @@ Deno.serve(async (request) => {
     const companyId = getRequiredString(body?.company_id);
     const fullName = getRequiredString(body?.name);
     const email = getRequiredString(body?.email).toLowerCase();
+    const quotationId = getOptionalString(body?.quotation_id);
 
     const missingFields: string[] = [];
 
@@ -310,6 +311,34 @@ Deno.serve(async (request) => {
     }
 
     if (!userId) {
+      let notificationId: string | null = null;
+
+      if (quotationId) {
+        const { data: notificationRow, error: notificationInsertError } =
+          await supabaseAdmin
+            .from("quotation_notifications")
+            .insert({
+              quotation_id: quotationId,
+              representative_id: representativeId,
+              email,
+              notification_type: "invite",
+              status: "pending",
+              attempt_count: 1,
+              created_by: currentUserData.user.id,
+            })
+            .select("notification_id")
+            .maybeSingle();
+
+        if (notificationInsertError) {
+          console.warn(
+            "No fue posible registrar la notificacion pendiente:",
+            getErrorDetails(notificationInsertError),
+          );
+        } else {
+          notificationId = notificationRow?.notification_id || null;
+        }
+      }
+
       const { data: invitationData, error: invitationError } =
         await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
           data: {
@@ -325,6 +354,19 @@ Deno.serve(async (request) => {
         });
 
       if (invitationError || !invitationData.user) {
+        if (notificationId) {
+          await supabaseAdmin
+            .from("quotation_notifications")
+            .update({
+              status: "failed",
+              error_message: getErrorMessage(
+                invitationError,
+                "No fue posible enviar la invitacion.",
+              ),
+            })
+            .eq("notification_id", notificationId);
+        }
+
         return errorResponse(
           getErrorMessage(
             invitationError,
@@ -336,6 +378,53 @@ Deno.serve(async (request) => {
       }
 
       userId = invitationData.user.id;
+
+      if (notificationId) {
+        await supabaseAdmin
+          .from("quotation_notifications")
+          .update({
+            status: "sent",
+            auth_user_id: userId,
+            sent_at: new Date().toISOString(),
+          })
+          .eq("notification_id", notificationId);
+      }
+    }
+
+    const { data: currentUserRecord, error: currentUserRecordError } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
+
+    if (currentUserRecordError) {
+      return errorResponse(
+        "No fue posible validar la cuenta del representante.",
+        500,
+        currentUserRecordError,
+      );
+    }
+
+    const currentAppMetadata = currentUserRecord?.user?.app_metadata || {};
+    const alreadyActivated = Boolean(currentAppMetadata.activated_at);
+
+    if (!alreadyActivated) {
+      const { error: appMetadataError } = await supabaseAdmin.auth.admin.updateUserById(
+        userId,
+        {
+          app_metadata: {
+            ...currentAppMetadata,
+            must_change_password: true,
+            role_code: "cliente",
+            application_code: "ecommerce",
+          },
+        },
+      );
+
+      if (appMetadataError) {
+        return errorResponse(
+          "No fue posible configurar el acceso del representante.",
+          500,
+          appMetadataError,
+        );
+      }
     }
 
     const { name, surname } = splitName(fullName);

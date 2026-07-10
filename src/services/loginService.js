@@ -31,6 +31,12 @@ export async function signInWithEmail(email, password) {
     return { data, error };
   }
 
+  const mustChangePassword = data.user.app_metadata?.must_change_password === true;
+
+  if (mustChangePassword) {
+    return { data, error: null, corporateUser: null, mustChangePassword: true };
+  }
+
   const corporateUser = await getCorporateUserData(
     data.user.id,
     data.user.email,
@@ -45,7 +51,7 @@ export async function signInWithEmail(email, password) {
     };
   }
 
-  return { data, error: null };
+  return { data, error: null, corporateUser: corporateUser.data, mustChangePassword: false };
 }
 
 export async function signInWithOAuth(provider) {

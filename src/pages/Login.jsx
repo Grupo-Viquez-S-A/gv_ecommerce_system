@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.js";
 import { signInWithEmail } from "../services/loginService";
+import { isClientAccount } from "../utils/roles.js";
 
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
 function Login() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading: authLoading, user, mustChangePassword } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -18,12 +19,34 @@ function Login() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [infoMessage, setInfoMessage] = useState("");
 
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate("/dashboard");
+    const storedMessage = window.sessionStorage.getItem("activationSuccessMessage");
+
+    if (storedMessage) {
+      setInfoMessage(storedMessage);
+      window.sessionStorage.removeItem("activationSuccessMessage");
     }
-  }, [isAuthenticated, navigate]);
+  }, []);
+
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) {
+      return;
+    }
+
+    if (mustChangePassword) {
+      navigate("/restablecer-contrasena");
+      return;
+    }
+
+    if (isClientAccount(user)) {
+      navigate("/mis-cotizaciones");
+      return;
+    }
+
+    navigate("/dashboard");
+  }, [isAuthenticated, authLoading, mustChangePassword, user, navigate]);
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -31,7 +54,8 @@ function Login() {
     setLoading(true);
     setError(null);
 
-    const { error } = await signInWithEmail(email, password);
+    const { error, corporateUser, mustChangePassword: shouldChangePassword } =
+      await signInWithEmail(email, password);
 
     if (error) {
       setError(error.message);
@@ -40,6 +64,17 @@ function Login() {
     }
 
     setLoading(false);
+
+    if (shouldChangePassword) {
+      navigate("/restablecer-contrasena");
+      return;
+    }
+
+    if (isClientAccount(corporateUser)) {
+      navigate("/mis-cotizaciones");
+      return;
+    }
+
     navigate("/dashboard");
   };
 
@@ -71,6 +106,12 @@ function Login() {
               Accede a tu portal corporativo
             </p>
           </div>
+
+          {infoMessage && (
+            <div className="bg-emerald-50 text-emerald-700 text-sm p-3 rounded-lg border border-emerald-200">
+              {infoMessage}
+            </div>
+          )}
 
           {error && (
             <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-200">
