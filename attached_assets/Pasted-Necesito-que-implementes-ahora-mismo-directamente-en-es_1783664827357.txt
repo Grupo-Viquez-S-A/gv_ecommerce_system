@@ -1,0 +1,621 @@
+Necesito que implementes ahora mismo, directamente en este proyecto React + Vite + JavaScript + Tailwind + Supabase, el flujo completo de invitación y acceso de clientes mediante cotizaciones.
+
+NO quiero solamente una explicación, pseudocódigo o una lista de pasos. Debes revisar el proyecto actual, modificar los archivos necesarios, crear los archivos nuevos, generar las migraciones SQL y dejar el flujo funcional de extremo a extremo.
+
+IMPORTANTE:
+- Conserva la funcionalidad y el diseño existentes.
+- No sustituyas datos reales por mocks.
+- No rompas el catálogo, clientes, agentes, cotizaciones, ventas, pedidos, agenda, reportes ni administración de usuarios.
+- Usa los nombres reales de tablas, columnas, servicios, rutas y componentes existentes.
+- Antes de escribir código, inspecciona el esquema utilizado por los servicios actuales.
+- No inventes columnas sin generar también su migración SQL.
+- No coloques nunca SUPABASE_SERVICE_ROLE_KEY en React, Vite, localStorage ni variables VITE_*.
+- Toda operación de Auth Admin debe ejecutarse en una Supabase Edge Function.
+- Trabaja con el proyecto actual; no crees otro proyecto.
+
+==================================================
+1. FLUJO FUNCIONAL OBLIGATORIO
+==================================================
+
+El flujo debe funcionar exactamente así:
+
+1. Un usuario interno autorizado, como agente, vendedor, comercial, director o gerente, crea una cotización desde la vista actual de cotizaciones.
+
+2. La cotización se relaciona con:
+   - businesses
+   - branches
+   - representatives
+   - quotations
+   - quote_products
+   - el usuario interno que creó la cotización mediante quotations.user_id
+
+3. El correo del representante es obligatorio. Si no hay correo válido:
+   - no permitir finalizar la cotización;
+   - mostrar un error claro;
+   - no intentar crear una cuenta sin correo.
+
+4. Después de guardar correctamente la cotización y sus productos, se debe ejecutar una Supabase Edge Function que:
+   - reciba quotationId;
+   - valide el JWT del usuario interno;
+   - confirme que el usuario tiene permiso para crear/enviar cotizaciones;
+   - consulte la cotización, el representante, la empresa y el correo desde la base de datos;
+   - no confíe en nombres, roles, representativeId, userId ni correo enviados libremente desde React.
+
+5. Si el representante todavía no tiene cuenta:
+   - crear/invitar el usuario mediante supabase.auth.admin.inviteUserByEmail();
+   - usar como redirectTo:
+     `${APP_URL}/establecer-contrasena`
+   - utilizar el email almacenado en representatives.email;
+   - guardar metadata útil como:
+     representative_id,
+     business_id,
+     role_code: "cliente",
+     application_code: "ecommerce";
+   - establecer app_metadata.must_change_password = true;
+   - no sobrescribir metadata existente: combinarla;
+   - obtener el UUID real de auth.users;
+   - actualizar representatives.user_id con ese UUID;
+   - crear o actualizar profiles;
+   - asignar el rol cliente en user_memberships;
+   - asignar acceso a la aplicación ecommerce en user_applications;
+   - buscar los IDs reales de roles y applications por role_code/application_code, no escribir UUID fijos;
+   - mantener todos estos procesos idempotentes mediante upsert o consultas previas;
+   - nunca crear dos cuentas para el mismo correo.
+
+6. Si el representante ya tiene cuenta pero todavía no activó su acceso:
+   - no crear otra cuenta;
+   - volver a enviar un enlace de activación o recuperación dirigido a `/establecer-contrasena`;
+   - mantener must_change_password = true;
+   - vincular representatives.user_id si todavía está vacío.
+
+7. Si el representante ya tiene cuenta activa:
+   - no volver a invitarlo;
+   - no obligarlo a cambiar nuevamente su contraseña;
+   - enviar un correo normal indicando que tiene una nueva cotización;
+   - incluir número de cotización, empresa y botón “Ver mis cotizaciones”;
+   - el botón debe llevar al login principal o al portal del cliente;
+   - usar el mecanismo de envío de correos existente en el proyecto;
+   - si no existe un mecanismo para correos normales, crear una Edge Function reutilizable usando secretos de entorno:
+     SMTP_HOST
+     SMTP_PORT
+     SMTP_USER
+     SMTP_PASS
+     SMTP_FROM_EMAIL
+     SMTP_FROM_NAME
+     APP_URL
+   - no escribir credenciales SMTP en el repositorio.
+
+La invitación es solamente para la creación/activación inicial de la cuenta. Las siguientes cotizaciones producen una notificación, no una cuenta nueva.
+
+==================================================
+2. REVISAR Y CORREGIR EL SERVICIO DE COTIZACIONES
+==================================================
+
+Localiza el archivo que contiene:
+
+export async function createBusinessQuotation(payload)
+
+Actualmente este flujo:
+- crea businesses;
+- crea branches;
+- crea representatives con user_id null;
+- crea quotations;
+- crea quote_products.
+
+Modifícalo sin destruir la lógica actual.
+
+Antes de hacerlo, resuelve correctamente cualquier conflicto de Git que todavía exista en ese archivo. Hay marcadores como:
+
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+
+No elimines funciones necesarias de ninguno de los lados. Deben conservarse correctamente:
+- getFileUrl
+- normalizeFileText
+- isImageFile
+- isTechnicalSheetFile
+- getProductImageUrl
+- getPrimaryValue
+
+El archivo final no puede contener ningún marcador de conflicto.
+
+También debes corregir lo siguiente:
+
+A. Al crear quotations, guardar el UUID del usuario autenticado en quotations.user_id.
+
+B. No aceptar user_id desde el formulario. Obtenerlo mediante:
+supabase.auth.getUser()
+
+C. Validar representativeEmail antes de crear la cotización.
+
+D. Después de completar exitosamente la cotización y quote_products, invocar:
+
+supabase.functions.invoke("invite-quotation-representative", {
+  body: {
+    quotationId: quotation.quotation_id
+  }
+})
+
+E. Si la cotización se creó pero falló el correo:
+- no ocultar el error;
+- informar “La cotización fue creada, pero no se pudo enviar el correo”;
+- conservar quotationId;
+- mostrar una acción “Reintentar envío”;
+- no volver a insertar la cotización al reintentar.
+
+F. Crear una función de servicio como:
+retryQuotationInvitation(quotationId)
+
+G. Evitar que varios clics rápidos creen cotizaciones o invitaciones duplicadas:
+- desactivar el botón mientras procesa;
+- usar estado de loading;
+- hacer la Edge Function idempotente.
+
+==================================================
+3. EDGE FUNCTION invite-quotation-representative
+==================================================
+
+Crear:
+
+supabase/functions/invite-quotation-representative/index.ts
+
+Requisitos:
+
+- Responder correctamente a CORS y OPTIONS.
+- Requerir Authorization Bearer.
+- Validar al usuario llamante mediante su JWT.
+- Utilizar un cliente normal para identificar al usuario.
+- Utilizar un segundo cliente administrativo con SUPABASE_SERVICE_ROLE_KEY solamente dentro de la Edge Function.
+- No devolver secretos, tokens ni datos sensibles.
+- Normalizar el correo con trim().toLowerCase().
+- Consultar quotationId en quotations.
+- Consultar representatives mediante quotation.representative_id.
+- Verificar que el representante esté activo.
+- Confirmar que representatives.email exista.
+- Verificar que el usuario llamante sea:
+  a) el creador de la cotización, o
+  b) posea un rol/permisos existentes que permitan administrar cotizaciones.
+- Adaptar la comprobación al modelo actual de profiles, user_memberships, roles y permisos.
+- No permitir que un cliente invoque esta función para otras cotizaciones.
+
+Para detectar una cuenta existente:
+1. consultar profiles por correo normalizado;
+2. usar profiles.user_id cuando exista;
+3. si es necesario, comprobar Auth Admin desde el servidor;
+4. no usar Auth Admin desde React.
+
+Para una cuenta nueva:
+
+const { data, error } =
+  await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${APP_URL}/establecer-contrasena`,
+    data: {
+      representative_id: representative.representative_id,
+      business_id: representative.business_id,
+      full_name: representative.name,
+      role_code: "cliente",
+      application_code: "ecommerce"
+    }
+  });
+
+Después:
+- obtener data.user.id;
+- leer y combinar app_metadata existente;
+- establecer must_change_password: true;
+- establecer role_code: "cliente";
+- establecer application_code: "ecommerce";
+- actualizar el usuario con auth.admin.updateUserById();
+- vincular las tablas empresariales.
+
+No sobrescribir perfiles o membresías existentes innecesariamente.
+
+El proceso debe soportar múltiples cotizaciones para el mismo representante sin duplicar:
+- auth.users;
+- profiles;
+- representatives;
+- user_memberships;
+- user_applications.
+
+==================================================
+4. REGISTRO DE ENVÍOS Y REINTENTOS
+==================================================
+
+Crear una migración SQL para una tabla como:
+
+quotation_notifications
+
+Debe adaptar todos los tipos de ID a los tipos reales de las tablas actuales.
+
+Campos requeridos:
+- notification_id
+- quotation_id
+- representative_id
+- auth_user_id
+- email
+- notification_type
+- status
+- error_message
+- created_by
+- sent_at
+- created_at
+- updated_at
+
+Valores permitidos para notification_type:
+- invite
+- activation
+- new_quotation
+
+Valores permitidos para status:
+- pending
+- sent
+- failed
+
+Agregar:
+- foreign keys;
+- índices por quotation_id, representative_id, email y status;
+- restricción o estrategia idempotente para evitar envíos duplicados accidentales;
+- RLS;
+- políticas para que usuarios internos autorizados puedan consultar el estado;
+- escritura administrativa mediante Edge Function;
+- ningún cliente debe poder modificar registros de notificaciones.
+
+No debes marcar como sent hasta que el proveedor confirme el envío.
+
+==================================================
+5. FORMULARIO OBLIGATORIO PARA ESTABLECER CONTRASEÑA
+==================================================
+
+Crear una página pública, fuera de MainLayout:
+
+src/pages/SetPassword.jsx
+
+Ruta:
+
+/establecer-contrasena
+
+Esta página debe:
+
+- mantener el diseño oscuro y dorado del sistema;
+- mostrar el nombre de Grupo Víquez S.A.;
+- recibir la sesión creada al aceptar la invitación;
+- esperar correctamente a que Supabase procese los tokens del enlace;
+- consultar supabase.auth.getSession();
+- escuchar onAuthStateChange cuando sea necesario;
+- no enviar al dashboard automáticamente;
+- mostrar campos:
+  - Nueva contraseña
+  - Confirmar contraseña
+- permitir mostrar/ocultar contraseña;
+- validar mínimo 8 caracteres;
+- validar que ambas contraseñas coincidan;
+- mostrar loading y errores reales;
+- impedir múltiples envíos.
+
+Al confirmar:
+
+1. Ejecutar:
+   supabase.auth.updateUser({
+     password: newPassword
+   })
+
+2. Invocar una Edge Function:
+   complete-client-activation
+
+3. Esa Edge Function debe:
+   - validar el JWT del usuario;
+   - actualizar app_metadata.must_change_password a false;
+   - combinar metadata en vez de sobrescribirla;
+   - opcionalmente registrar activated_at;
+   - no recibir un userId arbitrario desde el navegador.
+
+4. Después de completar ambos procesos:
+   - ejecutar supabase.auth.signOut();
+   - limpiar cualquier estado de autenticación temporal;
+   - redirigir a `/`;
+   - mostrar en el login:
+     “Contraseña creada correctamente. Inicia sesión con tu correo y tu nueva contraseña.”
+
+No iniciar automáticamente el panel después de cambiar contraseña. El usuario debe regresar al login e ingresar manualmente sus credenciales, tal como fue solicitado.
+
+Si el enlace está vencido, es inválido o no contiene sesión:
+- mostrar un mensaje claro;
+- no mostrar un formulario inutilizable;
+- ofrecer una opción para solicitar un nuevo enlace o contactar al administrador.
+
+==================================================
+6. FORZAR EL CAMBIO DE CONTRASEÑA
+==================================================
+
+Modificar AuthContext/AuthProvider, ProtectedRoute y el enrutamiento.
+
+Reglas:
+
+- Si existe una sesión y:
+  user.app_metadata.must_change_password === true
+
+  cualquier intento de entrar a una ruta interna debe redirigir a:
+  /establecer-contrasena
+
+- Esto aplica antes de cargar Dashboard, Catálogo, Cotizaciones u otra vista.
+- No debe existir una manera normal de saltarse el formulario escribiendo otra URL.
+- `/establecer-contrasena` debe poder abrirse aunque el perfil todavía se esté creando.
+- Después de activar la cuenta y cerrar sesión, volver al login.
+
+En el login:
+- si el usuario inicia sesión y must_change_password es true, redirigir a `/establecer-contrasena`;
+- si el rol es cliente, redirigir a `/cliente/cotizaciones`;
+- si es un usuario interno, conservar la redirección actual al dashboard.
+
+==================================================
+7. ELIMINAR REGISTRO PÚBLICO
+==================================================
+
+La aplicación no debe permitir registro público.
+
+En App.jsx:
+- eliminar la importación de SignUp;
+- eliminar la ruta `/signup`;
+- eliminar cualquier botón, texto o enlace “Registrarse” del login;
+- no afectar “Olvidé mi contraseña” si existe;
+- la creación de clientes se realiza únicamente mediante la invitación asociada a una cotización.
+
+==================================================
+8. PORTAL EXCLUSIVO DEL CLIENTE
+==================================================
+
+Crear un layout para clientes separado del panel interno:
+
+src/components/layouts/ClientLayout.jsx
+
+Debe conservar el branding existente, pero mostrar solamente opciones permitidas, como:
+- Mis cotizaciones
+- Catálogo, únicamente si el negocio ya lo permite
+- Mi cuenta
+- Cerrar sesión
+
+No mostrar a clientes:
+- Dashboard interno
+- Clientes
+- Agentes
+- Ventas
+- Pedidos internos
+- Agenda interna
+- Reportes
+- Administración de usuarios
+- Configuración administrativa
+
+Crear:
+
+src/pages/client/ClientQuotations.jsx
+src/pages/client/ClientQuotationDetail.jsx
+
+Rutas protegidas:
+
+/cliente/cotizaciones
+/cliente/cotizaciones/:quotationId
+
+La consulta del cliente debe partir siempre de auth.uid().
+
+Relación esperada:
+auth.uid()
+→ representatives.user_id
+→ quotations.representative_id
+→ quote_products.quotation_id
+
+Mostrar:
+- número de cotización;
+- fecha;
+- estado;
+- empresa;
+- productos;
+- cantidades;
+- precio unitario;
+- IVA;
+- subtotal;
+- total;
+- notas;
+- imágenes disponibles.
+
+Un cliente puede ver todas las cotizaciones vinculadas a su representante, pero nunca las de otro representante.
+
+No filtrar únicamente en React. La seguridad real debe estar en RLS.
+
+==================================================
+9. POLÍTICAS RLS DEL PORTAL DEL CLIENTE
+==================================================
+
+Generar una migración SQL, sin eliminar políticas internas existentes, que agregue políticas específicas para clientes.
+
+Los clientes autenticados deben poder hacer SELECT solamente cuando corresponda:
+
+representatives:
+- user_id = auth.uid()
+
+quotations:
+- representative_id pertenece a un representatives cuyo user_id = auth.uid()
+
+quote_products:
+- quotation_id pertenece a una quotations visible para auth.uid()
+
+textile_products y textile_product_files:
+- permitir únicamente la lectura necesaria para productos incluidos en cotizaciones visibles, o conservar las políticas autenticadas actuales si ya son seguras.
+
+profiles:
+- el usuario puede consultar su propio perfil.
+
+No dar INSERT, UPDATE o DELETE de cotizaciones a clientes salvo que exista una función específica ya diseñada para aceptar/rechazar.
+
+Las políticas internas existentes para agentes, gerentes o comerciales deben continuar funcionando.
+
+Usar nombres únicos para las políticas y evitar duplicarlas cuando la migración se ejecute más de una vez.
+
+==================================================
+10. CORREO DE INVITACIÓN
+==================================================
+
+El proyecto ya utiliza la plantilla “Invite user” de Supabase con:
+
+{{ .ConfirmationURL }}
+
+Debe continuar usando esa plantilla.
+
+No reemplazar el enlace por una URL escrita manualmente.
+
+La Edge Function debe proporcionar redirectTo hacia:
+`${APP_URL}/establecer-contrasena`
+
+La plantilla actual tiene el botón:
+“Aceptar invitación”
+
+No es necesario cambiar el estilo de la plantilla, salvo que detectes un error técnico.
+
+También revisar la plantilla “Reset password”, porque puede ser utilizada para reenviar la activación de una cuenta que ya existe pero todavía no ha establecido contraseña.
+
+==================================================
+11. CONFIGURACIÓN DE URLS
+==================================================
+
+No escribir dominios ficticios.
+
+Detectar la URL real de producción del proyecto y utilizar una variable:
+
+VITE_APP_URL para el frontend, cuando sea necesario.
+APP_URL como secreto de las Edge Functions.
+
+Entregar al final las URLs exactas que debo registrar en:
+
+Supabase Dashboard
+→ Authentication
+→ URL Configuration
+
+Debe incluir:
+- Site URL de producción;
+- URL exacta de producción:
+  /establecer-contrasena
+- URL local de Vite;
+- URL de preview de Replit, cuando aplique.
+
+No usar wildcard abierto en producción si puede utilizarse la ruta exacta.
+
+==================================================
+12. MANEJO DE ERRORES
+==================================================
+
+Debes manejar correctamente:
+
+- representante sin correo;
+- correo inválido;
+- cuenta ya existente;
+- perfil ya existente;
+- membresía ya existente;
+- acceso ecommerce ya existente;
+- representatives.user_id ya vinculado;
+- invitación expirada;
+- enlace utilizado dos veces;
+- correo SMTP fallido;
+- rate limit de correo;
+- cotización creada pero notificación fallida;
+- usuario sin permisos;
+- JWT ausente o vencido;
+- sesión temporal inexistente;
+- contraseña débil;
+- RLS bloqueando una operación;
+- doble clic;
+- errores CORS.
+
+No mostrar mensajes como “[object Object]”.
+No mostrar service_role ni detalles internos al usuario.
+Registrar errores útiles en consola solamente en desarrollo.
+La interfaz debe mostrar mensajes comprensibles en español.
+
+==================================================
+13. PRUEBAS DE ACEPTACIÓN OBLIGATORIAS
+==================================================
+
+Debes comprobar estos escenarios:
+
+PRUEBA 1 — Representante nuevo
+- El agente crea una cotización.
+- Se crea una sola cuenta.
+- Llega el correo de invitación.
+- El botón abre `/establecer-contrasena`.
+- No abre el dashboard.
+- El representante establece contraseña.
+- Se cierra la sesión.
+- Regresa al login.
+- Inicia sesión con correo y nueva contraseña.
+- Entra al portal de cliente.
+- Ve la cotización recién creada.
+
+PRUEBA 2 — Segunda cotización del mismo representante
+- No se crea otra cuenta.
+- No se vuelve a forzar el cambio de contraseña.
+- Llega una notificación de nueva cotización.
+- Al entrar, aparecen ambas cotizaciones.
+
+PRUEBA 3 — Aislamiento
+- Cliente A no puede consultar la cotización de Cliente B modificando la URL o usando la consola.
+
+PRUEBA 4 — Usuario interno
+- Los agentes y gerentes continúan usando el dashboard actual.
+- Sus permisos actuales no se rompen.
+
+PRUEBA 5 — Fallo de correo
+- La cotización no se duplica.
+- Se informa que el correo falló.
+- El botón Reintentar envío funciona.
+- quotation_notifications registra el error.
+
+PRUEBA 6 — Enlace inválido
+- Se muestra una pantalla clara.
+- No se deja al usuario en una página vacía.
+
+PRUEBA 7 — Registro público
+- `/signup` ya no existe.
+- El login no muestra enlaces de registro.
+
+==================================================
+14. RESULTADO QUE DEBES ENTREGAR
+==================================================
+
+Al terminar:
+
+1. Aplica las modificaciones al código del proyecto.
+2. Enumera todos los archivos creados.
+3. Enumera todos los archivos modificados.
+4. Muestra las migraciones SQL completas.
+5. Muestra el código completo de las Edge Functions.
+6. Indica los comandos exactos para desplegarlas.
+7. Indica los secretos exactos que debo registrar, sin inventar sus valores.
+8. Indica las URLs exactas que debo configurar en Supabase Auth.
+9. Indica qué plantillas de email debo revisar.
+10. Reporta cualquier error de compilación.
+11. Ejecuta npm run build y corrige todos los errores encontrados.
+12. No declares la tarea terminada mientras existan:
+    - conflictos de Git;
+    - errores de importación;
+    - rutas inexistentes;
+    - errores de compilación;
+    - datos mock en el portal del cliente;
+    - service_role expuesta;
+    - políticas RLS faltantes.
+
+Empieza inspeccionando:
+- App.jsx
+- el archivo que contiene createBusinessQuotation
+- primarySupabaseClient
+- AuthContext/AuthProvider
+- ProtectedRoute
+- Login
+- services relacionados con quotations
+- profiles
+- representatives
+- quotations
+- quote_products
+- roles
+- user_memberships
+- applications
+- user_applications
+
+Implementa el flujo completo, no solamente una parte.
