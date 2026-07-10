@@ -1,0 +1,634 @@
+Necesito que corrijas de inmediato el flujo de invitación y establecimiento obligatorio de contraseña de los representantes.
+
+Ya identifiqué que la Edge Function existente se llama:
+
+create-representative-user
+
+No crees otra función que duplique su responsabilidad. Modifica la función existente y conserva su lógica actual para:
+
+- Crear o encontrar el usuario en auth.users.
+- Crear o actualizar profiles.
+- Enlazar representatives.user_id.
+- Crear user_memberships.
+- Crear user_applications.
+- Evitar cuentas duplicadas.
+
+El problema actual es que la función envía la invitación en algunos casos, pero no establece must_change_password, omite el correo cuando el usuario ya existe y puede enviar un redirectTo incorrecto o undefined.
+
+Debes implementar el flujo completo de extremo a extremo. No quiero solamente una explicación. Modifica el código, crea la Edge Function adicional necesaria, actualiza el frontend y ejecuta npm run build.
+
+==================================================
+RESULTADO OBLIGATORIO
+==================================================
+
+El flujo debe funcionar exactamente así:
+
+1. Un agente o usuario interno crea una cotización para un representante.
+2. create-representative-user crea o vincula la cuenta del representante.
+3. Si es una cuenta nueva, Supabase envía el correo usando la plantilla “Invite user”.
+4. Al presionar “Aceptar invitación”, el representante debe ir exactamente a:
+
+/restablecer-contrasena
+
+5. El representante no puede entrar a ninguna ruta interna mientras no establezca su contraseña.
+6. El representante escribe y confirma su nueva contraseña.
+7. Se actualiza la contraseña.
+8. Se marca must_change_password como false.
+9. Se cierra la sesión temporal.
+10. Se redirige al login principal.
+11. El representante inicia sesión manualmente con su correo y nueva contraseña.
+12. Se redirige a /mis-cotizaciones.
+13. Puede ver únicamente sus propias cotizaciones.
+14. Una segunda cotización no debe crear otra cuenta ni volver a forzar la contraseña.
+
+==================================================
+1. CORREGIR EL REDIRECT DE LA EDGE FUNCTION
+==================================================
+
+Dentro de create-representative-user, elimina la lógica ambigua actual basada en:
+
+- ECOMMERCE_CLIENT_REDIRECT_URL
+- SITE_URL
+- redirectTo undefined
+
+Utiliza un único secreto obligatorio:
+
+APP_URL
+
+APP_URL debe contener únicamente el origen de la aplicación, por ejemplo:
+
+https://dominio-de-la-aplicacion.replit.app
+
+Construye la URL así:
+
+const appUrl = Deno.env.get("APP_URL");
+
+if (!appUrl) {
+  devolver un error 500 claro indicando que falta APP_URL;
+}
+
+const redirectTo = new URL(
+  "/restablecer-contrasena",
+  appUrl.endsWith("/") ? appUrl : `${appUrl}/`
+).toString();
+
+Antes de llamar a inviteUserByEmail, registrar en los logs de la Edge Function únicamente:
+
+- redirectTo
+- email normalizado
+- si la cuenta es nueva o existente
+
+No registrar tokens, contraseñas, service role ni enlaces completos de autenticación.
+
+Nunca permitas que redirectTo sea undefined.
+
+No uses el dominio enviado desde el frontend.
+
+==================================================
+2. CUENTA NUEVA: INVITAR Y MARCAR ACTIVACIÓN PENDIENTE
+==================================================
+
+Cuando no exista el usuario en auth.users:
+
+Ejecutar:
+
+supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+  redirectTo,
+  data: {
+    created_from: "quotation_representative",
+    role: "client",
+    representative_id: representativeId,
+    business_id: businessId,
+    branch_id: branchId,
+    application_id: ECOMMERCE_APPLICATION_ID,
+    full_name: fullName
+  }
+});
+
+La propiedad data de inviteUserByEmail puede conservarse para user_metadata, pero no es suficiente para controlar la obligación de contraseña.
+
+Después de obtener invitationData.user.id, consultar o utilizar la app_metadata actual del usuario y ejecutar:
+
+supabaseAdmin.auth.admin.updateUserById(userId, {
+  app_metadata: {
+    ...existingAppMetadata,
+    must_change_password: true,
+    activation_status: "pending",
+    role_code: "cliente",
+    application_code: "ecommerce"
+  }
+});
+
+No sobrescribir app_metadata existente. Debes combinarla.
+
+El resultado para una cuenta nueva debe devolver:
+
+{
+  ok: true,
+  account_state: "invited",
+  invitation_sent: true,
+  must_change_password: true
+}
+
+No devolver tokens ni datos confidenciales.
+
+==================================================
+3. USUARIO EXISTENTE
+==================================================
+
+Actualmente la función encuentra el usuario existente y continúa sin enviar ningún correo. Eso debe corregirse.
+
+Cuando el usuario ya exista:
+
+1. Obtener el usuario completo mediante:
+
+supabaseAdmin.auth.admin.getUserById(userId)
+
+2. Leer:
+
+- app_metadata.must_change_password
+- app_metadata.activation_status
+- last_sign_in_at
+- invited_at
+- email_confirmed_at
+
+3. Determinar su estado.
+
+CASO A: usuario ya activo
+
+Considerar activo cuando:
+
+- app_metadata.must_change_password === false, o
+- app_metadata.activation_status === "active", o
+- tiene last_sign_in_at y no tiene una activación pendiente explícita.
+
+En ese caso:
+
+- No enviar otra invitación.
+- No enviar recuperación de contraseña.
+- No cambiar must_change_password a true.
+- Mantener la vinculación con profiles, representatives, user_memberships y user_applications.
+- Devolver:
+
+{
+  ok: true,
+  account_state: "active",
+  invitation_sent: false,
+  must_change_password: false
+}
+
+CASO B: usuario existente con activación pendiente
+
+Considerar pendiente cuando:
+
+- app_metadata.must_change_password === true, o
+- app_metadata.activation_status === "pending", o
+- fue invitado, nunca inició sesión y todavía no terminó la activación.
+
+En este caso:
+
+- Mantener must_change_password en true.
+- No intentar crear otra cuenta.
+- Crear un cliente público separado con SUPABASE_URL y SUPABASE_ANON_KEY, sin reutilizar el Authorization del usuario interno.
+- Enviar un correo de recuperación para que pueda establecer la contraseña:
+
+await supabasePublic.auth.resetPasswordForEmail(email, {
+  redirectTo
+});
+
+Este correo utilizará la plantilla “Reset password”.
+
+Devolver:
+
+{
+  ok: true,
+  account_state: "pending",
+  invitation_sent: true,
+  email_type: "recovery",
+  must_change_password: true
+}
+
+No utilices una recuperación de contraseña para usuarios activos cuando solamente se crea una nueva cotización.
+
+CASO C: usuario legado sin estado claro
+
+No fuerces masivamente a todos los usuarios existentes.
+
+Si falta la metadata y el usuario nunca inició sesión, puedes marcarlo como pendiente.
+
+Si el usuario ya tiene last_sign_in_at, tratarlo como activo para evitar bloquear cuentas que ya funcionan.
+
+==================================================
+4. NO VOLVER A FORZAR LA CONTRASEÑA
+==================================================
+
+Una vez que un representante complete la activación:
+
+- must_change_password debe quedar en false.
+- activation_status debe quedar en active.
+- activated_at debe guardar una fecha ISO.
+- Las futuras llamadas a create-representative-user no deben cambiar estos valores a pending.
+- Las futuras cotizaciones no deben volver a enviar la invitación.
+- No debe volver a aparecer el formulario obligatorio de contraseña.
+
+La bandera true solamente debe establecerse:
+
+- al crear una cuenta nueva;
+- al detectar una cuenta realmente pendiente que nunca terminó la activación.
+
+==================================================
+5. CREAR COMPLETE-CLIENT-ACTIVATION
+==================================================
+
+Crear:
+
+supabase/functions/complete-client-activation/index.ts
+
+Esta función debe:
+
+- Responder OPTIONS correctamente.
+- Tener CORS.
+- Aceptar solamente POST.
+- Exigir Authorization Bearer.
+- Identificar al usuario mediante supabase.auth.getUser().
+- No recibir user_id desde React.
+- Utilizar SUPABASE_SERVICE_ROLE_KEY solamente dentro de la Edge Function.
+- Consultar el usuario actual con auth.admin.getUserById().
+- Combinar la app_metadata existente.
+- Ejecutar:
+
+supabaseAdmin.auth.admin.updateUserById(currentUser.id, {
+  app_metadata: {
+    ...currentAppMetadata,
+    must_change_password: false,
+    activation_status: "active",
+    activated_at: new Date().toISOString()
+  }
+});
+
+La función debe devolver únicamente:
+
+{
+  ok: true,
+  message: "Activación completada correctamente."
+}
+
+No devolver metadata completa, tokens ni secretos.
+
+==================================================
+6. CORREGIR RESETPASSWORD.JSX
+==================================================
+
+Utiliza la página existente:
+
+src/pages/ResetPassword.jsx
+
+No crees otra página duplicada.
+
+La ruta pública debe seguir siendo:
+
+/restablecer-contrasena
+
+Esta ruta debe estar fuera de ProtectedRoute y fuera de cualquier protección que exija perfil, rol o membresía.
+
+La página debe funcionar para:
+
+- Invitación inicial.
+- Recuperación normal de contraseña.
+- Usuario pendiente al que se le reenvió un enlace.
+
+Al cargar la página:
+
+1. Mostrar un estado “Validando enlace…”.
+2. Esperar a que Supabase procese la sesión del enlace.
+3. Ejecutar supabase.auth.getSession().
+4. Escuchar supabase.auth.onAuthStateChange().
+5. Si la URL contiene un parámetro code y todavía no existe sesión, intercambiarlo usando el mecanismo de Supabase correspondiente al cliente actual.
+6. Evitar redirigir antes de que Supabase termine de procesar el enlace.
+7. No depender de profiles, user_memberships o user_applications para mostrar el formulario.
+
+Cuando exista una sesión válida, mostrar:
+
+- Nueva contraseña.
+- Confirmar nueva contraseña.
+- Botones para mostrar u ocultar contraseña.
+- Botón “Establecer contraseña”.
+
+Validaciones:
+
+- Mínimo 8 caracteres.
+- Ambas contraseñas deben coincidir.
+- No aceptar campos vacíos.
+- Evitar doble clic.
+- Mostrar errores en español.
+
+Al guardar:
+
+1. Ejecutar:
+
+const { error: passwordError } = await supabase.auth.updateUser({
+  password: newPassword
+});
+
+2. Si funciona, obtener la sesión actual.
+
+3. Invocar:
+
+supabase.functions.invoke("complete-client-activation", {
+  headers: {
+    Authorization: `Bearer ${session.access_token}`
+  }
+});
+
+4. Verificar que la función responda ok: true.
+
+5. Ejecutar:
+
+await supabase.auth.signOut();
+
+6. Guardar un mensaje temporal para el login:
+
+“Contraseña creada correctamente. Inicia sesión con tu correo y tu nueva contraseña.”
+
+7. Redirigir a:
+
+/
+
+No iniciar automáticamente el portal del cliente después de cambiar la contraseña.
+
+Si el enlace está vencido o no existe una sesión válida, mostrar:
+
+“El enlace de acceso es inválido o ha vencido. Solicita un nuevo enlace.”
+
+No mostrar el formulario si no existe una sesión válida.
+
+==================================================
+7. PROTECCIÓN GLOBAL OBLIGATORIA
+==================================================
+
+Revisar:
+
+- AuthProvider
+- AuthContext
+- ProtectedRoute
+- rutas protegidas por rol
+- Login
+- App.jsx
+
+La regla global debe ser:
+
+Si existe una sesión y:
+
+user.app_metadata?.must_change_password === true
+
+entonces cualquier ruta interna debe redirigir a:
+
+/restablecer-contrasena
+
+Esto debe aplicarse a:
+
+- /dashboard
+- /mis-cotizaciones
+- /mis-pedidos
+- /catalogo
+- /cotizaciones
+- /ventas
+- /clientes
+- /agentes
+- /agenda
+- /reportes
+- /configuracion
+- cualquier otra ruta protegida
+
+No repitas la condición manualmente en cada página. Colócala en ProtectedRoute o en la protección global equivalente.
+
+Evitar bucles:
+
+- Mientras authLoading sea true, mostrar loading.
+- No redirigir a /restablecer-contrasena si ya está en esa ruta.
+- /restablecer-contrasena debe ser pública.
+- No exigir perfil cargado para entrar a ella.
+
+==================================================
+8. CORREGIR EL LOGIN
+==================================================
+
+Después de iniciar sesión:
+
+Si:
+
+user.app_metadata?.must_change_password === true
+
+redirigir inmediatamente a:
+
+/restablecer-contrasena
+
+No permitir que la lógica de roles lo envíe antes a /mis-cotizaciones o /dashboard.
+
+Si must_change_password es false:
+
+- Cliente: redirigir a /mis-cotizaciones.
+- Usuario interno: conservar la redirección actual.
+
+Mostrar el mensaje enviado desde ResetPassword.jsx:
+
+“Contraseña creada correctamente. Inicia sesión con tu correo y tu nueva contraseña.”
+
+Mostrarlo una sola vez.
+
+==================================================
+9. URLS DE SUPABASE
+==================================================
+
+La URL visible en Authentication → URL Configuration ya contiene la ruta:
+
+/restablecer-contrasena
+
+Verifica que el valor coincida exactamente, incluyendo:
+
+- https
+- dominio completo
+- ruta
+- ausencia de espacios
+- ausencia de caracteres adicionales
+
+La Site URL debe ser el origen de la aplicación, sin la ruta:
+
+https://DOMINIO-DE-LA-APLICACION
+
+La Redirect URL debe ser:
+
+https://DOMINIO-DE-LA-APLICACION/restablecer-contrasena
+
+Crear el secreto de la Edge Function:
+
+APP_URL=https://DOMINIO-DE-LA-APLICACION
+
+No guardar APP_URL con /restablecer-contrasena porque el código debe agregar la ruta.
+
+No utilizar una URL antigua de preview si el deployment actual utiliza otra dirección.
+
+Mostrarme al finalizar cuál es el valor real detectado para APP_URL, pero no inventarlo.
+
+==================================================
+10. PLANTILLAS DE CORREO
+==================================================
+
+Mantener la plantilla “Invite user” existente con:
+
+{{ .ConfirmationURL }}
+
+No cambiar el enlace por una URL escrita manualmente.
+
+Revisar también la plantilla “Reset password”.
+
+La plantilla Reset password debe contener un botón cuyo href sea:
+
+{{ .ConfirmationURL }}
+
+La invitación inicial utiliza Invite user.
+
+El reenvío para una cuenta pendiente ya existente utiliza Reset password.
+
+Una cuenta activa no debe recibir ninguno de esos correos por crear una nueva cotización.
+
+==================================================
+11. RESPUESTA DEL FRONTEND
+==================================================
+
+Cuando el frontend invoque create-representative-user, debe leer:
+
+- account_state
+- invitation_sent
+- email_type
+- must_change_password
+
+Mostrar mensajes distintos:
+
+Cuenta nueva:
+
+“Cotización creada y correo de invitación enviado al representante.”
+
+Cuenta pendiente:
+
+“Cotización creada y enlace de activación reenviado al representante.”
+
+Cuenta ya activa:
+
+“Cotización creada correctamente. El representante ya posee acceso al sistema.”
+
+Si el correo falla después de crear la cotización:
+
+“La cotización fue creada, pero no se pudo enviar el correo al representante.”
+
+No volver a insertar la cotización al reintentar el correo.
+
+==================================================
+12. PRUEBA CON UN CORREO NUEVO
+==================================================
+
+Para validar correctamente, no utilices únicamente un correo que ya existe en auth.users.
+
+Realiza una prueba con un correo completamente nuevo:
+
+1. Crear una cotización.
+2. Confirmar en los logs el redirectTo exacto.
+3. Confirmar que invitation_sent es true.
+4. Confirmar que auth.users contiene el usuario.
+5. Confirmar que app_metadata contiene:
+
+must_change_password: true
+activation_status: "pending"
+
+6. Abrir el correo.
+7. Presionar “Aceptar invitación”.
+8. Confirmar que abre /restablecer-contrasena.
+9. Intentar abrir /mis-cotizaciones antes de guardar contraseña.
+10. Confirmar que vuelve a /restablecer-contrasena.
+11. Establecer contraseña.
+12. Confirmar que complete-client-activation responde ok.
+13. Confirmar que app_metadata cambia a:
+
+must_change_password: false
+activation_status: "active"
+
+14. Confirmar que se cierra la sesión.
+15. Confirmar que regresa al login.
+16. Iniciar sesión manualmente.
+17. Confirmar que entra a /mis-cotizaciones.
+
+También probar un correo existente pendiente y un correo existente activo.
+
+==================================================
+13. USUARIOS CREADOS ANTES DE ESTA CORRECCIÓN
+==================================================
+
+Los usuarios creados antes de este cambio no tendrán must_change_password.
+
+No hagas una actualización masiva insegura.
+
+Para cada usuario de prueba anterior que nunca completó la activación:
+
+- Identificarlo por correo.
+- Usar auth.admin.updateUserById desde una operación administrativa segura.
+- Establecer:
+
+must_change_password: true
+activation_status: "pending"
+
+- Reenviar un enlace de recuperación a /restablecer-contrasena.
+
+Los usuarios que ya han iniciado sesión no deben ser bloqueados automáticamente.
+
+==================================================
+14. DESPLIEGUE
+==================================================
+
+Después de modificar el código:
+
+1. Configurar el secreto APP_URL.
+2. Desplegar create-representative-user.
+3. Desplegar complete-client-activation.
+4. Confirmar que ambas funciones tienen acceso a:
+   - SUPABASE_URL
+   - SUPABASE_ANON_KEY
+   - SUPABASE_SERVICE_ROLE_KEY
+   - APP_URL
+5. Ejecutar npm run build.
+6. Corregir cualquier error.
+7. Probar el flujo con un correo nuevo.
+
+No declares la tarea terminada solamente porque el proyecto compile.
+
+==================================================
+15. ENTREGA
+==================================================
+
+Al finalizar, indícame:
+
+- Archivos modificados.
+- Archivos creados.
+- Código final de create-representative-user.
+- Código final de complete-client-activation.
+- Cambios de ResetPassword.jsx.
+- Cambios de ProtectedRoute.
+- Cambios de AuthProvider o AuthContext.
+- Cambios del login.
+- Valor exacto que debo configurar como APP_URL.
+- Redirect URL exacta que debe quedar en Supabase.
+- Comandos exactos para desplegar las Edge Functions.
+- Resultado de npm run build.
+- Resultado de las pruebas.
+- Logs relevantes sin información confidencial.
+
+No declares que está listo si:
+
+- must_change_password no aparece en app_metadata.
+- redirectTo puede quedar undefined.
+- /restablecer-contrasena está dentro de ProtectedRoute.
+- un usuario pendiente puede entrar a /mis-cotizaciones.
+- la activación no limpia la bandera.
+- la sesión no se cierra al establecer la contraseña.
+- las cuentas activas vuelven a ser forzadas.
+- los usuarios existentes nunca reciben un enlace cuando siguen pendientes.
+- el proyecto no compila.

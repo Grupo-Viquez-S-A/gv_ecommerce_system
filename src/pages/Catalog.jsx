@@ -1002,10 +1002,14 @@ export default function Catalog() {
         status,
       });
 
+      const baseSuccessMessage = quotation.earlyDelivery
+        ? `Cotizacion guardada: ${quotation.quotationNumber}. Entrega anticipada registrada el ${quotation.earlyDeliveryDate}.`
+        : `Cotizacion guardada: ${quotation.quotationNumber}`;
+
       setQuotationSuccess(
-        quotation.earlyDelivery
-          ? `Cotizacion guardada: ${quotation.quotationNumber}. Entrega anticipada registrada el ${quotation.earlyDeliveryDate}.`
-          : `Cotizacion guardada: ${quotation.quotationNumber}`,
+        quotation.representativeAccessMessage
+          ? `${baseSuccessMessage} ${quotation.representativeAccessMessage}`
+          : baseSuccessMessage,
       );
 
       if (quotation.notificationError) {

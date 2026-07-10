@@ -4,6 +4,24 @@ import { addDaysCRDateString, getTodayCRDateString } from "../utils/dateUtils.js
 
 const QUOTATION_VALIDITY_DAYS = 2;
 
+function getRepresentativeAccessMessage(accessResult) {
+  if (!accessResult) return null;
+
+  if (accessResult.account_state === "invited") {
+    return "Cotizacion creada y correo de invitacion enviado al representante.";
+  }
+
+  if (accessResult.account_state === "pending") {
+    return "Cotizacion creada y enlace de activacion reenviado al representante.";
+  }
+
+  if (accessResult.account_state === "active") {
+    return "Cotizacion creada correctamente. El representante ya posee acceso al sistema.";
+  }
+
+  return null;
+}
+
 function getText(value) {
   const normalizedValue = String(value || "").trim();
 
@@ -1215,10 +1233,11 @@ export async function createBusinessQuotation(payload) {
     );
 
     let notificationError = null;
+    let representativeAccessMessage = null;
 
     if (representativeId && client.representativeEmail && !client.representativeUserId) {
       try {
-        await createRepresentativeUser({
+        const accessResult = await createRepresentativeUser({
           representative_id: representativeId,
           business_id: businessId,
           branch_id: branchId,
@@ -1228,6 +1247,8 @@ export async function createBusinessQuotation(payload) {
           quotation_id: quotationId,
           quotation_number: quotation.quotation_number,
         });
+
+        representativeAccessMessage = getRepresentativeAccessMessage(accessResult);
       } catch (error) {
         console.error("No fue posible notificar al representante:", error);
         notificationError =
@@ -1257,6 +1278,7 @@ export async function createBusinessQuotation(payload) {
       validUntil: quotation.valid_until,
       methodId: quotation.method_id,
       notificationError,
+      representativeAccessMessage,
     };
   } catch (error) {
     await rollbackQuotation({

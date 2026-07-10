@@ -116,6 +116,7 @@ Deno.serve(async (request) => {
         app_metadata: {
           ...currentAppMetadata,
           must_change_password: false,
+          activation_status: "active",
           activated_at: new Date().toISOString(),
         },
       },
