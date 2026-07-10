@@ -3,6 +3,15 @@ import { getTodayCRDateString } from "../utils/dateUtils.js";
 
 const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
 
+function getAppUrl(path = "") {
+  const basePath =
+    import.meta.env.BASE_URL === "/"
+      ? ""
+      : import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  return `${window.location.origin}${basePath}${path}`;
+}
+
 function isActiveByDates(record) {
   if (!record || record.is_active === false) {
     return false;
@@ -59,7 +68,7 @@ export async function signInWithOAuth(provider) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${window.location.origin}/dashboard`,
+      redirectTo: getAppUrl("/dashboard"),
     },
   });
 
@@ -113,7 +122,7 @@ export async function getCorporateUserData(userId, authEmail) {
     return {
       data: null,
       error: createAccessError(
-        "Tu usuario no tiene acceso activo al e-commerce de Grupo Viquez.",
+        "Tu usuario no tiene acceso activo al e-commerce de Grupo Víquez.",
       ),
     };
   }

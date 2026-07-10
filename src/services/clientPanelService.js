@@ -273,7 +273,7 @@ function normalizeQuotationDetail({ quotation, business, branch, representative,
   };
 }
 
-export async function getAuthenticatedUserId() {
+export async function getAuthenticatedUser() {
   const {
     data: { user },
     error,
@@ -287,17 +287,32 @@ export async function getAuthenticatedUserId() {
     throw new Error("No hay un usuario autenticado.");
   }
 
+  return {
+    id: user.id,
+    email: user.email || "",
+  };
+}
+
+export async function getAuthenticatedUserId() {
+  const user = await getAuthenticatedUser();
+
   return user.id;
 }
 
 const APPROVED_QUOTATION_STATES = ["approved", "Aprobada", "aprobada"];
 
-async function getMyRepresentativeIds(userId) {
+async function getMyRepresentativeIds({ userId, email }) {
+  const ownerFilters = [`user_id.eq.${userId}`];
+
+  if (email) {
+    ownerFilters.push(`email.ilike.${email}`);
+  }
+
   const representatives = throwIfError(
     await supabase
       .from("representatives")
       .select("representative_id")
-      .eq("user_id", userId)
+      .or(ownerFilters.join(","))
       .eq("is_active", true),
     "No fue posible cargar tu perfil de representante",
   );
@@ -307,14 +322,17 @@ async function getMyRepresentativeIds(userId) {
 
 
 export async function acceptMyQuotation(quotationId) {
-  const userId = await getAuthenticatedUserId();
-  const representativeIds = await getMyRepresentativeIds(userId);
+  const currentUser = await getAuthenticatedUser();
+  const representativeIds = await getMyRepresentativeIds({
+    userId: currentUser.id,
+    email: currentUser.email,
+  });
 
   if (!quotationId) {
     throw new Error("No se encontro la cotizacion seleccionada.");
   }
 
-  const ownerFilters = [`user_id.eq.${userId}`];
+  const ownerFilters = [`user_id.eq.${currentUser.id}`];
 
   if (representativeIds.length) {
     ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
@@ -358,10 +376,13 @@ export async function acceptMyQuotation(quotationId) {
 }
 
 async function fetchOwnedQuotations({ statesFilter = null } = {}) {
-  const userId = await getAuthenticatedUserId();
-  const representativeIds = await getMyRepresentativeIds(userId);
+  const currentUser = await getAuthenticatedUser();
+  const representativeIds = await getMyRepresentativeIds({
+    userId: currentUser.id,
+    email: currentUser.email,
+  });
 
-  const ownerFilters = [`user_id.eq.${userId}`];
+  const ownerFilters = [`user_id.eq.${currentUser.id}`];
 
   if (representativeIds.length) {
     ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
@@ -421,7 +442,7 @@ async function fetchOwnedQuotations({ statesFilter = null } = {}) {
 }
 
 export async function getMyQuotations() {
-  return fetchOwnedQuotations({ statesFilter: APPROVED_QUOTATION_STATES });
+  return fetchOwnedQuotations();
 }
 
 export async function getMyProductionOrders() {
@@ -471,14 +492,17 @@ export async function getMyProductionOrders() {
 }
 
 export async function getMyQuotationDetail(quotationId) {
-  const userId = await getAuthenticatedUserId();
-  const representativeIds = await getMyRepresentativeIds(userId);
+  const currentUser = await getAuthenticatedUser();
+  const representativeIds = await getMyRepresentativeIds({
+    userId: currentUser.id,
+    email: currentUser.email,
+  });
 
   if (!quotationId) {
     throw new Error("No se encontro la cotizacion seleccionada.");
   }
 
-  const ownerFilters = [`user_id.eq.${userId}`];
+  const ownerFilters = [`user_id.eq.${currentUser.id}`];
 
   if (representativeIds.length) {
     ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
@@ -492,7 +516,6 @@ export async function getMyQuotationDetail(quotationId) {
       )
       .eq("quotation_id", quotationId)
       .or(ownerFilters.join(","))
-      .in("state", APPROVED_QUOTATION_STATES)
       .eq("is_active", true)
       .maybeSingle(),
     "No fue posible cargar el detalle de la cotizacion",
@@ -517,8 +540,11 @@ export async function getMyQuotationDetail(quotationId) {
 }
 
 export async function getMyOrderDetail(productionOrderId) {
-  const userId = await getAuthenticatedUserId();
-  const representativeIds = await getMyRepresentativeIds(userId);
+  const currentUser = await getAuthenticatedUser();
+  const representativeIds = await getMyRepresentativeIds({
+    userId: currentUser.id,
+    email: currentUser.email,
+  });
 
   if (!productionOrderId) {
     throw new Error("No se encontro el pedido seleccionado.");
@@ -540,7 +566,7 @@ export async function getMyOrderDetail(productionOrderId) {
     throw new Error("No se encontro el pedido seleccionado.");
   }
 
-  const ownerFilters = [`user_id.eq.${userId}`];
+  const ownerFilters = [`user_id.eq.${currentUser.id}`];
 
   if (representativeIds.length) {
     ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);

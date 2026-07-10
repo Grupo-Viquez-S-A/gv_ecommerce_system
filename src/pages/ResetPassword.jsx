@@ -95,8 +95,13 @@ function ResetPassword() {
         });
 
       if (activationError || activationData?.ok === false) {
+        console.error("Error completando activacion del cliente:", {
+          activationError,
+          activationData,
+        });
         setError(
           activationData?.error ||
+            activationError?.message ||
             "La contrasena se actualizo, pero no fue posible completar la activacion. Intenta de nuevo.",
         );
         return;
@@ -126,9 +131,9 @@ function ResetPassword() {
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <section className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
           <div className="mb-7 flex items-center gap-3">
-            <img src={logoImage} alt="Logo Grupo Viquez" className="h-10 w-auto" />
+            <img src={logoImage} alt="Logo Grupo Víquez" className="h-10 w-auto" />
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#c9a227]">Grupo Viquez</p>
+              <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#c9a227]">Grupo Víquez</p>
               <h1 className="text-2xl font-black text-[#1a2f5e]">Restablecer contrasena</h1>
             </div>
           </div>

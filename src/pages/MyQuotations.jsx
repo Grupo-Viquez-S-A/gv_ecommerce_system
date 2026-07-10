@@ -120,12 +120,12 @@ export default function MyQuotations() {
       <div className="mb-6">
         <h1 className="text-2xl font-black text-white lg:text-3xl">Mis cotizaciones</h1>
         <p className="mt-2 max-w-3xl text-sm text-gray-400">
-          Revisa el resumen y los productos de tus cotizaciones aprobadas.
+          Revisa el resumen, estado y productos de todas tus cotizaciones.
         </p>
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <ClientSummaryCard icon={<RiCheckboxCircleFill size={22} />} label="Cotizaciones aprobadas" value={quotations.length} tone="green" />
+        <ClientSummaryCard icon={<RiCheckboxCircleFill size={22} />} label="Cotizaciones registradas" value={quotations.length} tone="green" />
         <ClientSummaryCard icon={<RiFileList3Fill size={22} />} label="Productos cotizados" value={summary.totalItems} tone="gold" />
         <ClientSummaryCard icon={<RiMoneyDollarCircleFill size={22} />} label="Monto total" value={formatCurrency(summary.totalQuoted, "CRC 0")} tone="blue" />
         <ClientSummaryCard icon={<RiWallet3Fill size={22} />} label="Adelanto total (50%)" value={formatCurrency(summary.totalAdvance, "CRC 0")} tone="red" />

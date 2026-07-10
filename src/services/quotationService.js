@@ -11,10 +11,18 @@ function getRepresentativeAccessMessage(accessResult) {
   if (!accessResult) return null;
 
   if (accessResult.account_state === "new") {
+    if (accessResult.email_notification?.sent) {
+      return "Cotizacion creada. Se envio un correo al representante para crear su contrasena.";
+    }
+
     return "Cotizacion creada. Se genero una contrasena temporal para el representante; compartela manualmente.";
   }
 
   if (accessResult.account_state === "pending") {
+    if (accessResult.email_notification?.sent) {
+      return "Cotizacion creada. Se envio un nuevo correo al representante para crear su contrasena.";
+    }
+
     return "Cotizacion creada. Se genero una nueva contrasena temporal para el representante; compartela manualmente.";
   }
 

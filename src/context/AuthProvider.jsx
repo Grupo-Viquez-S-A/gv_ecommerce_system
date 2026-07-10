@@ -9,7 +9,12 @@ import {
 } from "../services/loginService";
 
 function isPasswordResetRoute() {
-  return window.location.pathname === "/restablecer-contrasena";
+  const basePath =
+    import.meta.env.BASE_URL === "/"
+      ? ""
+      : import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  return window.location.pathname === `${basePath}/restablecer-contrasena`;
 }
 
 export function AuthProvider({ children }) {

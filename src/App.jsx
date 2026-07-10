@@ -20,9 +20,14 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import AdminUsersRoute from "./components/AdminUsersRoute.jsx";
 import MainLayout from "./components/layouts/MainLayout.jsx";
 
+const routerBaseName =
+  import.meta.env.BASE_URL === "/"
+    ? undefined
+    : import.meta.env.BASE_URL.replace(/\/$/, "");
+
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBaseName}>
       <Routes>
         {/* Pantallas públicas */}
         <Route path="/" element={<Login />} />
