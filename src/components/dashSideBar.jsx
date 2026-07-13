@@ -10,6 +10,7 @@ import {
   RiStoreFill,
   RiFileListFill,
   RiShoppingBagFill,
+  RiCustomerService2Fill,
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
@@ -300,6 +301,23 @@ function DashSideBar({
             </>
           )}
 
+          {!sidebarCollapsed ? (
+            <div className="px-4 pb-1 pt-4">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
+                Ayuda
+              </span>
+            </div>
+          ) : (
+            <div className="mx-3 my-1 border-t border-[#2a3550]" />
+          )}
+
+          <NavItem
+            icon={<RiCustomerService2Fill size={18} />}
+            label="Soporte TI"
+            to="/tickets-ti"
+            collapsed={sidebarCollapsed}
+          />
+
           {canAccessUserAdministration && (
             <>
               {/* SISTEMA */}
@@ -531,6 +549,20 @@ function DashSideBar({
                 />
               </>
             )}
+            <div className="px-4 pb-1 pt-4">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
+                Ayuda
+              </span>
+            </div>
+
+            <NavItem
+              icon={<RiCustomerService2Fill size={18} />}
+              label="Soporte TI"
+              to="/tickets-ti"
+              collapsed={false}
+              onNavigate={handleCloseMobileSidebar}
+            />
+
             {canAccessUserAdministration && (
               <>
                 {/* SISTEMA */}

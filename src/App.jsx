@@ -15,6 +15,7 @@ import Orders from "./pages/Orders";
 import Reports from "./pages/Reports";
 import MyOrders from "./pages/MyOrders";
 import MyQuotations from "./pages/MyQuotations";
+import ITSupportTickets from "./pages/ITSupportTickets";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import AdminUsersRoute from "./components/AdminUsersRoute.jsx";
@@ -130,6 +131,24 @@ function App() {
             element={
               <ProtectedRoute>
                 <MyQuotations />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tickets-ti"
+            element={
+              <ProtectedRoute>
+                <ITSupportTickets />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/soporte-ti"
+            element={
+              <ProtectedRoute>
+                <ITSupportTickets />
               </ProtectedRoute>
             }
           />
