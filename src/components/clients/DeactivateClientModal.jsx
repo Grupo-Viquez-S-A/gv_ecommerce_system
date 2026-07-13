@@ -138,7 +138,7 @@ export default function DeactivateClientModal({
               type="button"
               onClick={onClose}
               disabled={isProcessing}
-              className="flex-1 bg-[#222e44] hover:bg-[#2a3550] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="action-close-cancel flex-1 bg-[#222e44] hover:bg-[#2a3550] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>

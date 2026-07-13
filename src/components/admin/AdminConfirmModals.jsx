@@ -36,7 +36,7 @@ export default function AdminConfirmModals({ deleteModal, setDeleteModal, deacti
                 <button
                   type="button"
                   onClick={() => setDeleteModal(null)}
-                  className="flex-1 bg-[#1c2538] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+                  className="action-close-cancel flex-1 bg-[#1c2538] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -107,4 +107,3 @@ export default function AdminConfirmModals({ deleteModal, setDeleteModal, deacti
       )}
   </>;
 }
-

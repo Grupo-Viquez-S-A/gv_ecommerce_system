@@ -11,6 +11,48 @@ html, body {
   height: 100%;
 }
 
+/* Mantiene una señal visual consistente para todos los controles interactivos. */
+:where(
+  button,
+  select,
+  option,
+  summary,
+  a[href],
+  [role="button"],
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"]
+):where(:not(:disabled, [aria-disabled="true"])) {
+  cursor: pointer;
+}
+
+:where(
+  button,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  [role="button"]
+):is(:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
+/* Acciones que descartan o cierran contenido. Se excluyen los backdrops. */
+:where(button[aria-label^="Cerrar"], button[title="Cerrar"]):not(.fixed),
+.action-close-cancel {
+  color: #fca5a5;
+  background-color: rgb(239 68 68 / 0.12);
+  border-color: rgb(239 68 68 / 0.35);
+}
+
+:where(button[aria-label^="Cerrar"], button[title="Cerrar"]):not(.fixed):hover,
+.action-close-cancel:hover {
+  color: #ffffff;
+  background-color: rgb(239 68 68 / 0.82);
+  border-color: rgb(248 113 113 / 0.9);
+}
+
 .scrollbar-hidden {
   -ms-overflow-style: none;
   scrollbar-width: none;

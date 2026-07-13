@@ -556,7 +556,7 @@ export default function CatalogProductDetailsModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-[#45648D] bg-[#132F58] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B]"
+              className="action-close-cancel rounded-xl border border-[#45648D] bg-[#132F58] px-4 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B]"
             >
               Cerrar
             </button>

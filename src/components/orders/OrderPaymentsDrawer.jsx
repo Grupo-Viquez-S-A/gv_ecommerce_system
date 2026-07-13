@@ -282,7 +282,7 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
           <button
             type="button"
             onClick={closePaymentsDrawer}
-            className="flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+            className="action-close-cancel flex-1 bg-[#1c2538] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
           >
             Cerrar
           </button>
@@ -352,4 +352,3 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
       )}
   </>;
 }
-

@@ -231,7 +231,7 @@ function SizePickerModal({ productName, availableSizes, onConfirm, onCancel }) {
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-xl border border-[#35547E] px-4 py-2.5 text-sm font-semibold text-[#9BB3D3] transition hover:border-[#5a8abf] hover:text-white"
+            className="action-close-cancel flex-1 rounded-xl border border-[#35547E] px-4 py-2.5 text-sm font-semibold text-[#9BB3D3] transition hover:border-[#5a8abf] hover:text-white"
           >
             Cancelar
           </button>

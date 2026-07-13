@@ -82,7 +82,7 @@ export default function ConfirmAgentModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-[#2a3550] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+              className="action-close-cancel flex-1 bg-[#2a3550] border border-[#2a3550] text-gray-300 hover:text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
             >
               Cancelar
             </button>
