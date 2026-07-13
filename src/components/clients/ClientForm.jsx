@@ -11,6 +11,11 @@ import {
 } from "react-icons/ri";
 
 import { supabase } from "../../services/primarySupabaseClient.js";
+import {
+  createEmptyBranch,
+  createEmptyPhone,
+  createEmptyRepresentative,
+} from "./clientFormDefaults.js";
 
 const PHONE_TYPES = [
   "General",
@@ -28,73 +33,6 @@ const selectClassName =
 
 const labelClassName =
   "block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5";
-
-function createDraftId(prefix = "item") {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return `${prefix}-${crypto.randomUUID()}`;
-  }
-
-  return `${prefix}-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
-}
-
-export function createEmptyPhone(overrides = {}) {
-  return {
-    draftId: createDraftId("phone"),
-    phone: "",
-    type: "General",
-    isPrimary: false,
-    ...overrides,
-  };
-}
-
-export function createEmptyRepresentative(overrides = {}) {
-  return {
-    draftId: createDraftId("representative"),
-    name: "",
-    email: "",
-    status: "Activo",
-    ...overrides,
-  };
-}
-
-export function createEmptyBranch(overrides = {}) {
-  return {
-    draftId: createDraftId("branch"),
-    province: "",
-    district: "",
-    address: "",
-    status: "Activo",
-    phones: [
-      createEmptyPhone({
-        type: "Oficina",
-        isPrimary: true,
-      }),
-    ],
-    representatives: [],
-    ...overrides,
-  };
-}
-
-export function createEmptyClientForm() {
-  return {
-    name: "",
-    legalId: "",
-    legalName: "",
-    activityCode: "",
-    companyId: "",
-    email: "",
-    status: "Activo",
-    clientPhones: [
-      createEmptyPhone({
-        type: "General",
-        isPrimary: true,
-      }),
-    ],
-    branches: [createEmptyBranch()],
-  };
-}
 
 function normalizePhone(phone = {}, index = 0, prefix = "phone") {
   return {
@@ -184,8 +122,11 @@ function normalizeForm(form = {}) {
   return {
     ...form,
     name: form.name || "",
+    identificationType:
+      form.identificationType === "personal" ? "personal" : "legal",
     legalId: form.legalId || "",
     legalName: form.legalName || "",
+    ownerName: form.ownerName || "",
     activityCode: form.activityCode || "",
     companyId: form.companyId || "",
     email: form.email || "",
@@ -733,27 +674,30 @@ export default function ClientForm({ form, onChange }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <FieldLabel>Cédula jurídica</FieldLabel>
+              <FieldLabel required>Tipo de identificación</FieldLabel>
 
-              <input
-                type="text"
-                value={currentForm.legalId}
+              <select
+                value={currentForm.identificationType}
                 onChange={(event) =>
-                  updateField("legalId", event.target.value)
+                  updateField("identificationType", event.target.value)
                 }
-                placeholder="Ej. 3-101-123456"
-                className={inputClassName}
-              />
+                required
+                className={selectClassName}
+              >
+                <option value="legal">Cédula jurídica</option>
+                <option value="personal">Número de identificación</option>
+              </select>
             </div>
 
             <div>
-              <FieldLabel>Estado</FieldLabel>
+              <FieldLabel required>Estado</FieldLabel>
 
               <select
                 value={currentForm.status}
                 onChange={(event) =>
                   updateField("status", event.target.value)
                 }
+                required
                 className={selectClassName}
               >
                 <option value="Activo">Activo</option>
@@ -762,22 +706,76 @@ export default function ClientForm({ form, onChange }) {
             </div>
           </div>
 
-          <div>
-            <FieldLabel>Razón social</FieldLabel>
+          {currentForm.identificationType === "legal" ? (
+            <>
+              <div>
+                <FieldLabel required>Cédula jurídica</FieldLabel>
 
-            <input
-              type="text"
-              value={currentForm.legalName}
-              onChange={(event) =>
-                updateField("legalName", event.target.value)
-              }
-              placeholder="Ej. Hotel Los Laureles Sociedad Anónima"
-              className={inputClassName}
-            />
-          </div>
+                <input
+                  type="text"
+                  value={currentForm.legalId}
+                  onChange={(event) =>
+                    updateField("legalId", event.target.value)
+                  }
+                  required
+                  placeholder="Ej. 3-101-123456"
+                  className={inputClassName}
+                />
+              </div>
+
+              <div>
+                <FieldLabel required>Razón social</FieldLabel>
+
+                <input
+                  type="text"
+                  value={currentForm.legalName}
+                  onChange={(event) =>
+                    updateField("legalName", event.target.value)
+                  }
+                  required
+                  placeholder="Ej. Hotel Los Laureles Sociedad Anónima"
+                  className={inputClassName}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <FieldLabel required>
+                  Datos del dueño (nombre y apellidos)
+                </FieldLabel>
+
+                <input
+                  type="text"
+                  value={currentForm.ownerName}
+                  onChange={(event) =>
+                    updateField("ownerName", event.target.value)
+                  }
+                  required
+                  placeholder="Ej. María Rodríguez Vargas"
+                  className={inputClassName}
+                />
+              </div>
+
+              <div>
+                <FieldLabel required>Número de identificación</FieldLabel>
+
+                <input
+                  type="text"
+                  value={currentForm.legalId}
+                  onChange={(event) =>
+                    updateField("legalId", event.target.value)
+                  }
+                  required
+                  placeholder="Ej. 1-1234-5678"
+                  className={inputClassName}
+                />
+              </div>
+            </>
+          )}
 
           <div>
-            <FieldLabel>Código de actividad</FieldLabel>
+            <FieldLabel required>Código de actividad</FieldLabel>
 
             <input
               type="text"
@@ -785,13 +783,14 @@ export default function ClientForm({ form, onChange }) {
               onChange={(event) =>
                 updateField("activityCode", event.target.value)
               }
+              required
               placeholder="Ej. 551001"
               className={inputClassName}
             />
           </div>
 
           <div>
-            <FieldLabel>Correo electrónico principal</FieldLabel>
+            <FieldLabel required>Correo electrónico principal</FieldLabel>
 
             <div className="relative">
               <RiMailLine
@@ -805,6 +804,7 @@ export default function ClientForm({ form, onChange }) {
                 onChange={(event) =>
                   updateField("email", event.target.value)
                 }
+                required
                 placeholder="contacto@cliente.com"
                 className={`${inputClassName} pl-9`}
               />

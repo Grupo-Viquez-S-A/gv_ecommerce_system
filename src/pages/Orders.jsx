@@ -34,7 +34,6 @@ import {
 import {
   formatDateShortCR,
   formatDateTimeCR,
-  toDateInputValueCR,
 } from "../utils/dateUtils.js";
 import { useAuth } from "../context/AuthContext.js";
 import { hasSystemAccess } from "../utils/roles.js";
@@ -242,7 +241,11 @@ export default function Orders() {
   };
 
   useEffect(() => {
-    loadOrders();
+    const timerId = window.setTimeout(() => {
+      void loadOrders();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
   }, []);
 
   const agents = useMemo(() => {
@@ -771,7 +774,7 @@ export default function Orders() {
             </button>
           </div>
 
-          <table className="w-full text-left hidden md:table">
+          <table className="hidden w-full text-left lg:table">
             <thead>
               <tr className="border-b border-[#2a3550]">
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
@@ -883,6 +886,35 @@ export default function Orders() {
             </tbody>
           </table>
 
+          {!loading && filteredOrders.length > 0 && (
+            <div className="divide-y divide-[#2a3550] lg:hidden">
+              {filteredOrders.map((order) => (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => openViewDrawer(order)}
+                  className="block w-full p-4 text-left transition-colors hover:bg-[#1c2538]/60"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{order.client}</p>
+                      <p className="mt-1 font-mono text-xs text-gray-400">{order.code}</p>
+                    </div>
+                    <p className="whitespace-nowrap text-sm font-bold text-white">{formatCurrency(order.total)}</p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                    <div><p className="text-gray-500">Fecha</p><p className="mt-1 text-gray-300">{formatDate(order.createdAt)}</p></div>
+                    <div><p className="text-gray-500">Próximo pago</p><p className="mt-1 text-gray-300">{formatDate(order.nextPaymentDate)}</p></div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <StatusBadge status={order.productionStatus} label={order.productionStatusLabel} config={STATUS_CONFIG} />
+                    <StatusBadge status={order.paymentStatus} label={order.paymentStatusLabel} config={PAYMENT_CONFIG} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           {loading && (
             <div className="flex flex-col items-center justify-center py-14 gap-3">
               <p className="text-sm text-gray-500">
@@ -910,7 +942,7 @@ export default function Orders() {
             </div>
           )}
 
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#2a3550] px-4 py-3 sm:px-5">
             <span className="text-xs text-gray-500">
               Mostrando {filteredOrders.length} de {orders.length} ordenes
             </span>
@@ -944,7 +976,7 @@ export default function Orders() {
             : "translate-x-full"
         }`}
       >
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-[#2a3550] px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <RiEyeFill size={20} className="text-[#C9A227]" />
@@ -966,7 +998,7 @@ export default function Orders() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {viewOrder && (
             <div className="space-y-5">
               <div className="pb-5 border-b border-[#2a3550]">
@@ -1184,7 +1216,7 @@ export default function Orders() {
           )}
         </div>
 
-        <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-[#2a3550] px-4 py-4 sm:flex-row sm:px-6">
           <button
             type="button"
             onClick={closeDrawer}
@@ -1222,7 +1254,7 @@ export default function Orders() {
           paymentsDrawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-[#2a3550] px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <RiFileTextLine size={20} className="text-[#C9A227]" />
@@ -1244,7 +1276,7 @@ export default function Orders() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
           {viewOrder && (
             <div className="space-y-5">
               <div className="pb-5 border-b border-[#2a3550]">
@@ -1481,7 +1513,7 @@ export default function Orders() {
             })}
         </div>
 
-        <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-[#2a3550] px-4 py-4 sm:flex-row sm:px-6">
           <button
             type="button"
             onClick={closePaymentsDrawer}
@@ -1507,7 +1539,7 @@ export default function Orders() {
 
       {/* Lightbox de previsualizacion del comprobante */}
       {previewReceipt && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm px-6">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 px-3 backdrop-blur-sm sm:px-6">
           <button
             type="button"
             onClick={() => setPreviewReceipt(null)}

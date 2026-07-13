@@ -19,18 +19,15 @@ function Login() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [infoMessage, setInfoMessage] = useState("");
-
-  const [showForgotPasswordInfo, setShowForgotPasswordInfo] = useState(false);
-
-  useEffect(() => {
+  const [infoMessage] = useState(() => {
     const storedMessage = window.sessionStorage.getItem("activationSuccessMessage");
-
     if (storedMessage) {
-      setInfoMessage(storedMessage);
       window.sessionStorage.removeItem("activationSuccessMessage");
     }
-  }, []);
+    return storedMessage || "";
+  });
+
+  const [showForgotPasswordInfo, setShowForgotPasswordInfo] = useState(false);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated) {
@@ -82,11 +79,11 @@ function Login() {
 
   return (
     <div
-      className="w-screen h-screen flex items-center bg-cover bg-center bg-no-repeat"
+      className="min-h-dvh w-full overflow-y-auto bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="w-full h-full flex items-center justify-between px-10 md:px-16 lg:px-24 ml-50">
-        <div className="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md flex flex-col gap-5">
+      <div className="flex min-h-dvh w-full items-center justify-center px-4 py-6 sm:px-6 lg:justify-between lg:px-24">
+        <div className="flex w-full max-w-md flex-col gap-5 rounded-3xl bg-white p-6 shadow-2xl sm:p-10">
           <div className="flex items-center gap-2">
             <img
               src={logoImage}
@@ -312,7 +309,7 @@ function Login() {
           <img
             src={logoImage}
             alt="Logo Grupo Víquez"
-            className="w-[500px] h-auto drop-shadow-2xl ml-70"
+            className="h-auto w-full max-w-[500px] drop-shadow-2xl"
           />
         </div>
       </div>

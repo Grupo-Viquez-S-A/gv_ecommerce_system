@@ -8,9 +8,8 @@
 
 import CatalogHeader from "../components/catalog/CatalogHeader";
 import CatalogSwitcher from "../components/catalog/CatalogSwitcher";
-import CatalogFilters, {
-  EMPTY_CATALOG_FILTERS,
-} from "../components/catalog/CatalogFilters";
+import CatalogFilters from "../components/catalog/CatalogFilters";
+import { EMPTY_CATALOG_FILTERS } from "../components/catalog/catalogFilterDefaults.js";
 import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";

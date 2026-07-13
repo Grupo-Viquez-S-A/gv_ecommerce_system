@@ -8,9 +8,8 @@ import {
 
 import CatalogHeader from "../components/catalog/CatalogHeader";
 import CatalogSwitcher from "../components/catalog/CatalogSwitcher";
-import CatalogFilters, {
-  EMPTY_CATALOG_FILTERS,
-} from "../components/catalog/CatalogFilters";
+import CatalogFilters from "../components/catalog/CatalogFilters";
+import { EMPTY_CATALOG_FILTERS } from "../components/catalog/catalogFilterDefaults.js";
 import CatalogGrid from "../components/catalog/CatalogGrid";
 import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
@@ -155,7 +154,6 @@ export default function Catalog() {
   const [quotationSuccess, setQuotationSuccess] = useState("");
   const [quotationSubmitting, setQuotationSubmitting] = useState(false);
   const [accessError, setAccessError] = useState("");
-  const [representativeTempPassword, setRepresentativeTempPassword] = useState(null);
   const [clientLookupLoading, setClientLookupLoading] = useState(false);
   const [clientLookupMessage, setClientLookupMessage] = useState("");
   const [clientBranches, setClientBranches] = useState([]);
@@ -950,7 +948,6 @@ export default function Catalog() {
       setQuotationError("");
       setQuotationSuccess("");
       setAccessError("");
-      setRepresentativeTempPassword(null);
 
       let clientForm = quotationClientForm;
 
@@ -991,10 +988,6 @@ export default function Catalog() {
 
       if (quotation.accessError) {
         setAccessError(quotation.accessError);
-      }
-
-      if (quotation.representativeTempPassword) {
-        setRepresentativeTempPassword(quotation.representativeTempPassword);
       }
 
       setCartItems([]);
@@ -1115,7 +1108,7 @@ export default function Catalog() {
             <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#29466F] bg-[#102441]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-white">
-                  Catálogo actualizado desde Supabase
+                  Catálogo actualizado desde Supabase.
                 </p>
 
                 <p className="mt-1 text-xs text-slate-400">
@@ -1325,16 +1318,6 @@ export default function Catalog() {
                     {accessError && (
                       <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
                         {accessError}
-                      </div>
-                    )}
-
-                    {representativeTempPassword && (
-                      <div className="mt-4 rounded-xl border border-sky-400/35 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-                        Contrasena temporal del representante:{" "}
-                        <span className="font-mono font-bold">{representativeTempPassword}</span>
-                        <br />
-                        Se le envio por correo automaticamente; si no le llega, comparte esta
-                        contrasena manualmente. El representante debera cambiarla al iniciar sesion.
                       </div>
                     )}
 
@@ -1967,16 +1950,6 @@ export default function Catalog() {
                     {accessError && (
                       <div className="mt-4 rounded-xl border border-amber-400/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
                         {accessError}
-                      </div>
-                    )}
-
-                    {representativeTempPassword && (
-                      <div className="mt-4 rounded-xl border border-sky-400/35 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
-                        Contrasena temporal del representante:{" "}
-                        <span className="font-mono font-bold">{representativeTempPassword}</span>
-                        <br />
-                        Se le envio por correo automaticamente; si no le llega, comparte esta
-                        contrasena manualmente. El representante debera cambiarla al iniciar sesion.
                       </div>
                     )}
 

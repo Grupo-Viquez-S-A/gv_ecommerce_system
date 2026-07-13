@@ -12,18 +12,18 @@ function getRepresentativeAccessMessage(accessResult) {
 
   if (accessResult.account_state === "new") {
     if (accessResult.email_notification?.sent) {
-      return "Cotizacion creada. Se envio un correo al representante para crear su contrasena.";
+      return "Cotizacion creada. Se envio por correo el acceso temporal del representante.";
     }
 
-    return "Cotizacion creada. Se genero una contrasena temporal para el representante; compartela manualmente.";
+    return "Cotizacion creada, pero no se pudo enviar el correo de acceso. El representante debera restablecer su contrasena.";
   }
 
   if (accessResult.account_state === "pending") {
     if (accessResult.email_notification?.sent) {
-      return "Cotizacion creada. Se envio un nuevo correo al representante para crear su contrasena.";
+      return "Cotizacion creada. Se envio por correo un nuevo acceso temporal al representante.";
     }
 
-    return "Cotizacion creada. Se genero una nueva contrasena temporal para el representante; compartela manualmente.";
+    return "Cotizacion creada, pero no se pudo enviar el nuevo correo de acceso. El representante debera restablecer su contrasena.";
   }
 
   if (accessResult.account_state === "active") {
@@ -1184,7 +1184,6 @@ export async function createBusinessQuotation(payload) {
 
     let accessError = null;
     let representativeAccessMessage = null;
-    let representativeTempPassword = null;
 
     if (representativeId && client.representativeEmail && !client.representativeUserId) {
       try {
@@ -1200,7 +1199,6 @@ export async function createBusinessQuotation(payload) {
         });
 
         representativeAccessMessage = getRepresentativeAccessMessage(accessResult);
-        representativeTempPassword = accessResult?.temp_password || null;
       } catch (error) {
         console.error("No fue posible crear el acceso del representante:", error);
         accessError =
@@ -1229,7 +1227,6 @@ export async function createBusinessQuotation(payload) {
       methodId: quotation.method_id,
       accessError,
       representativeAccessMessage,
-      representativeTempPassword,
     };
   } catch (error) {
     await rollbackQuotation({

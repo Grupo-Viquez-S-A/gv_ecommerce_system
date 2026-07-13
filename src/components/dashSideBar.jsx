@@ -9,7 +9,6 @@ import {
   RiArrowRightSLine,
   RiStoreFill,
   RiFileListFill,
-  RiBarChartFill,
   RiShoppingBagFill,
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";

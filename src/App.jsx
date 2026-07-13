@@ -145,21 +145,6 @@ function App() {
             }
           />
 
-          {/* Rutas de pruebas sin ProtectedRoute */}
-          <Route path="/catalogo-dev" element={<Catalog />} />
-          <Route
-            path="/cliente/catalogo-dev"
-            element={<ClientCatalog />}
-          />
-          <Route path="/clientes-dev" element={<Clients />} />
-          <Route path="/agentes-dev" element={<Agents />} />
-          <Route path="/cotizaciones-dev" element={<Quotations />} />
-          <Route path="/ventas-dev" element={<Sales />} />
-          <Route path="/pedidos-dev" element={<Orders />} />
-          <Route path="/reportes-dev" element={<Reports />} />
-          <Route path="/mis-pedidos-dev" element={<MyOrders />} />
-          <Route path="/mis-cotizaciones-dev" element={<MyQuotations />} />
-          <Route path="/admin/usuarios-dev" element={<AdminConfig />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -23,7 +23,6 @@ import { getPaidSales } from "../services/salesService.js";
 import {
   formatDateShortCR,
   formatDateTimeCR,
-  toDateInputValueCR,
 } from "../utils/dateUtils.js";
 
 const STATUS_CONFIG = {
@@ -151,7 +150,11 @@ export default function Sales() {
   };
 
   useEffect(() => {
-    loadSales();
+    const timerId = window.setTimeout(() => {
+      void loadSales();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
   }, []);
 
   const representatives = useMemo(() => {
@@ -531,7 +534,7 @@ export default function Sales() {
             </button>
           </div>
 
-          <table className="w-full text-left hidden md:table">
+          <table className="hidden w-full text-left lg:table">
             <thead>
               <tr className="border-b border-[#2a3550]">
                 <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
@@ -635,6 +638,35 @@ export default function Sales() {
             </tbody>
           </table>
 
+          {!loading && filteredSales.length > 0 && (
+            <div className="divide-y divide-[#2a3550] lg:hidden">
+              {filteredSales.map((sale) => (
+                <button
+                  key={sale.id}
+                  type="button"
+                  onClick={() => openViewDrawer(sale)}
+                  className="block w-full p-4 text-left transition-colors hover:bg-[#1c2538]/60"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{sale.client}</p>
+                      <p className="mt-1 font-mono text-xs text-gray-400">{sale.code}</p>
+                    </div>
+                    <p className="whitespace-nowrap text-sm font-bold text-white">{formatCurrency(sale.total)}</p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                    <div><p className="text-gray-500">Fecha</p><p className="mt-1 text-gray-300">{formatDate(sale.saleDate)}</p></div>
+                    <div><p className="text-gray-500">Método</p><p className="mt-1 truncate text-gray-300">{sale.paymentMethod}</p></div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <StatusBadge status={sale.productionStatus} label={sale.productionStatusLabel} config={STATUS_CONFIG} />
+                    <StatusBadge status={sale.paymentStatus} label={sale.paymentStatusLabel} config={PAYMENT_CONFIG} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           {loading && (
             <div className="flex flex-col items-center justify-center py-14 gap-3">
               <p className="text-sm text-gray-500">Cargando ventas...</p>
@@ -659,7 +691,7 @@ export default function Sales() {
             </div>
           )}
 
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#2a3550] px-4 py-3 sm:px-5">
             <span className="text-xs text-gray-500">
               Mostrando {filteredSales.length} de {sales.length} ventas
             </span>
@@ -683,7 +715,7 @@ export default function Sales() {
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-[#2a3550] px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <RiEyeFill size={20} className="text-[#C9A227]" />
@@ -705,7 +737,7 @@ export default function Sales() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {viewSale && (
             <div className="space-y-5">
               <div className="pb-5 border-b border-[#2a3550]">
@@ -755,7 +787,7 @@ export default function Sales() {
           )}
         </div>
 
-        <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-[#2a3550] px-4 py-4 sm:flex-row sm:px-6">
           <button
             type="button"
             onClick={closeDrawer}

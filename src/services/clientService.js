@@ -15,8 +15,10 @@ const AVATAR_COLORS = [
 const BUSINESS_COLUMNS = `
   business_id,
   company_id,
+  identification_type,
   legal_id,
   legal_name,
+  owner_name,
   business_name,
   activity_code,
   is_active,
@@ -338,8 +340,14 @@ function normalizeClientPayload(client = {}) {
   return {
     businessId: client.businessId || client.business_id || client.id || null,
     name,
+    identificationType:
+      client.identificationType === "personal" ||
+      client.identification_type === "personal"
+        ? "personal"
+        : "legal",
     legalId: asNullableText(client.legalId || client.legal_id),
     legalName: asNullableText(client.legalName || client.legal_name),
+    ownerName: asNullableText(client.ownerName || client.owner_name),
     activityCode: asNullableText(
       client.activityCode || client.activity_code,
     ),
@@ -452,6 +460,9 @@ function createClientItem({
 
     legalId: business.legal_id || "",
     legalName: business.legal_name || "",
+    identificationType:
+      business.identification_type === "personal" ? "personal" : "legal",
+    ownerName: business.owner_name || "",
     activityCode: business.activity_code || "",
 
     email: getPrimaryValue(emails, "email"),
@@ -904,8 +915,10 @@ async function syncRepresentativesForBranch({
 function buildBusinessPayload(client) {
   return {
     company_id: client.companyId,
+    identification_type: client.identificationType,
     legal_id: client.legalId,
     legal_name: client.legalName,
+    owner_name: client.ownerName,
     business_name: client.name,
     activity_code: client.activityCode,
     is_active: client.isActive,

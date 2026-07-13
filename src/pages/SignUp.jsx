@@ -31,7 +31,7 @@ function SignUp() {
       return;
     }
 
-    const { data, error } = await signUpWithEmail(email, password, {
+    const { error } = await signUpWithEmail(email, password, {
       full_name: fullName,
     });
 
@@ -46,10 +46,10 @@ function SignUp() {
 
   return (
     <div
-      className="w-screen h-screen flex items-center bg-cover bg-center bg-no-repeat"
+      className="min-h-dvh w-full overflow-y-auto bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="w-full h-full flex items-center justify-between px-10 md:px-16 lg:px-24 ml-50">
+      <div className="flex min-h-dvh w-full items-center justify-center px-4 py-6 sm:px-6 lg:justify-between lg:px-24">
         <div className="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-md flex flex-col gap-5">
           <div className="flex items-center gap-2">
             <img src={logoImage} alt="Logo Grupo Víquez" className="h-9 w-auto" />
@@ -189,7 +189,7 @@ function SignUp() {
         </div>
 
         <div className="hidden lg:flex items-center justify-center flex-1">
-          <img src={logoImage} alt="Logo Grupo Víquez" className="w-[500px] h-auto drop-shadow-2xl ml-70" />
+          <img src={logoImage} alt="Logo Grupo Víquez" className="h-auto w-full max-w-[500px] drop-shadow-2xl" />
         </div>
       </div>
     </div>

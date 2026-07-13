@@ -15,7 +15,7 @@ export default function RepresentativesModal({ client, onClose }) {
   const [selectedBranch, setSelectedBranch] = useState(null);
 
   useEffect(() => {
-    setSelectedBranch(null);
+    queueMicrotask(() => setSelectedBranch(null));
   }, [client]);
 
   if (!client) {
@@ -51,14 +51,14 @@ export default function RepresentativesModal({ client, onClose }) {
         className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 cursor-default"
       />
 
-      <div className="fixed inset-0 flex items-center justify-center z-50 px-4 py-6 pointer-events-none">
+      <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-3 py-3 sm:px-4 sm:py-6">
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="representatives-modal-title"
-          className="pointer-events-auto bg-[#141d2e] border border-[#2a3550] rounded-2xl w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto"
+          className="pointer-events-auto max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-[#2a3550] bg-[#141d2e] shadow-2xl sm:max-h-[90dvh]"
         >
-          <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[#2a3550] sticky top-0 bg-[#141d2e] z-10 rounded-t-2xl">
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 rounded-t-2xl border-b border-[#2a3550] bg-[#141d2e] px-4 py-4 sm:px-6">
             <div className="flex items-center gap-4 min-w-0">
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
@@ -92,7 +92,7 @@ export default function RepresentativesModal({ client, onClose }) {
           </div>
 
           {!selectedBranch ? (
-            <div className="px-6 py-5">
+            <div className="px-4 py-5 sm:px-6">
               <div className="mb-4">
                 <h4 className="text-base font-bold text-white">
                   Sucursales
@@ -177,7 +177,7 @@ export default function RepresentativesModal({ client, onClose }) {
               )}
             </div>
           ) : (
-            <div className="px-6 py-5">
+            <div className="px-4 py-5 sm:px-6">
               <div className="flex items-center gap-3 mb-4">
                 <button
                   type="button"
@@ -322,7 +322,7 @@ export default function RepresentativesModal({ client, onClose }) {
             </div>
           )}
 
-          <div className="flex items-center justify-end px-6 py-4 border-t border-[#2a3550] sticky bottom-0 bg-[#141d2e] rounded-b-2xl">
+          <div className="sticky bottom-0 flex items-center justify-end rounded-b-2xl border-t border-[#2a3550] bg-[#141d2e] px-4 py-4 sm:px-6">
             <button
               type="button"
               onClick={handleClose}

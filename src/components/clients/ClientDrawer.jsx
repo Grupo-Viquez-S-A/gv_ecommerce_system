@@ -72,7 +72,7 @@ export default function ClientDrawer({
         }`}
       >
         {/* Encabezado */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-[#2a3550] px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div>
             <h2
               id="client-drawer-title"
@@ -98,7 +98,7 @@ export default function ClientDrawer({
         </div>
 
         {/* Contenido */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {isViewMode ? (
             <ClientDetails client={client} />
           ) : (
@@ -107,7 +107,7 @@ export default function ClientDrawer({
         </div>
 
         {/* Pie del drawer */}
-        <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-[#2a3550] px-4 py-4 sm:flex-row sm:px-6">
           <button
             type="button"
             onClick={onClose}

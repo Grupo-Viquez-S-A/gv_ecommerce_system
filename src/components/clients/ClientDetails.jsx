@@ -97,20 +97,32 @@ export default function ClientDetails({ client }) {
 
       {/* Información legal */}
       <section>
-        <SectionTitle>Información legal</SectionTitle>
+        <SectionTitle>Información de identificación</SectionTitle>
 
         <div>
           <DetailRow
             icon={<RiPriceTag3Fill size={15} />}
-            label="Cédula jurídica"
+            label={
+              client.identificationType === "personal"
+                ? "Número de identificación"
+                : "Cédula jurídica"
+            }
             value={client.legalId}
           />
 
-          <DetailRow
-            icon={<RiFileList3Fill size={15} />}
-            label="Razón social"
-            value={client.legalName}
-          />
+          {client.identificationType === "personal" ? (
+            <DetailRow
+              icon={<RiFileList3Fill size={15} />}
+              label="Datos del dueño"
+              value={client.ownerName}
+            />
+          ) : (
+            <DetailRow
+              icon={<RiFileList3Fill size={15} />}
+              label="Razón social"
+              value={client.legalName}
+            />
+          )}
 
           <DetailRow
             icon={<RiBarChartFill size={15} />}

@@ -342,6 +342,19 @@ function Pagination({ current, total, onChange }) {
   );
 }
 
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2 shadow-xl">
+      <p className="mb-1 text-xs text-gray-400">{label}</p>
+      <p className="text-sm font-semibold text-white">{payload[0].value}M</p>
+    </div>
+  );
+}
+
 export default function Reports() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
@@ -372,21 +385,6 @@ export default function Reports() {
     setSearch("");
     setStatusFilter("Todos");
     setTypeFilter("Todos");
-  };
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload || payload.length === 0) {
-      return null;
-    }
-
-    return (
-      <div className="bg-[#141d2e] border border-[#2a3550] rounded-lg px-3 py-2 shadow-xl">
-        <p className="text-xs text-gray-400 mb-1">{label}</p>
-        <p className="text-sm font-semibold text-white">
-          {payload[0].value}M
-        </p>
-      </div>
-    );
   };
 
   return (
@@ -1082,8 +1080,8 @@ export default function Reports() {
             aria-label="Cerrar panel de nuevo reporte"
           />
 
-          <div className="relative w-full max-w-lg bg-[#141d2e] border-l border-[#2a3550] h-full overflow-y-auto">
-            <div className="sticky top-0 bg-[#141d2e] border-b border-[#2a3550] px-6 py-4 flex items-center justify-between z-10">
+          <div className="relative h-full w-full max-w-lg overflow-y-auto border-l border-[#2a3550] bg-[#141d2e]">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#2a3550] bg-[#141d2e] px-4 py-4 sm:px-6">
               <h2 className="text-lg font-semibold">Nuevo reporte</h2>
 
               <button
@@ -1096,7 +1094,7 @@ export default function Reports() {
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="space-y-5 p-4 sm:p-6">
               <div>
                 <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                   Nombre del reporte
@@ -1123,7 +1121,7 @@ export default function Reports() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
                     Fecha desde

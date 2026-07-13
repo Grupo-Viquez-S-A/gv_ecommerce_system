@@ -49,7 +49,8 @@ export default function MainLayout() {
       user?.activeCompany || user?.companies?.[0];
 
     if (userCompany) {
-      setCurrentCompany(normalizeCompany(userCompany));
+      const normalizedCompany = normalizeCompany(userCompany);
+      queueMicrotask(() => setCurrentCompany(normalizedCompany));
     }
   }, [user]);
 
@@ -71,7 +72,7 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="w-full h-screen bg-[#0B1120] text-white flex overflow-hidden">
+    <div className="flex h-dvh w-full overflow-hidden bg-[#0B1120] text-white">
       <DashSideBar
         sidebarCollapsed={sidebarCollapsed}
         sidebarOpen={sidebarOpen}

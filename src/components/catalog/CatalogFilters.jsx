@@ -4,15 +4,7 @@
   SlidersHorizontal,
 } from "lucide-react";
 
-export const EMPTY_CATALOG_FILTERS = {
-  search: "",
-  categoryId: "",
-  typeId: "",
-  materialId: "",
-  color: "",
-  collectionId: "",
-  sizeId: "",
-};
+import { EMPTY_CATALOG_FILTERS } from "./catalogFilterDefaults.js";
 
 function SelectField({
   id,

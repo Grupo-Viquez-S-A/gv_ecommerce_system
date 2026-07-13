@@ -19,19 +19,6 @@ export default function MyQuotations() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
 
-  async function loadQuotations() {
-    try {
-      setLoading(true);
-      setError("");
-      const rows = await getMyQuotations();
-      setQuotations(rows);
-    } catch (loadError) {
-      setError(loadError.message || "No fue posible cargar tus cotizaciones.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
     let mounted = true;
 

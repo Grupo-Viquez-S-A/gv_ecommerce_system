@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   RiAddFill,
@@ -366,7 +366,7 @@ export default function Quotations() {
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
 
-  const loadQuotations = async () => {
+  const loadQuotations = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -383,10 +383,10 @@ export default function Quotations() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
 
-  const loadProductionOrders = async () => {
+  const loadProductionOrders = useCallback(async () => {
     try {
       setOrdersLoading(true);
       setOrdersError("");
@@ -399,14 +399,14 @@ export default function Quotations() {
     } finally {
       setOrdersLoading(false);
     }
-  };
+  }, []);
   useEffect(() => {
     if (!user) return;
     Promise.resolve().then(() => {
       loadQuotations();
       loadProductionOrders();
     });
-  }, [user]);
+  }, [user, loadQuotations, loadProductionOrders]);
 
   useEffect(() => {
     let mounted = true;
@@ -966,8 +966,9 @@ export default function Quotations() {
 
         {/* Listados de producción */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-6">
-          <div className="flex items-end justify-between gap-3 px-5 pt-3 border-b border-[#2a3550]">
-            <div className="flex gap-1 overflow-x-auto">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#2a3550] px-4 pt-3 sm:px-5">
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <div className="flex w-max gap-1">
               <button
                 type="button"
                 onClick={() => setActiveProductionTab("quotations")}
@@ -993,6 +994,7 @@ export default function Quotations() {
                 Listado de Órdenes de Producción
                 <span className="ml-2 text-xs text-[#C9A227]">{filteredProductionOrders.length}</span>
               </button>
+              </div>
             </div>
 
             <button
@@ -1007,7 +1009,7 @@ export default function Quotations() {
 
           {activeProductionTab === "quotations" && (
             <>
-              <table className="w-full text-left hidden md:table">
+              <table className="hidden w-full text-left lg:table">
                 <thead>
                   <tr className="border-b border-[#2a3550]">
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">#</th>
@@ -1073,6 +1075,35 @@ export default function Quotations() {
                 </tbody>
               </table>
 
+              {!loading && filtered.length > 0 && (
+                <div className="divide-y divide-[#2a3550] lg:hidden">
+                  {filtered.map((quotation) => (
+                    <button
+                      key={quotation.id}
+                      type="button"
+                      onClick={() => openQuotationModal(quotation)}
+                      className="block w-full p-4 text-left transition-colors hover:bg-[#1c2538]/60"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">{quotation.client}</p>
+                          <p className="mt-1 font-mono text-xs text-gray-400">{quotation.number}</p>
+                        </div>
+                        <p className="whitespace-nowrap text-sm font-bold text-white">{formatCurrency(quotation.total)}</p>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                        <div><p className="text-gray-500">Fecha</p><p className="mt-1 text-gray-300">{formatDate(quotation.date)}</p></div>
+                        <div><p className="text-gray-500">Vigencia</p><p className="mt-1 text-gray-300">{formatDate(quotation.validity)}</p></div>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <StatusBadge status={quotation.status} />
+                        <span className="truncate text-xs text-gray-400">{quotation.agent}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {loading && (
                 <div className="flex flex-col items-center justify-center py-14 gap-3">
                   <RiSearchLine size={28} className="text-gray-600 animate-pulse" />
@@ -1090,13 +1121,14 @@ export default function Quotations() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#2a3550] px-4 py-3 sm:px-5">
                 <span className="text-xs text-gray-500">
                   Mostrando {filtered.length === 0 ? 0 : 1} a {filtered.length} de {quotations.length} cotizaciones
                 </span>
                 <div className="flex items-center gap-1">
                   <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-                  {[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}
+                  <span className="sm:hidden"><PagBtn label={1} active /></span>
+                  <span className="hidden sm:contents">{[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}</span>
                   <PagBtn icon={<RiArrowRightSFill size={14} />} />
                 </div>
               </div>
@@ -1105,7 +1137,7 @@ export default function Quotations() {
 
           {activeProductionTab === "orders" && (
             <>
-              <table className="w-full text-left hidden md:table">
+              <table className="hidden w-full text-left lg:table">
                 <thead>
                   <tr className="border-b border-[#2a3550]">
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Orden</th>
@@ -1146,6 +1178,35 @@ export default function Quotations() {
                 </tbody>
               </table>
 
+              {!ordersLoading && filteredProductionOrders.length > 0 && (
+                <div className="divide-y divide-[#2a3550] lg:hidden">
+                  {filteredProductionOrders.map((order) => (
+                    <button
+                      key={order.id}
+                      type="button"
+                      onClick={() => setSelectedProductionOrder(order)}
+                      className="block w-full p-4 text-left transition-colors hover:bg-[#1c2538]/60"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">{order.client}</p>
+                          <p className="mt-1 font-mono text-xs text-gray-400">{order.code}</p>
+                        </div>
+                        <p className="whitespace-nowrap text-sm font-bold text-white">{formatCurrency(order.balance)}</p>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <StatusBadge status={order.productionStatusLabel} />
+                        <StatusBadge status={order.paymentStatusLabel} />
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-400">
+                        <span>{formatDate(order.createdAt)}</span>
+                        <span className="truncate">{order.agent}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {ordersLoading && (
                 <div className="flex flex-col items-center justify-center py-14 gap-3">
                   <RiSearchLine size={28} className="text-gray-600 animate-pulse" />
@@ -1163,13 +1224,14 @@ export default function Quotations() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between px-5 py-3 border-t border-[#2a3550]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#2a3550] px-4 py-3 sm:px-5">
                 <span className="text-xs text-gray-500">
                   Mostrando {filteredProductionOrders.length === 0 ? 0 : 1} a {filteredProductionOrders.length} de {productionOrders.length} órdenes
                 </span>
                 <div className="flex items-center gap-1">
                   <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-                  {[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}
+                  <span className="sm:hidden"><PagBtn label={1} active /></span>
+                  <span className="hidden sm:contents">{[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}</span>
                   <PagBtn icon={<RiArrowRightSFill size={14} />} />
                 </div>
               </div>
@@ -1403,7 +1465,7 @@ export default function Quotations() {
           drawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#2a3550] flex-shrink-0">
+        <div className="flex flex-shrink-0 items-start justify-between border-b border-[#2a3550] px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               {drawerMode === "create" && (
@@ -1438,7 +1500,7 @@ export default function Quotations() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {drawerMode === "view" && viewQuote && (
             <div className="space-y-5">
               <div className="flex items-center gap-4 pb-5 border-b border-[#2a3550]">
@@ -1489,7 +1551,7 @@ export default function Quotations() {
         </div>
 
         {drawerMode === "view" && (
-          <div className="flex gap-3 px-6 py-4 border-t border-[#2a3550] flex-shrink-0">
+          <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-[#2a3550] px-4 py-4 sm:flex-row sm:px-6">
             <button
               type="button"
               onClick={closeDrawer}

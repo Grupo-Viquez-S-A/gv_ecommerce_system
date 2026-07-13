@@ -85,7 +85,7 @@ export default function Pagination({
         </span>
       </p>
 
-      <div className="flex items-center justify-center gap-1.5">
+      <div className="flex items-center justify-center gap-1.5 cursor-pointer">
         <button
           type="button"
           onClick={() => goToPage(safeCurrentPage - 1)}

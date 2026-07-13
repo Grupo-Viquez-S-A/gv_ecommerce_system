@@ -16,7 +16,7 @@ import {
   updateBusinessClientStatus,
 } from "../services/clientService.js";
 
-import { createEmptyClientForm } from "../components/clients/ClientForm.jsx";
+import { createEmptyClientForm } from "../components/clients/clientFormDefaults.js";
 
 import ClientsPageHeader from "../components/clients/ClientsPageHeader.jsx";
 import ClientMetrics from "../components/clients/ClientMetrics.jsx";
@@ -154,8 +154,11 @@ function cloneClient(client = {}, index = 0) {
       client.company ||
       client.companyName ||
       "Sin empresa asignada",
+    identificationType:
+      client.identificationType || client.identification_type || "legal",
     legalId: client.legalId || client.legal_id || "",
     legalName: client.legalName || client.legal_name || "",
+    ownerName: client.ownerName || client.owner_name || "",
     activityCode: client.activityCode || client.activity_code || "",
     email: client.email || "",
     status: normalizeStatus(
@@ -180,8 +183,10 @@ function createEditableForm(client) {
   return {
     businessId: safeClient.businessId || safeClient.id || null,
     name: safeClient.name || "",
+    identificationType: safeClient.identificationType || "legal",
     legalId: safeClient.legalId || "",
     legalName: safeClient.legalName || "",
+    ownerName: safeClient.ownerName || "",
     activityCode: safeClient.activityCode || "",
     companyId: safeClient.companyId || "",
     email: safeClient.email || "",
@@ -240,6 +245,13 @@ function hasBranchContent(branch = {}) {
 function normalizeClientForm(form = {}) {
   const name = form.name?.trim() || "";
   const companyId = form.companyId || "";
+  const identificationType =
+    form.identificationType === "personal" ? "personal" : "legal";
+  const legalId = form.legalId?.trim() || "";
+  const legalName = form.legalName?.trim() || "";
+  const ownerName = form.ownerName?.trim() || "";
+  const activityCode = form.activityCode?.trim() || "";
+  const email = form.email?.trim() || "";
 
   if (!name) {
     return {
@@ -252,6 +264,54 @@ function normalizeClientForm(form = {}) {
     return {
       valid: false,
       message: "Selecciona la empresa del grupo a la que pertenece el cliente.",
+    };
+  }
+
+  if (
+    identificationType === "legal" &&
+    !legalName
+  ) {
+    return {
+      valid: false,
+      message: "Ingresa la razón social del cliente jurídico.",
+    };
+  }
+
+  if (identificationType === "personal" && !ownerName) {
+    return {
+      valid: false,
+      message: "Ingresa el nombre y apellidos del dueño.",
+    };
+  }
+
+  if (!legalId) {
+    return {
+      valid: false,
+      message:
+        identificationType === "legal"
+          ? "Ingresa la cédula jurídica del cliente."
+          : "Ingresa el número de identificación del dueño.",
+    };
+  }
+
+  if (!activityCode) {
+    return {
+      valid: false,
+      message: "Ingresa el código de actividad del cliente.",
+    };
+  }
+
+  if (!email) {
+    return {
+      valid: false,
+      message: "Ingresa el correo electrónico principal del cliente.",
+    };
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return {
+      valid: false,
+      message: "Ingresa un correo electrónico principal válido.",
     };
   }
 
@@ -312,11 +372,19 @@ function normalizeClientForm(form = {}) {
     value: {
       businessId: form.businessId || null,
       name,
-      legalId: form.legalId?.trim() || "",
-      legalName: form.legalName?.trim() || "",
-      activityCode: form.activityCode?.trim() || "",
+      identificationType,
+      legalId,
+      legalName:
+        identificationType === "personal"
+          ? ""
+          : legalName,
+      ownerName:
+        identificationType === "personal"
+          ? ownerName
+          : "",
+      activityCode,
       companyId,
-      email: form.email?.trim() || "",
+      email,
       status: normalizeStatus(form.status),
       clientPhones,
       branches,
@@ -376,7 +444,11 @@ export default function Clients() {
   }, []);
 
   useEffect(() => {
-    loadClients();
+    const timerId = window.setTimeout(() => {
+      void loadClients();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
   }, [loadClients]);
 
   const filteredClients = useMemo(() => {
