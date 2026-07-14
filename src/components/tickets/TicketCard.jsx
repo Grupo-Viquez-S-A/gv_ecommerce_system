@@ -11,7 +11,7 @@ function formatDate(value) {
 
 export default function TicketCard({ ticket }) {
   const status = TICKET_STATUS[ticket.status] || TICKET_STATUS.new;
-  const category = TICKET_CATEGORIES.find((item) => item.value === ticket.category)?.label || "Otro";
+  const category = ticket.categoryName || TICKET_CATEGORIES.find((item) => item.value === ticket.category)?.label || "Otro";
   const priority = TICKET_PRIORITIES.find((item) => item.value === ticket.priority)?.label || "Media";
 
   return (

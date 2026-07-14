@@ -1,16 +1,18 @@
 import { RiLoader4Line, RiSendPlane2Line } from "react-icons/ri";
 
-import { TICKET_CATEGORIES, TICKET_LEVELS } from "../../constants/tickets.constants.js";
+import { TICKET_LEVELS } from "../../constants/tickets.constants.js";
 import TicketAttachmentsField from "./TicketAttachmentsField.jsx";
 
 const inputClassName = "mt-1.5 w-full rounded-lg border border-[#33405d] bg-[#202c43] px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-gray-500 focus:border-[#C9A227] focus:ring-1 focus:ring-[#C9A227]/30";
 
 export default function TicketRequestForm({
   form,
+  categories,
   attachments,
   attachmentError,
   error,
   isSubmitting,
+  isLoadingCategories,
   onAttachmentsChange,
   onAttachmentError,
   onChange,
@@ -28,9 +30,9 @@ export default function TicketRequestForm({
       <form className="space-y-4" onSubmit={onSubmit}>
         <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
           Categoría <span className="text-red-400">*</span>
-          <select required value={form.category} onChange={(event) => onChange("category", event.target.value)} className={inputClassName}>
-            <option value="">Selecciona una categoría</option>
-            {TICKET_CATEGORIES.map((category) => <option key={category.value} value={category.value}>{category.label}</option>)}
+          <select required disabled={isLoadingCategories || categories.length === 0} value={form.category} onChange={(event) => onChange("category", event.target.value)} className={inputClassName}>
+            <option value="">{isLoadingCategories ? "Cargando categorías..." : "Selecciona una categoría"}</option>
+            {categories.map((category) => <option key={category.id || category.value} value={category.value}>{category.label}</option>)}
           </select>
         </label>
 
@@ -73,7 +75,7 @@ export default function TicketRequestForm({
 
         {error && <p role="alert" className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">{error}</p>}
 
-        <button type="submit" disabled={isSubmitting} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9A227] px-4 py-3 text-sm font-bold text-[#0B1120] transition-colors hover:bg-[#d8b32f] disabled:cursor-not-allowed disabled:opacity-60">
+        <button type="submit" disabled={isSubmitting || isLoadingCategories || categories.length === 0} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#C9A227] px-4 py-3 text-sm font-bold text-[#0B1120] transition-colors hover:bg-[#d8b32f] disabled:cursor-not-allowed disabled:opacity-60">
           {isSubmitting ? <RiLoader4Line className="animate-spin" size={18} /> : <RiSendPlane2Line size={18} />}
           {isSubmitting ? "Enviando solicitud..." : "Enviar ticket a TI"}
         </button>

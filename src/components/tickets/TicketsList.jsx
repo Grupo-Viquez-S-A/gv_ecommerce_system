@@ -2,13 +2,13 @@ import { RiSearchLine, RiTicket2Line } from "react-icons/ri";
 
 import TicketCard from "./TicketCard.jsx";
 
-export default function TicketsList({ tickets, search, statusFilter, onSearchChange, onStatusChange }) {
+export default function TicketsList({ tickets, search, statusFilter, isLoading, onSearchChange, onStatusChange }) {
   return (
     <section>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-lg font-bold text-white">Mis solicitudes</h2>
-          <p className="mt-1 text-xs text-gray-400">Consulta los reportes enviados desde este dispositivo.</p>
+          <p className="mt-1 text-xs text-gray-400">Consulta las solicitudes guardadas en el sistema.</p>
         </div>
         <span className="text-xs text-gray-500">{tickets.length} resultado{tickets.length === 1 ? "" : "s"}</span>
       </div>
@@ -35,7 +35,11 @@ export default function TicketsList({ tickets, search, statusFilter, onSearchCha
         </label>
       </div>
 
-      {tickets.length > 0 ? (
+      {isLoading ? (
+        <div className="flex min-h-64 items-center justify-center rounded-xl border border-[#33405d] bg-[#141d2e]/60 text-sm text-gray-400">
+          Cargando solicitudes...
+        </div>
+      ) : tickets.length > 0 ? (
         <div className="space-y-3">{tickets.map((ticket) => <TicketCard key={ticket.id} ticket={ticket} />)}</div>
       ) : (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-[#33405d] bg-[#141d2e]/60 p-8 text-center">
