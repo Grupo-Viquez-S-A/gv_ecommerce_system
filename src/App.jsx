@@ -6,7 +6,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Catalog from "./pages/Catalog";
-import ClientCatalog from "./pages/ClientCatalog";
+import PublicClientCatalog from "./pages/PublicClientCatalog";
 import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
@@ -33,6 +33,7 @@ function App() {
         {/* Pantallas públicas */}
         <Route path="/" element={<Login />} />
         <Route path="/restablecer-contrasena" element={<ResetPassword />} />
+        <Route path="/cliente/catalogo" element={<PublicClientCatalog />} />
         
         {/* Todas las vistas internas usan el mismo sidebar y AppTopBar */}
         <Route element={<MainLayout />}>
@@ -50,15 +51,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Catalog />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/cliente/catalogo"
-            element={
-              <ProtectedRoute>
-                <ClientCatalog />
               </ProtectedRoute>
             }
           />

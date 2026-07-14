@@ -82,7 +82,7 @@ function Login() {
       className="min-h-dvh w-full overflow-y-auto bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="flex min-h-dvh w-full items-center justify-center px-4 py-6 sm:px-6 lg:justify-between lg:px-24">
+      <div className="flex min-h-dvh w-full items-center justify-center px-4 py-6 sm:px-6 lg:justify-start lg:gap-[clamp(4rem,8vw,10rem)] lg:pl-[clamp(14rem,18vw,21rem)] lg:pr-6">
         <div className="flex w-full max-w-md flex-col gap-5 rounded-3xl bg-white p-6 shadow-2xl sm:p-10">
           <div className="flex items-center gap-2">
             <img
@@ -92,17 +92,17 @@ function Login() {
             />
 
             <span className="text-[#1a2f5e] font-bold text-sm tracking-widest uppercase">
-              Grupo Víquez.
+              Grupo Víquez
             </span>
           </div>
 
           <div>
             <h1 className="text-4xl font-black text-[#1a2f5e] leading-tight">
-              Bienvenido
+              ¡Bienvenido!
             </h1>
 
             <p className="text-gray-500 text-sm mt-1">
-              Accede a tu portal corporativo
+              Accede al portal corporativo.
             </p>
           </div>
 
@@ -305,7 +305,7 @@ function Login() {
           </div>
         </div>
 
-        <div className="hidden lg:flex items-center justify-center flex-1">
+        <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
           <img
             src={logoImage}
             alt="Logo Grupo Víquez"

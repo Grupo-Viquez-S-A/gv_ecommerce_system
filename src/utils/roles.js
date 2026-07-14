@@ -33,6 +33,10 @@ export function hasSystemAccess(user) {
 const CATALOG_PURCHASE_ROLE_CODES = new Set([
   ...SYSTEM_ACCESS_ROLE_CODES,
   "sales_agent",
+  "sales agent",
+  "agente_ventas",
+  "agente de ventas",
+  "vendedor",
 ]);
 
 export function hasCatalogPurchaseAccess(user) {

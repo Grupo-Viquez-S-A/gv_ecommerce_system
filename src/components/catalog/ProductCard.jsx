@@ -512,7 +512,7 @@ export default function ProductCard({
             </div>
           )}
 
-          {isTextileProduct && (
+          {isTextileProduct && canPurchase && (
             <div className="mt-5 space-y-3 border-t border-[#29466F] pt-4">
               {!hasMultipleSizes && (
                 <div className="pointer-events-auto relative z-20 flex items-center justify-between gap-3">
