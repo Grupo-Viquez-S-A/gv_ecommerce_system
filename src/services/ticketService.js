@@ -1,6 +1,7 @@
 import { supabase } from "./primarySupabaseClient.js";
 
 const SUPPORT_BUCKET = "System_Files";
+const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
 
 function assertNoError(error) {
   if (error) throw error;
@@ -23,6 +24,10 @@ async function uploadAttachments(ticketId, commentId, files, isInternal = false)
   const uploaded = [];
 
   for (const file of files || []) {
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      throw new Error(`El archivo ${file.name} supera el límite de 50 MB.`);
+    }
+
     const objectPath = `tickets/${ticketId}/${commentId || "opening"}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
     const uploadResponse = await supabase.storage
       .from(SUPPORT_BUCKET)

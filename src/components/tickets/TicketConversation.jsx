@@ -11,6 +11,11 @@ import {
 
 import { TICKET_STATUS } from "../../constants/tickets.constants.js";
 import {
+  TICKET_ACCEPTED_FILE_TYPES,
+  TICKET_MAX_FILES,
+  TICKET_MAX_FILE_SIZE,
+} from "../../constants/tickets.constants.js";
+import {
   getTicketMessages,
   markTicketRead,
   sendTicketMessage,
@@ -128,6 +133,33 @@ export default function TicketConversation({
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleFileSelection = (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    event.target.value = "";
+
+    const oversizedFile = selectedFiles.find((file) => file.size > TICKET_MAX_FILE_SIZE);
+    if (oversizedFile) {
+      setError(`El archivo ${oversizedFile.name} supera el límite de 50 MB.`);
+      return;
+    }
+
+    const nextFiles = [...files];
+    selectedFiles.forEach((file) => {
+      const exists = nextFiles.some(
+        (currentFile) => currentFile.name === file.name && currentFile.size === file.size,
+      );
+      if (!exists) nextFiles.push(file);
+    });
+
+    if (nextFiles.length > TICKET_MAX_FILES) {
+      setError(`Puedes adjuntar un máximo de ${TICKET_MAX_FILES} archivos.`);
+      return;
+    }
+
+    setError("");
+    setFiles(nextFiles);
   };
 
   return (
@@ -268,7 +300,13 @@ export default function TicketConversation({
           <div className="flex items-end gap-2">
             <label className="cursor-pointer rounded-lg border border-[#33405D] p-3 text-[#8BA4C8] hover:border-[#D9A72A]/60 hover:text-[#D9A72A]" title="Adjuntar archivos">
               <Paperclip size={18} />
-              <input type="file" multiple className="sr-only" onChange={(event) => setFiles(Array.from(event.target.files || []).slice(0, 5))} />
+              <input
+                type="file"
+                multiple
+                accept={TICKET_ACCEPTED_FILE_TYPES}
+                className="sr-only"
+                onChange={handleFileSelection}
+              />
             </label>
             <textarea
               value={body}
@@ -287,5 +325,4 @@ export default function TicketConversation({
     </div>
   );
 }
-
 

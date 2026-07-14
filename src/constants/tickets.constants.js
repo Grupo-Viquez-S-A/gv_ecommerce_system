@@ -34,6 +34,10 @@ export const TICKET_LEVELS = [
   { value: "high", label: "Alto" },
 ];
 
+export const TICKET_MAX_FILES = 5;
+export const TICKET_MAX_FILE_SIZE = 50 * 1024 * 1024;
+export const TICKET_ACCEPTED_FILE_TYPES = ".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt";
+
 export const CATEGORY_DEFAULT_PRIORITY = {
   access: "normal", permissions: "normal", email: "high",
   functional_error: "high", data: "normal", device: "normal",
