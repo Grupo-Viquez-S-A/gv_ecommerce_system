@@ -2395,6 +2395,7 @@ export default function Catalog() {
         product={selectedProductDetails}
         onClose={() => setSelectedProductDetails(null)}
         onViewTechnicalSheet={handleOpenTechnicalSheet}
+        showPrice={canPurchase}
       />
 
       <CatalogTechnicalSheetModal

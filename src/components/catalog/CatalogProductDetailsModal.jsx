@@ -12,6 +12,7 @@ import {
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
+import { formatCurrency } from "../../utils/formatCurrency.js";
 
 function normalizeHexColor(value) {
   if (!value || typeof value !== "string") {
@@ -92,6 +93,7 @@ export default function CatalogProductDetailsModal({
   product,
   onClose,
   onViewTechnicalSheet,
+  showPrice = false,
 }) {
   useEffect(() => {
     if (!product) {
@@ -231,6 +233,12 @@ export default function CatalogProductDetailsModal({
               <Tag className="h-3.5 w-3.5 text-[#D7A91D]" />
               {productSku}
             </p>
+
+            {showPrice && isTextileProduct && (
+              <p className="mt-2 text-lg font-extrabold text-[#E9BC2D]">
+                {formatCurrency(product.price)}
+              </p>
+            )}
           </div>
 
           <button

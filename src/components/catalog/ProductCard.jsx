@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
+import { formatCurrency } from "../../utils/formatCurrency.js";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -432,6 +433,17 @@ export default function ProductCard({
             <p className="mt-2 h-10 overflow-hidden text-sm leading-5 text-slate-400">
               {productDescription}
             </p>
+
+            {isTextileProduct && canPurchase && (
+              <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-3 py-2.5">
+                <span className="text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+                  Precio
+                </span>
+                <span className="text-base font-extrabold text-[#E9BC2D]">
+                  {formatCurrency(product.price)}
+                </span>
+              </div>
+            )}
           </div>
 
           {isTextileProduct ? (
