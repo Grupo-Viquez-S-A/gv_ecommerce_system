@@ -6,6 +6,8 @@ const CLIENT_ALLOWED_ROUTES = [
   "/mis-pedidos",
   "/mis-cotizaciones",
   "/cliente/catalogo",
+  "/tickets-ti",
+  "/soporte-ti",
 ];
 
 const SYSTEM_ONLY_ROUTES = ["/admin/usuarios"];

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.js";
@@ -7,8 +7,10 @@ import {
   createTicket,
   getTicketCategories,
   getUserTickets,
+  subscribeToSupport,
 } from "../services/ticketService.js";
 
+import TicketConversation from "../components/tickets/TicketConversation.jsx";
 import TicketRequestForm from "../components/tickets/TicketRequestForm.jsx";
 import TicketsList from "../components/tickets/TicketsList.jsx";
 import TicketsPageHeader from "../components/tickets/TicketsPageHeader.jsx";
@@ -20,6 +22,7 @@ export default function ITSupportTickets() {
   const requesterId = user?.id || user?.userId || session?.user?.id || null;
   const [tickets, setTickets] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [selectedTicket, setSelectedTicket] = useState(null);
   const [form, setForm] = useState(EMPTY_TICKET_FORM);
   const [attachments, setAttachments] = useState([]);
   const [attachmentError, setAttachmentError] = useState("");
@@ -31,40 +34,51 @@ export default function ITSupportTickets() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  useEffect(() => {
-    let isMounted = true;
-    async function loadTicketData() {
-      if (!requesterId) {
-        if (isMounted) {
-          setLoadError("Debes iniciar sesión para consultar y crear tickets.");
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setLoadError("");
-        const [storedTickets, availableCategories] = await Promise.all([
-          getUserTickets(requesterId),
-          getTicketCategories(),
-        ]);
-        if (isMounted) {
-          setTickets(storedTickets);
-          setCategories(availableCategories);
-        }
-      } catch (error) {
-        console.error("IT tickets loading error:", error);
-        if (isMounted) {
-          setLoadError("No fue posible cargar los tickets desde la base de datos.");
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
+  const loadTickets = useCallback(async () => {
+    if (!requesterId) return;
+    try {
+      const nextTickets = await getUserTickets(requesterId, { all: false });
+      setTickets(nextTickets);
+      setSelectedTicket((current) =>
+        current ? nextTickets.find((ticket) => ticket.id === current.id) || current : null,
+      );
+      setLoadError("");
+    } catch (error) {
+      console.error("Support tickets load error:", error);
+      setLoadError("No fue posible cargar los tickets desde Supabase.");
+    } finally {
+      setIsLoading(false);
     }
-    loadTicketData();
-    return () => { isMounted = false; };
   }, [requesterId]);
+
+  useEffect(() => {
+    let active = true;
+    getTicketCategories()
+      .then((availableCategories) => {
+        if (active) setCategories(availableCategories);
+      })
+      .catch((error) => {
+        console.error("Ticket categories load error:", error);
+        if (active) setLoadError("No fue posible cargar las categorías de soporte.");
+      });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!requesterId) {
+      const unauthenticatedState = window.setTimeout(() => {
+        setLoadError("Debes iniciar sesión para consultar y crear tickets.");
+        setIsLoading(false);
+      }, 0);
+      return () => window.clearTimeout(unauthenticatedState);
+    }
+    const initialLoad = window.setTimeout(loadTickets, 0);
+    const unsubscribe = subscribeToSupport(loadTickets);
+    return () => {
+      window.clearTimeout(initialLoad);
+      unsubscribe();
+    };
+  }, [loadTickets, requesterId]);
 
   const filteredTickets = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -88,9 +102,10 @@ export default function ITSupportTickets() {
       setFormError("Completa la categoría, el asunto y una descripción de al menos 15 caracteres.");
       return;
     }
+
     const companyId = currentCompany?.id || user?.activeCompany?.id || null;
     if (!requesterId || !companyId) {
-      setFormError("No se encontró un usuario autenticado o una empresa activa para asociar el ticket.");
+      setFormError("No se encontró un usuario autenticado o una empresa activa.");
       return;
     }
 
@@ -104,28 +119,17 @@ export default function ITSupportTickets() {
         description,
         companyId,
         requesterId,
-        requesterName: user?.fullName || session?.user?.email || "Usuario",
-        requesterEmail: user?.email || session?.user?.email || "",
+        originApplication: "ecommerce",
       });
-      setTickets((currentTickets) => [newTicket, ...currentTickets]);
       setForm(EMPTY_TICKET_FORM);
       setAttachments([]);
       setAttachmentError("");
-      setSuccessMessage(`Solicitud ${newTicket.ticketNumber} creada correctamente.`);
+      setSuccessMessage(`Solicitud ${newTicket.ticketNumber || ""} creada correctamente.`);
+      await loadTickets();
+      setSelectedTicket(newTicket);
     } catch (error) {
       console.error("IT ticket creation error:", error);
-      const message = String(error?.message || "");
-      const isPermissionError =
-        message.toLowerCase().includes("row-level security") ||
-        message.toLowerCase().includes("policy");
-      const operation = message.includes(":")
-        ? message.slice(0, message.indexOf(":"))
-        : "Supabase rechazó la operación";
-      setFormError(
-        isPermissionError
-          ? `${message || operation}. Supabase rechazó la operación por una política RLS.`
-          : message || "No fue posible guardar la solicitud. Intenta nuevamente.",
-      );
+      setFormError(error?.message || "No fue posible guardar la solicitud.");
     } finally {
       setIsSubmitting(false);
     }
@@ -150,14 +154,31 @@ export default function ITSupportTickets() {
           attachmentError={attachmentError}
           error={formError}
           isSubmitting={isSubmitting}
-          isLoadingCategories={isLoading}
+          isLoadingCategories={isLoading && categories.length === 0}
           onAttachmentsChange={setAttachments}
           onAttachmentError={setAttachmentError}
           onChange={handleFormChange}
           onSubmit={handleSubmit}
         />
-        <TicketsList tickets={filteredTickets} search={search} statusFilter={statusFilter} isLoading={isLoading} onSearchChange={setSearch} onStatusChange={setStatusFilter} />
+        <TicketsList
+          tickets={filteredTickets}
+          search={search}
+          statusFilter={statusFilter}
+          isLoading={isLoading}
+          onSearchChange={setSearch}
+          onStatusChange={setStatusFilter}
+          onSelect={setSelectedTicket}
+        />
       </div>
+
+      {selectedTicket && (
+        <TicketConversation
+          ticket={selectedTicket}
+          currentUserId={requesterId}
+          onClose={() => setSelectedTicket(null)}
+          onChanged={loadTickets}
+        />
+      )}
     </div>
   );
 }
