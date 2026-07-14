@@ -72,7 +72,7 @@ export default function MainLayout() {
   };
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-[#0B1120] text-white">
+    <div className="fixed inset-0 flex overflow-hidden bg-[#0B1120] text-white">
       <DashSideBar
         sidebarCollapsed={sidebarCollapsed}
         sidebarOpen={sidebarOpen}

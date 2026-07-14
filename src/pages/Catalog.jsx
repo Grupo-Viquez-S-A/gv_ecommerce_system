@@ -711,7 +711,6 @@ export default function Catalog() {
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
-    scrollCatalogToTop();
   };
 
   const handleOpenProductDetails = (product) => {
