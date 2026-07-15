@@ -639,7 +639,7 @@ export async function getQuotationClientByLegalId(legalId) {
       )
       .eq("legal_id", normalizedLegalId)
       .maybeSingle(),
-    "No fue posible buscar el cliente por cedula juridica",
+    "No fue posible buscar el cliente por cédula jurídica",
   );
 
   if (!business) {

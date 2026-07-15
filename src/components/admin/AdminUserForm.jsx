@@ -1,4 +1,5 @@
 import { RiArrowDownSFill, RiCheckLine } from "react-icons/ri";
+import { formatPhoneNumber } from "../../utils/inputMasks.js";
 import { AdminFormField as FormField } from "./AdminViewHelpers.jsx";
 
 export default function AdminUserForm({ drawerMode, form, setForm, adminCatalogsLoading, adminCatalogsError, availableRoles, availableDepartments, availableCompanies, toggleCompanyInForm, saveUserError }) {
@@ -34,12 +35,12 @@ export default function AdminUserForm({ drawerMode, form, setForm, adminCatalogs
 
               <FormField
                 label="Teléfono"
-                placeholder="Ej. +506 8888 8888"
+                placeholder="Ej. 88888888"
                 value={form.phone}
                 onChange={(value) =>
                   setForm({
                     ...form,
-                    phone: value,
+                    phone: formatPhoneNumber(value),
                   })
                 }
                 type="tel"

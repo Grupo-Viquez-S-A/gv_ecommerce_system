@@ -43,6 +43,10 @@ import {
 } from "../services/quotationService.js";
 import { useAuth } from "../context/AuthContext.js";
 import { hasCatalogPurchaseAccess } from "../utils/roles.js";
+import {
+  formatLegalId,
+  formatPhoneNumber,
+} from "../utils/inputMasks.js";
 
 const PAGE_SIZE = 8;
 
@@ -840,6 +844,13 @@ export default function Catalog() {
   };
 
   const handleQuotationClientFormChange = (fieldName, value) => {
+    const nextValue =
+      fieldName === "legalId"
+        ? formatLegalId(value)
+        : ["businessPhone", "branchPhone"].includes(fieldName)
+          ? formatPhoneNumber(value)
+          : value;
+
     setQuotationClientForm((currentForm) => ({
       ...currentForm,
       ...(fieldName === "legalId"
@@ -849,7 +860,7 @@ export default function Catalog() {
             representativeId: "",
           }
         : {}),
-      [fieldName]: value,
+      [fieldName]: nextValue,
     }));
 
     if (fieldName === "legalId") {
@@ -875,7 +886,7 @@ export default function Catalog() {
 
       if (!existingClient) {
         setClientLookupMessage(
-          "No se encontro un cliente registrado con esta cedula juridica.",
+          "No se encontró un cliente registrado con esta cédula jurídica.",
         );
         return;
       }
@@ -902,7 +913,7 @@ export default function Catalog() {
       console.error("Client lookup error:", lookupError);
       setClientLookupMessage(
         lookupError?.message ||
-          "No fue posible verificar la cedula juridica.",
+          "No fue posible verificar la cédula jurídica.",
       );
     } finally {
       setClientLookupLoading(false);
@@ -1350,7 +1361,7 @@ export default function Catalog() {
 
                       <label>
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Cedula juridica
+                          Cédula jurídica
                         </span>
                         <input
                           value={quotationClientForm.legalId}
@@ -1362,12 +1373,12 @@ export default function Catalog() {
                           }
                           onBlur={handleLookupClientByLegalId}
                           className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 3-101-000000"
+                          placeholder="Ej. 3101000000"
                         />
                         {(clientLookupLoading || clientLookupMessage) && (
                           <span className="mt-2 block text-xs text-[#9BB3D3]">
                             {clientLookupLoading
-                              ? "Verificando cedula juridica..."
+                              ? "Verificando cédula jurídica..."
                               : clientLookupMessage}
                           </span>
                         )}
@@ -1444,7 +1455,7 @@ export default function Catalog() {
 
                       <label>
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Telefono empresa
+                          Teléfono empresa
                         </span>
                         <input
                           value={quotationClientForm.businessPhone}
@@ -1455,7 +1466,7 @@ export default function Catalog() {
                             )
                           }
                           className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 2222-2222"
+                          placeholder="Ej. 22222222"
                         />
                       </label>
 
@@ -1553,7 +1564,7 @@ export default function Catalog() {
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Distrito
+                              Cantón
                             </span>
                             <input
                               value={quotationClientForm.branchDistrict}
@@ -1564,12 +1575,12 @@ export default function Catalog() {
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Catedral"
+                              placeholder="Ej. Central"
                             />
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Telefono sucursal
+                              Teléfono sucursal
                             </span>
                             <input
                               value={quotationClientForm.branchPhone}
@@ -1580,7 +1591,7 @@ export default function Catalog() {
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. 2222-3333"
+                              placeholder="Ej. 22223333"
                             />
                           </label>
                           <label>
@@ -1982,7 +1993,7 @@ export default function Catalog() {
 
                       <label>
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Cedula juridica
+                          Cédula jurídica
                         </span>
                         <input
                           value={quotationClientForm.legalId}
@@ -1994,12 +2005,12 @@ export default function Catalog() {
                           }
                           onBlur={handleLookupClientByLegalId}
                           className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 3-101-000000"
+                          placeholder="Ej. 3101000000"
                         />
                         {(clientLookupLoading || clientLookupMessage) && (
                           <span className="mt-2 block text-xs text-[#9BB3D3]">
                             {clientLookupLoading
-                              ? "Verificando cedula juridica..."
+                              ? "Verificando cédula jurídica..."
                               : clientLookupMessage}
                           </span>
                         )}
@@ -2076,7 +2087,7 @@ export default function Catalog() {
 
                       <label>
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Telefono empresa
+                          Teléfono empresa
                         </span>
                         <input
                           value={quotationClientForm.businessPhone}
@@ -2087,7 +2098,7 @@ export default function Catalog() {
                             )
                           }
                           className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 2222-2222"
+                          placeholder="Ej. 22222222"
                         />
                       </label>
 
@@ -2185,7 +2196,7 @@ export default function Catalog() {
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Distrito
+                              Cantón
                             </span>
                             <input
                               value={quotationClientForm.branchDistrict}
@@ -2196,7 +2207,7 @@ export default function Catalog() {
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Catedral"
+                              placeholder="Ej. Central"
                             />
                           </label>
                           <label>
@@ -2217,7 +2228,7 @@ export default function Catalog() {
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Telefono sucursal
+                              Teléfono sucursal
                             </span>
                             <input
                               value={quotationClientForm.branchPhone}
@@ -2228,7 +2239,7 @@ export default function Catalog() {
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. 2222-3333"
+                              placeholder="Ej. 22223333"
                             />
                           </label>
                         </>

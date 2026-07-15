@@ -16,6 +16,10 @@ import {
   createEmptyPhone,
   createEmptyRepresentative,
 } from "./clientFormDefaults.js";
+import {
+  formatLegalId,
+  formatPhoneNumber,
+} from "../../utils/inputMasks.js";
 
 const PHONE_TYPES = [
   "General",
@@ -219,7 +223,7 @@ function PhoneList({
                     onChange={(event) =>
                       onChange(index, "phone", event.target.value)
                     }
-                    placeholder="Ej. 2222-2222"
+                    placeholder="Ej. 22222222"
                     className={`${inputClassName} pl-9`}
                   />
                 </div>
@@ -354,7 +358,10 @@ export default function ClientForm({ form, onChange }) {
 
   const updateField = (field, value) => {
     updateForm({
-      [field]: value,
+      [field]:
+        field === "legalId" && currentForm.identificationType === "legal"
+          ? formatLegalId(value)
+          : value,
     });
   };
 
@@ -373,7 +380,7 @@ export default function ClientForm({ form, onChange }) {
 
       return {
         ...phoneItem,
-        [field]: value,
+        [field]: field === "phone" ? formatPhoneNumber(value) : value,
       };
     });
 
@@ -465,7 +472,7 @@ export default function ClientForm({ form, onChange }) {
 
         return {
           ...phoneItem,
-          [field]: value,
+          [field]: field === "phone" ? formatPhoneNumber(value) : value,
         };
       });
 
@@ -718,7 +725,7 @@ export default function ClientForm({ form, onChange }) {
                     updateField("legalId", event.target.value)
                   }
                   required
-                  placeholder="Ej. 3-101-123456"
+                  placeholder="Ej. 3101123456"
                   className={inputClassName}
                 />
               </div>
@@ -836,7 +843,7 @@ export default function ClientForm({ form, onChange }) {
         <SectionTitle
           icon={<RiMapPinLine size={18} />}
           title="Sucursales"
-          description="Cada sucursal se identifica por provincia, distrito y dirección."
+          description="Cada sucursal se identifica por provincia, cantón y dirección."
           action={
             <button
               type="button"
@@ -899,7 +906,7 @@ export default function ClientForm({ form, onChange }) {
                     </div>
 
                     <div>
-                      <FieldLabel required>Distrito</FieldLabel>
+                      <FieldLabel required>Cantón</FieldLabel>
 
                       <input
                         type="text"

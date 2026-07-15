@@ -11,6 +11,7 @@ import {
   AGENT_COMPANIES,
   AGENT_STATUSES,
 } from "../../constants/agents.constants.js";
+import { formatPhoneNumber } from "../../utils/inputMasks.js";
 
 function FormField({
   icon,
@@ -54,7 +55,7 @@ export default function AgentForm({
   const updateField = (field, value) => {
     onChange({
       ...form,
-      [field]: value,
+      [field]: field === "phone" ? formatPhoneNumber(value) : value,
     });
   };
 
@@ -83,7 +84,7 @@ export default function AgentForm({
       <FormField
         icon={<RiPhoneFill size={14} />}
         label="Teléfono"
-        placeholder="+506 0000 0000"
+        placeholder="00000000"
         value={form.phone}
         onChange={(event) => updateField("phone", event.target.value)}
       />

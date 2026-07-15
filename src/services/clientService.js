@@ -318,7 +318,7 @@ function normalizeClientPayload(client = {}) {
 
     if (!branch.province || !branch.district || !branch.address) {
       throw new Error(
-        `Completa provincia, distrito y dirección de la sucursal ${
+        `Completa provincia, cantón y dirección de la sucursal ${
           index + 1
         }.`,
       );

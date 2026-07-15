@@ -1,5 +1,6 @@
 ﻿import { RiAddLine } from "react-icons/ri";
 import RepresentativeEditor from "./RepresentativeEditor";
+import { formatPhoneNumber } from "../../utils/inputMasks.js";
 
 const createEmptyRepresentative = () => ({
   name: "",
@@ -39,7 +40,10 @@ export default function BranchEditor({ branches = [], onChange }) {
     updateBranches(
       branches.map((branch, index) =>
         index === branchIndex
-          ? { ...branch, [field]: value }
+          ? {
+              ...branch,
+              [field]: field === "phone" ? formatPhoneNumber(value) : value,
+            }
           : branch,
       ),
     );
@@ -161,7 +165,7 @@ export default function BranchEditor({ branches = [], onChange }) {
             <div className="flex gap-2">
               <input
                 type="tel"
-                placeholder="Teléfono"
+                placeholder="Teléfono 00000000"
                 value={branch.phone ?? ""}
                 onChange={(event) =>
                   handleUpdateBranch(

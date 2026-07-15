@@ -240,7 +240,7 @@ export default function QuotationsDetails({ drawerOpen, closeDrawer, drawerMode,
                     {selectedQuotation.legalName || "Sin razon social"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {selectedQuotation.legalId || "Sin cedula juridica"}
+                    {selectedQuotation.legalId || "Sin cédula jurídica"}
                   </p>
                 </div>
 

@@ -345,7 +345,7 @@ function normalizeClientForm(form = {}) {
     if (!branch.province || !branch.district || !branch.address) {
       return {
         valid: false,
-        message: `Completa provincia, distrito y dirección de la sucursal ${
+        message: `Completa provincia, cantón y dirección de la sucursal ${
           index + 1
         }.`,
       };
