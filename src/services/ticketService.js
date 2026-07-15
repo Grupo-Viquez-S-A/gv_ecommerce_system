@@ -1,107 +1,71 @@
 import { supabase } from "./primarySupabaseClient.js";
 
-const TICKET_BUCKET = "System_Files";
-const TICKET_FOLDER = "tickets";
-const TICKET_SELECT = `
-  ticket_id,
-  ticket_number,
-  company_id,
-  requester_user_id,
-  category_id,
-  status,
-  priority,
-  title,
-  description,
-  source,
-  impact,
-  urgency,
-  assigned_to_user_id,
-  response_due_at,
-  resolution_due_at,
-  created_at,
-  updated_at,
-  category:it_ticket_categories!it_tickets_category_fkey(
-    category_code,
-    category_name
-  ),
-  assigned_to:profiles!it_tickets_assigned_to_fkey(
-    name,
-    surname
-  ),
-  attachments:it_ticket_attachments(
-    attachment_id,
-    bucket_name,
-    object_path,
-    file_name,
-    mime_type,
-    file_size,
-    created_at
-  )
-`;
+const SUPPORT_BUCKET = "System_Files";
+const MAX_ATTACHMENT_SIZE = 50 * 1024 * 1024;
 
-function unwrapRelation(value) {
-  return Array.isArray(value) ? value[0] || null : value || null;
+function assertNoError(error) {
+  if (error) throw error;
+}
+function safeFileName(name) {
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
-function mapAttachment(row) {
-  return {
-    id: row.attachment_id,
-    bucketName: row.bucket_name,
-    objectPath: row.object_path,
-    fileName: row.file_name,
-    mimeType: row.mime_type,
-    fileSize: row.file_size,
-    createdAt: row.created_at,
-  };
+async function addSignedUrls(items) {
+  return Promise.all((items || []).map(async (item) => {
+    if (!item?.objectPath) return item;
+    const { data } = await supabase.storage
+      .from(SUPPORT_BUCKET)
+      .createSignedUrl(item.objectPath, 3600);
+    return { ...item, url: data?.signedUrl || null };
+  }));
 }
 
-function mapTicket(row) {
-  const category = unwrapRelation(row.category);
-  const assignedTo = unwrapRelation(row.assigned_to);
-  return {
-    id: row.ticket_id,
-    ticketNumber: row.ticket_number,
-    companyId: row.company_id,
-    requesterId: row.requester_user_id,
-    categoryId: row.category_id,
-    category: category?.category_code || "other",
-    categoryName: category?.category_name || "Otro",
-    status: row.status,
-    priority: row.priority,
-    title: row.title,
-    description: row.description,
-    source: row.source,
-    impact: row.impact,
-    urgency: row.urgency,
-    assignedToId: row.assigned_to_user_id,
-    assignedToName: assignedTo
-      ? [assignedTo.name, assignedTo.surname].filter(Boolean).join(" ")
-      : "",
-    responseDueAt: row.response_due_at,
-    resolutionDueAt: row.resolution_due_at,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    attachments: (row.attachments || []).map(mapAttachment),
-  };
-}
+async function uploadAttachments(ticketId, commentId, files, isInternal = false) {
+  const uploaded = [];
 
-function safeFileName(fileName) {
-  return String(fileName || "archivo")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_+/g, "_");
-}
+  for (const file of files || []) {
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      throw new Error(`El archivo ${file.name} supera el límite de 50 MB.`);
+    }
 
-function createObjectPath(ticketId, fileName) {
-  return `${TICKET_FOLDER}/${ticketId}/${crypto.randomUUID()}-${safeFileName(fileName)}`;
-}
+    const objectPath = `tickets/${ticketId}/${commentId || "opening"}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+    const uploadResponse = await supabase.storage
+      .from(SUPPORT_BUCKET)
+      .upload(objectPath, file, { upsert: false, contentType: file.type || undefined });
 
-async function rollbackTicket(ticketId, uploadedPaths) {
-  if (uploadedPaths.length > 0) {
-    await supabase.storage.from(TICKET_BUCKET).remove(uploadedPaths);
+    assertNoError(uploadResponse.error);
+
+    const attachmentResponse = await supabase
+      .from("it_ticket_attachments")
+      .insert({
+        ticket_id: ticketId,
+        comment_id: commentId || null,
+        bucket_name: SUPPORT_BUCKET,
+        folder_name: "tickets",
+        object_path: objectPath,
+        file_name: file.name,
+        mime_type: file.type || null,
+        file_size: file.size,
+        is_internal: isInternal,
+      })
+      .select("attachment_id")
+      .single();
+
+    if (attachmentResponse.error) {
+      await supabase.storage.from(SUPPORT_BUCKET).remove([objectPath]);
+      throw attachmentResponse.error;
+    }
+
+    uploaded.push(attachmentResponse.data);
   }
-  await supabase.from("it_tickets").delete().eq("ticket_id", ticketId);
+
+  return uploaded;
+}
+
+export async function isCurrentUserITAgent() {
+  const { data, error } = await supabase.rpc("support_is_it_agent");
+  assertNoError(error);
+  return Boolean(data);
 }
 
 export async function getTicketCategories() {
@@ -110,8 +74,7 @@ export async function getTicketCategories() {
     .select("category_id, category_code, category_name, description, default_priority")
     .eq("is_active", true)
     .order("category_name", { ascending: true });
-
-  if (error) throw error;
+  assertNoError(error);
   return (data || []).map((category) => ({
     id: category.category_id,
     value: category.category_code,
@@ -121,112 +84,106 @@ export async function getTicketCategories() {
   }));
 }
 
-export async function getUserTickets(userId) {
-  if (!userId) return [];
-
-  const { data, error } = await supabase
-    .from("it_tickets")
-    .select(TICKET_SELECT)
-    .eq("requester_user_id", userId)
-    .eq("is_active", true)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data || []).map(mapTicket);
+export async function getUserTickets(_userId, options = {}) {
+  const { data, error } = await supabase.rpc("support_list_tickets", {
+    p_all: Boolean(options.all),
+  });
+  assertNoError(error);
+  return Promise.all((data || []).map(async (ticket) => ({
+    ...ticket,
+    openingAttachments: await addSignedUrls(ticket.openingAttachments),
+  })));
 }
 
 export async function createTicket(ticketData) {
-  const {
-    attachments = [],
-    category,
-    companyId,
-    requesterId,
-    title,
-    description,
-    impact,
-    urgency,
-  } = ticketData;
+  const { attachments = [], ...ticket } = ticketData;
+  const { data: ticketId, error } = await supabase.rpc("support_create_ticket", {
+    p_category_code: ticket.category,
+    p_title: ticket.title,
+    p_description: ticket.description,
+    p_impact: ticket.impact,
+    p_urgency: ticket.urgency,
+    p_origin_application: ticket.originApplication || "ecommerce",
+    p_company_id: ticket.companyId || null,
+  });
+  assertNoError(error);
 
-  if (!requesterId) throw new Error("Debes iniciar sesión para crear un ticket.");
-  if (!companyId) throw new Error("Selecciona una empresa antes de crear el ticket.");
+  await uploadAttachments(ticketId, null, attachments, false);
+  const tickets = await getUserTickets(ticket.requesterId, { all: false });
+  return tickets.find((item) => item.id === ticketId) || { id: ticketId, ...ticket };
+}
 
-  const { data: categoryRow, error: categoryError } = await supabase
-    .from("it_ticket_categories")
-    .select("category_id")
-    .eq("category_code", category)
-    .eq("is_active", true)
-    .maybeSingle();
+export async function getTicketMessages(ticketId) {
+  const { data, error } = await supabase.rpc("support_list_messages", {
+    p_ticket_id: ticketId,
+  });
+  assertNoError(error);
 
-  if (categoryError) throw categoryError;
-  if (!categoryRow) throw new Error("La categoría seleccionada ya no está disponible.");
+  return Promise.all((data || []).map(async (message) => ({
+    ...message,
+    attachments: await addSignedUrls(message.attachments),
+  })));
+}
 
-  const ticketId = crypto.randomUUID();
-  const { error: ticketError } = await supabase
-    .from("it_tickets")
-    .insert({
-      ticket_id: ticketId,
-      company_id: companyId,
-      category_id: categoryRow.category_id,
-      title,
-      description,
-      source: "web",
-      impact,
-      urgency,
-    });
+export async function sendTicketMessage(ticketId, body, options = {}) {
+  const { data: commentId, error } = await supabase.rpc("support_add_message", {
+    p_ticket_id: ticketId,
+    p_body: body,
+    p_is_internal: Boolean(options.isInternal),
+  });
+  assertNoError(error);
 
-  if (ticketError) {
-    throw new Error(`No se pudo crear el ticket: ${ticketError.message}`);
-  }
+  await uploadAttachments(
+    ticketId,
+    commentId,
+    options.attachments || [],
+    Boolean(options.isInternal),
+  );
+  return commentId;
+}
 
-  const uploadedPaths = [];
-  try {
-    for (const file of attachments) {
-      const objectPath = createObjectPath(ticketId, file.name);
-      const { error: uploadError } = await supabase.storage
-        .from(TICKET_BUCKET)
-        .upload(objectPath, file, {
-          cacheControl: "3600",
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
-        });
+export async function updateTicket(ticketId, changes = {}) {
+  const { error } = await supabase.rpc("support_update_ticket", {
+    p_ticket_id: ticketId,
+    p_status: changes.status || null,
+    p_assign_to_self: Boolean(changes.assignToSelf),
+  });
+  assertNoError(error);
+}
 
-      if (uploadError) {
-        throw new Error(`No se pudo subir ${file.name}: ${uploadError.message}`);
-      }
-      uploadedPaths.push(objectPath);
+export async function markTicketRead(ticketId) {
+  const { error } = await supabase.rpc("support_mark_read", {
+    p_ticket_id: ticketId,
+  });
+  assertNoError(error);
+}
 
-      const { error: attachmentError } = await supabase
-        .from("it_ticket_attachments")
-        .insert({
-          ticket_id: ticketId,
-          bucket_name: TICKET_BUCKET,
-          folder_name: TICKET_FOLDER,
-          object_path: objectPath,
-          file_name: file.name,
-          mime_type: file.type || null,
-          file_size: file.size,
-          uploaded_by: requesterId,
-          is_internal: false,
-          is_valid: true,
-        });
+export function subscribeToSupport(callback, ticketId = null) {
+  const suffix = ticketId || "all";
+  const channel = supabase.channel(`it-support-${suffix}-${crypto.randomUUID()}`);
 
-      if (attachmentError) {
-        throw new Error(
-          `El archivo ${file.name} se subió, pero no se pudo registrar: ${attachmentError.message}`,
-        );
-      }
-    }
+  channel.on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "it_ticket_comments",
+      ...(ticketId ? { filter: `ticket_id=eq.${ticketId}` } : {}),
+    },
+    callback,
+  );
 
-    const { data: completedTicket, error: fetchError } = await supabase
-      .from("it_tickets")
-      .select(TICKET_SELECT)
-      .eq("ticket_id", ticketId)
-      .single();
+  channel.on(
+    "postgres_changes",
+    {
+      event: "UPDATE",
+      schema: "public",
+      table: "it_tickets",
+      ...(ticketId ? { filter: `ticket_id=eq.${ticketId}` } : {}),
+    },
+    callback,
+  );
 
-    if (fetchError) throw fetchError;
-    return mapTicket(completedTicket);
-  } catch (error) {
-    await rollbackTicket(ticketId, uploadedPaths);
-    throw error;
-  }
+  channel.subscribe();
+  return () => supabase.removeChannel(channel);
 }

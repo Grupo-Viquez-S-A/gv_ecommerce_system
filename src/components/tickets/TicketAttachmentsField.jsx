@@ -1,7 +1,12 @@
+import { useRef } from "react";
 import { RiDeleteBinLine, RiFileLine, RiImageLine, RiUploadCloud2Line } from "react-icons/ri";
 
-const MAX_FILES = 5;
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+import {
+  TICKET_ACCEPTED_FILE_TYPES,
+  TICKET_MAX_FILES,
+  TICKET_MAX_FILE_SIZE,
+} from "../../constants/tickets.constants.js";
+
 const ALLOWED_EXTENSIONS = [
   ".png", ".jpg", ".jpeg", ".webp", ".pdf", ".doc", ".docx",
   ".xls", ".xlsx", ".csv", ".txt",
@@ -18,13 +23,15 @@ function isAllowedFile(file) {
 }
 
 export default function TicketAttachmentsField({ files, error, onChange, onError }) {
+  const inputRef = useRef(null);
+
   const handleSelection = (event) => {
     const selectedFiles = Array.from(event.target.files || []);
     event.target.value = "";
 
-    const oversizedFile = selectedFiles.find((file) => file.size > MAX_FILE_SIZE);
+    const oversizedFile = selectedFiles.find((file) => file.size > TICKET_MAX_FILE_SIZE);
     if (oversizedFile) {
-      onError(`El archivo ${oversizedFile.name} supera el límite de 10 MB.`);
+      onError(`El archivo ${oversizedFile.name} supera el límite de 50 MB.`);
       return;
     }
 
@@ -42,8 +49,8 @@ export default function TicketAttachmentsField({ files, error, onChange, onError
       if (!alreadySelected) uniqueFiles.push(file);
     });
 
-    if (uniqueFiles.length > MAX_FILES) {
-      onError(`Puedes adjuntar un máximo de ${MAX_FILES} archivos.`);
+    if (uniqueFiles.length > TICKET_MAX_FILES) {
+      onError(`Puedes adjuntar un máximo de ${TICKET_MAX_FILES} archivos.`);
       return;
     }
 
@@ -57,12 +64,23 @@ export default function TicketAttachmentsField({ files, error, onChange, onError
         Evidencia o archivos <span className="font-normal normal-case tracking-normal text-gray-500">(opcional)</span>
       </p>
 
-      <label className="mt-1.5 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[#465574] bg-[#0B1120]/55 px-4 py-5 text-center transition-colors hover:border-[#C9A227]/70 hover:bg-[#C9A227]/5">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className="mt-1.5 flex w-full cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[#465574] bg-[#0B1120]/55 px-4 py-5 text-center transition-colors hover:border-[#C9A227]/70 hover:bg-[#C9A227]/5"
+      >
         <RiUploadCloud2Line size={24} className="text-[#C9A227]" />
         <span className="mt-2 text-sm font-semibold text-gray-200">Seleccionar imágenes o documentos</span>
-        <span className="mt-1 text-[11px] text-gray-500">PNG, JPG, WEBP, PDF, Word, Excel, CSV o TXT · máximo 10 MB</span>
-        <input type="file" multiple accept=".png,.jpg,.jpeg,.webp,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt" onChange={handleSelection} className="sr-only" />
-      </label>
+        <span className="mt-1 text-[11px] text-gray-500">PNG, JPG, WEBP, PDF, Word, Excel, CSV o TXT · máximo 50 MB por archivo</span>
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={TICKET_ACCEPTED_FILE_TYPES}
+        onChange={handleSelection}
+        className="hidden"
+      />
 
       {error && <p role="alert" className="mt-2 text-xs text-red-300">{error}</p>}
 

@@ -9,18 +9,19 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-export default function TicketCard({ ticket }) {
+export default function TicketCard({ ticket, onOpen }) {
   const status = TICKET_STATUS[ticket.status] || TICKET_STATUS.new;
   const category = ticket.categoryName || TICKET_CATEGORIES.find((item) => item.value === ticket.category)?.label || "Otro";
   const priority = TICKET_PRIORITIES.find((item) => item.value === ticket.priority)?.label || "Media";
 
   return (
-    <article className="rounded-xl border border-[#2a3550] bg-[#141d2e] p-4 transition-colors hover:border-[#3a4868]">
+    <button type="button" onClick={() => onOpen?.(ticket)} className="w-full rounded-xl border border-[#2a3550] bg-[#141d2e] p-4 text-left transition-colors hover:border-[#C9A227]/60">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-xs font-bold text-[#C9A227]">{ticket.ticketNumber}</span>
             <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${status.className}`}>{status.label}</span>
+            {ticket.unreadCount > 0 && <span className="rounded-full bg-[#C9A227] px-2 py-0.5 text-[11px] font-bold text-[#0B1120]">{ticket.unreadCount} nuevo{ticket.unreadCount === 1 ? "" : "s"}</span>}
           </div>
           <h3 className="mt-2 break-words text-base font-semibold text-white">{ticket.title}</h3>
         </div>
@@ -42,6 +43,6 @@ export default function TicketCard({ ticket }) {
         )}
         <span className="sm:ml-auto">{formatDate(ticket.createdAt)}</span>
       </div>
-    </article>
+    </button>
   );
 }
