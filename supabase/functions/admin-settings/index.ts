@@ -9,16 +9,131 @@
 // isCallerAuthorized check below).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
-import { getConfiguredCorsHeaders, isOriginAllowed, isUuid, isValidEmail } from "../_shared/http.ts";
-import { ACCOUNT_MANAGEMENT_ROLE_CODES } from "../_shared/authorization.ts";
+
+const ACCOUNT_MANAGEMENT_ROLE_CODES = new Set([
+  "admin",
+  "administrador",
+  "super_admin",
+  "gerente",
+  "manager",
+  "encargado",
+  "presidente",
+  "president",
+]);
+
+function normalizeOrigin(value: string | undefined) {
+  const candidate = String(value || "").trim().replace(/\/+$/, "");
+  if (!candidate) return "";
+
+  try {
+    return new URL(candidate).origin;
+  } catch {
+    return "";
+  }
+}
+
+function getConfiguredCorsHeaders() {
+  const configuredOrigin = normalizeOrigin(
+    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
+      Deno.env.get("SITE_URL") ||
+      Deno.env.get("APP_URL"),
+  );
+
+  return {
+    ...(configuredOrigin ? { "Access-Control-Allow-Origin": configuredOrigin } : {}),
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+  };
+}
+
+function isOriginAllowed(request: Request) {
+  const requestOrigin = normalizeOrigin(request.headers.get("Origin") || undefined);
+  if (!requestOrigin) return true;
+
+  const configuredOrigin = normalizeOrigin(
+    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
+      Deno.env.get("SITE_URL") ||
+      Deno.env.get("APP_URL"),
+  );
+
+  return Boolean(configuredOrigin && requestOrigin === configuredOrigin);
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function isValidEmail(value: string) {
+  return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
 
 const corsHeaders = getConfiguredCorsHeaders();
+const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function getErrorDetails(error: unknown) {
+  if (!error) return null;
+
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+
+  if (typeof error === "object") {
+    try {
+      return JSON.parse(JSON.stringify(error));
+    } catch {
+      return String(error);
+    }
+  }
+
+  return String(error);
+}
+
+function getErrorMessage(error: unknown, fallbackMessage: string) {
+  if (error instanceof Error && error.message && error.message !== "{}") {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const maybeError = error as {
+      message?: unknown;
+      error_description?: unknown;
+      error?: unknown;
+      details?: unknown;
+      hint?: unknown;
+      code?: unknown;
+      status?: unknown;
+    };
+
+    const message = [
+      maybeError.message,
+      maybeError.error_description,
+      maybeError.error,
+      maybeError.details,
+      maybeError.hint,
+      maybeError.code,
+      maybeError.status ? `Status ${maybeError.status}` : null,
+    ].find((value) => typeof value === "string" && value.trim() && value.trim() !== "{}");
+
+    if (message) return String(message);
+  }
+
+  return fallbackMessage;
 }
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -266,6 +381,19 @@ async function handleCreateUser(payload: any) {
       });
 
     if (membershipError) throw membershipError;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const { error: applicationError } = await adminClient
+      .from("user_applications")
+      .insert({
+        user_id: userId,
+        application_id: ECOMMERCE_APPLICATION_ID,
+        is_active: true,
+        start_date: today,
+        end_date: null,
+      });
+
+    if (applicationError) throw applicationError;
 
     await replaceProfileModules(userId, moduleIds);
   } catch (error) {
@@ -524,7 +652,11 @@ Deno.serve(async (request: Request) => {
 
     return jsonResponse({ ok: true, ...data });
   } catch (error) {
-    console.error("admin-settings error:", error);
-    return jsonResponse({ ok: false, error: "No fue posible completar la operación administrativa." }, 500);
+    console.error("admin-settings error:", getErrorDetails(error));
+    const message = getErrorMessage(
+      error,
+      "No fue posible completar la operacion administrativa.",
+    );
+    return jsonResponse({ ok: false, error: message, message }, 500);
   }
 });

@@ -1,14 +1,338 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getSmtpConfig, isSmtpConfigured, sendSmtpMail } from "../_shared/mailer.ts";
-import { authorizeCompanyAction, COMMERCIAL_OPERATION_ROLE_CODES } from "../_shared/authorization.ts";
-import { escapeHtml, getConfiguredCorsHeaders, isOriginAllowed, isUuid } from "../_shared/http.ts";
+
+const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
+const COMMERCIAL_OPERATION_ROLE_CODES = new Set([
+  "admin",
+  "administrador",
+  "super_admin",
+  "gerente",
+  "manager",
+  "encargado",
+  "presidente",
+  "president",
+  "sales_agent",
+]);
 
 declare const Deno: {
   env: {
     get(key: string): string | undefined;
   };
+  connectTls(options: { hostname: string; port: number }): Promise<{
+    read(buffer: Uint8Array): Promise<number | null>;
+    write(buffer: Uint8Array): Promise<number>;
+    close(): void;
+  }>;
   serve(handler: (request: Request) => Response | Promise<Response>): void;
 };
+
+function normalizeOrigin(value: string | undefined) {
+  const candidate = String(value || "").trim().replace(/\/+$/, "");
+  if (!candidate) return "";
+
+  try {
+    return new URL(candidate).origin;
+  } catch {
+    return "";
+  }
+}
+
+function getConfiguredCorsHeaders() {
+  const configuredOrigin = normalizeOrigin(
+    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
+      Deno.env.get("SITE_URL") ||
+      Deno.env.get("APP_URL"),
+  );
+
+  return {
+    ...(configuredOrigin ? { "Access-Control-Allow-Origin": configuredOrigin } : {}),
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+  };
+}
+
+function isOriginAllowed(request: Request) {
+  const requestOrigin = normalizeOrigin(request.headers.get("Origin") || undefined);
+  if (!requestOrigin) return true;
+
+  const configuredOrigin = normalizeOrigin(
+    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
+      Deno.env.get("SITE_URL") ||
+      Deno.env.get("APP_URL"),
+  );
+
+  return Boolean(configuredOrigin && requestOrigin === configuredOrigin);
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function normalizeRoleCode(value: unknown) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getTodayCostaRica() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Costa_Rica",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function isActiveRecord(record: any, today: string) {
+  return Boolean(
+    record &&
+      record.is_active !== false &&
+      (!record.start_date || record.start_date <= today) &&
+      (!record.end_date || record.end_date >= today),
+  );
+}
+
+async function authorizeCompanyAction({
+  supabaseAdmin,
+  userId,
+  companyId,
+  allowedRoleCodes,
+}: {
+  supabaseAdmin: any;
+  userId: string;
+  companyId: string;
+  allowedRoleCodes: Set<string>;
+}) {
+  const today = getTodayCostaRica();
+  const { data: applications, error: applicationError } = await supabaseAdmin
+    .from("user_applications")
+    .select("is_active, start_date, end_date")
+    .eq("user_id", userId)
+    .eq("application_id", ECOMMERCE_APPLICATION_ID);
+
+  if (applicationError) {
+    return { authorized: false, status: 500, message: "No fue posible validar el acceso a la aplicacion.", details: applicationError };
+  }
+  if (!(applications || []).some((record: any) => isActiveRecord(record, today))) {
+    return { authorized: false, status: 403, message: "Tu usuario no tiene acceso activo a esta aplicacion." };
+  }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .select("is_active")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (profileError) {
+    return { authorized: false, status: 500, message: "No fue posible validar el perfil del usuario.", details: profileError };
+  }
+  if (!profile || profile.is_active === false) {
+    return { authorized: false, status: 403, message: "Tu perfil de usuario no esta activo." };
+  }
+
+  const { data: memberships, error: membershipError } = await supabaseAdmin
+    .from("user_memberships")
+    .select("company_id, role_id, is_active, start_date, end_date")
+    .eq("user_id", userId)
+    .eq("company_id", companyId);
+
+  if (membershipError) {
+    return { authorized: false, status: 500, message: "No fue posible validar la membresia del usuario.", details: membershipError };
+  }
+
+  const roleIds = [...new Set((memberships || [])
+    .filter((record: any) => isActiveRecord(record, today))
+    .map((record: any) => record.role_id)
+    .filter(Boolean))];
+
+  if (roleIds.length === 0) {
+    return { authorized: false, status: 403, message: "No tienes una membresia activa para la empresa solicitada." };
+  }
+
+  const { data: roles, error: rolesError } = await supabaseAdmin
+    .from("roles")
+    .select("role_code, role_name")
+    .in("role_id", roleIds);
+
+  if (rolesError) {
+    return { authorized: false, status: 500, message: "No fue posible validar el rol del usuario.", details: rolesError };
+  }
+
+  const authorizedRole = (roles || []).find((role: any) =>
+    allowedRoleCodes.has(normalizeRoleCode(role.role_code)) ||
+    allowedRoleCodes.has(normalizeRoleCode(role.role_name)));
+
+  if (!authorizedRole) {
+    return { authorized: false, status: 403, message: "Tu rol no permite realizar esta operacion." };
+  }
+
+  return { authorized: true, roleCode: normalizeRoleCode(authorizedRole.role_code) || normalizeRoleCode(authorizedRole.role_name) };
+}
+
+function getSmtpConfig() {
+  const host = Deno.env.get("SMTP_HOST") || "";
+  const port = Number(Deno.env.get("SMTP_PORT") || "465");
+  const username = Deno.env.get("SMTP_USERNAME") || "";
+  const password = Deno.env.get("SMTP_PASSWORD") || "";
+  const fromEmail = Deno.env.get("SMTP_FROM_EMAIL") ||
+    Deno.env.get("SMTP_SENDER_EMAIL") || username;
+  const fromName = Deno.env.get("SMTP_FROM_NAME") ||
+    Deno.env.get("SMTP_SENDER_NAME") || "Grupo Viquez S.A";
+  return { host, port, username, password, fromEmail, fromName };
+}
+
+function isSmtpConfigured(config: ReturnType<typeof getSmtpConfig>) {
+  return Boolean(config.host && config.port && config.username &&
+    config.password && config.fromEmail);
+}
+
+function encodeBase64(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function encodeHeader(value: string) {
+  return `=?UTF-8?B?${encodeBase64(value)}?=`;
+}
+
+function assertMailbox(value: string, field: string) {
+  const normalized = value.trim();
+  if (
+    !normalized ||
+    normalized.length > 254 ||
+    /[\r\n<>]/.test(normalized) ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)
+  ) {
+    throw new Error(`${field} no es una direccion de correo valida.`);
+  }
+  return normalized;
+}
+
+function assertHeaderText(value: string, field: string) {
+  const normalized = value.trim();
+  if (!normalized || normalized.length > 200 || /[\r\n]/.test(normalized)) {
+    throw new Error(`${field} contiene caracteres no permitidos.`);
+  }
+  return normalized;
+}
+
+function normalizeSmtpBody(value: string) {
+  return value.replace(/\r?\n/g, "\r\n").split("\r\n")
+    .map((line) => line.startsWith(".") ? `.${line}` : line).join("\r\n");
+}
+
+async function sendSmtpCommand(
+  connection: {
+    read(buffer: Uint8Array): Promise<number | null>;
+    write(buffer: Uint8Array): Promise<number>;
+  },
+  bufferState: { value: string },
+  command: string | null,
+  expectedCodes: number[],
+) {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  if (command !== null) await connection.write(encoder.encode(`${command}\r\n`));
+
+  while (true) {
+    const match = bufferState.value.match(/(?:^|\r\n)(\d{3}) [^\r\n]*(?:\r\n|$)/);
+    if (match) {
+      const responseEnd = match.index
+        ? match.index + match[0].length
+        : match[0].length;
+      const response = bufferState.value.slice(0, responseEnd).trim();
+      bufferState.value = bufferState.value.slice(responseEnd);
+      const statusCode = Number(match[1]);
+      if (!expectedCodes.includes(statusCode)) {
+        throw new Error(`SMTP respondio ${statusCode}: ${response}`);
+      }
+      return response;
+    }
+
+    const chunk = new Uint8Array(4096);
+    const bytesRead = await connection.read(chunk);
+    if (bytesRead === null) {
+      throw new Error("La conexion SMTP se cerro inesperadamente.");
+    }
+    bufferState.value += decoder.decode(chunk.subarray(0, bytesRead));
+  }
+}
+
+async function sendSmtpMail({
+  host, port, username, password, fromEmail, fromName, to, subject, text, html,
+}: {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  fromEmail: string;
+  fromName: string;
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}) {
+  if (port !== 465) {
+    throw new Error("Esta funcion SMTP usa TLS directo. Configura SMTP_PORT=465.");
+  }
+
+  const safeFromEmail = assertMailbox(fromEmail, "El remitente");
+  const safeTo = assertMailbox(to, "El destinatario");
+  const safeFromName = assertHeaderText(fromName, "El nombre del remitente");
+  const safeSubject = assertHeaderText(subject, "El asunto");
+  const connection = await Deno.connectTls({ hostname: host, port });
+  const bufferState = { value: "" };
+  const boundary = `gv-mail-${crypto.randomUUID()}`;
+  const message = [
+    `From: ${encodeHeader(safeFromName)} <${safeFromEmail}>`,
+    `To: ${safeTo}`,
+    `Subject: ${encodeHeader(safeSubject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    text,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    html,
+    "",
+    `--${boundary}--`,
+  ].join("\r\n");
+
+  try {
+    await sendSmtpCommand(connection, bufferState, null, [220]);
+    await sendSmtpCommand(connection, bufferState, `EHLO ${host}`, [250]);
+    await sendSmtpCommand(connection, bufferState, "AUTH LOGIN", [334]);
+    await sendSmtpCommand(connection, bufferState, encodeBase64(username), [334]);
+    await sendSmtpCommand(connection, bufferState, encodeBase64(password), [235]);
+    await sendSmtpCommand(connection, bufferState, `MAIL FROM:<${safeFromEmail}>`, [250]);
+    await sendSmtpCommand(connection, bufferState, `RCPT TO:<${safeTo}>`, [250, 251]);
+    await sendSmtpCommand(connection, bufferState, "DATA", [354]);
+    await sendSmtpCommand(connection, bufferState, `${normalizeSmtpBody(message)}\r\n.`, [250]);
+    await sendSmtpCommand(connection, bufferState, "QUIT", [221]);
+  } finally {
+    connection.close();
+  }
+}
 
 const corsHeaders = getConfiguredCorsHeaders();
 

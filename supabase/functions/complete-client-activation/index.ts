@@ -1,5 +1,47 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getConfiguredCorsHeaders, isOriginAllowed } from "../_shared/http.ts";
+
+function normalizeOrigin(value: string | undefined) {
+  const candidate = String(value || "").trim().replace(/\/+$/, "");
+  if (!candidate) return "";
+
+  try {
+    return new URL(candidate).origin;
+  } catch {
+    return "";
+  }
+}
+
+function getConfiguredCorsHeaders() {
+  const configuredOrigin = normalizeOrigin(
+    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
+      Deno.env.get("SITE_URL") ||
+      Deno.env.get("APP_URL"),
+  );
+
+  return {
+    ...(configuredOrigin ? { "Access-Control-Allow-Origin": configuredOrigin } : {}),
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
+    "X-Content-Type-Options": "nosniff",
+    "Cache-Control": "no-store",
+  };
+}
+
+function isOriginAllowed(request: Request) {
+  const requestOrigin = normalizeOrigin(request.headers.get("Origin") || undefined);
+  if (!requestOrigin) return true;
+
+  const configuredOrigin = normalizeOrigin(
+    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
+      Deno.env.get("SITE_URL") ||
+      Deno.env.get("APP_URL"),
+  );
+
+  return Boolean(configuredOrigin && requestOrigin === configuredOrigin);
+}
 
 const corsHeaders = getConfiguredCorsHeaders();
 
@@ -216,6 +258,11 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     console.error("complete-client-activation error:", error);
+    const message = getErrorMessage(error);
+
+    if (message) {
+      return jsonResponse({ ok: false, error: message }, 500);
+    }
 
     return jsonResponse(
       {
