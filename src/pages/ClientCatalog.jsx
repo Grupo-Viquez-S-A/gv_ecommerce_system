@@ -680,7 +680,7 @@ export default function ClientCatalog() {
             <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#29466F] bg-[#102441]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold text-white">
-                  Catálogo actualizado desde Supabase
+                  Catálogo actualizado
                 </p>
 
                 <p className="mt-1 text-xs text-slate-400">

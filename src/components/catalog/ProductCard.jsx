@@ -9,11 +9,15 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
 import { formatCurrency } from "../../utils/formatCurrency.js";
+import {
+  getOptimizedSupabaseImageUrl,
+  isChromiumLikeBrowser,
+} from "../../utils/supabaseImageUrl.js";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -262,7 +266,21 @@ export default function ProductCard({
   const [hasSublimation, setHasSublimation] = useState(false);
   const [hasEmbroidery, setHasEmbroidery] = useState(false);
   const [showSizePicker, setShowSizePicker] = useState(false);
-  const productImage = getProductImage(product);
+  const originalProductImage = getProductImage(product);
+  const optimizedProductImage = useMemo(
+    () =>
+      getOptimizedSupabaseImageUrl(originalProductImage, {
+        width: 900,
+        height: 675,
+        quality: 82,
+      }),
+    [originalProductImage],
+  );
+  const [productImage, setProductImage] = useState(optimizedProductImage);
+
+  useEffect(() => {
+    setProductImage(optimizedProductImage);
+  }, [optimizedProductImage]);
 
   const isTextileProduct =
     product?.catalog_type === "textile_products";
@@ -355,31 +373,37 @@ export default function ProductCard({
     <>
       <article
         className="
-          group relative flex h-full flex-col overflow-hidden rounded-2xl border
+          catalog-product-card group relative flex h-full flex-col overflow-hidden rounded-2xl border
           border-[#29466F] bg-[#102441]
           shadow-[0_12px_30px_rgba(0,0,0,0.14)]
           transition duration-200
-          hover:-translate-y-1 hover:border-[#4B6B96]
+          hover:border-[#4B6B96]
           hover:shadow-[0_16px_36px_rgba(0,0,0,0.24)]
         "
       >
         <button
           type="button"
           onClick={handleOpenProductDetails}
-          className="absolute inset-0 z-0 cursor-pointer"
+          className="catalog-product-media relative z-10 block aspect-[4/3] w-full overflow-hidden bg-[#091A31] text-left"
           aria-label={`Ver información completa de ${productName}`}
-        />
-
-        <div className="relative z-10 pointer-events-none aspect-[4/3] overflow-hidden bg-[#091A31]">
+        >
           {productImage ? (
             <img
               src={productImage}
               alt={productName}
-              className="
-                h-full w-full object-cover transition duration-500
-                group-hover:scale-105
-              "
+              className="h-full w-full object-cover"
               loading="lazy"
+              decoding="async"
+              onError={() => {
+                if (isChromiumLikeBrowser()) {
+                  setProductImage(null);
+                  return;
+                }
+
+                if (productImage !== originalProductImage) {
+                  setProductImage(originalProductImage);
+                }
+              }}
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-slate-500">
@@ -399,7 +423,6 @@ export default function ProductCard({
                 max-w-full truncate rounded-lg border border-white/10
                 bg-[#071426]/90 px-2.5 py-1 text-[10px] font-bold
                 uppercase tracking-[0.12em] text-[#D7A91D]
-                backdrop-blur-sm
               "
             >
               {categoryName}
@@ -410,25 +433,29 @@ export default function ProductCard({
                 className="
                   max-w-full truncate rounded-lg border border-white/10
                   bg-[#071426]/90 px-2.5 py-1 text-[10px] font-semibold
-                  text-[#C9D8EC] backdrop-blur-sm
+                  text-[#C9D8EC]
                 "
               >
                 {productTypeName}
               </span>
             )}
           </div>
-        </div>
+        </button>
 
-        <div className="relative z-10 pointer-events-none flex flex-1 flex-col p-5">
+        <div className="relative z-10 flex flex-1 flex-col bg-[#102441] p-5">
           <div className="mb-3">
             <div className="mb-2 flex items-center gap-1.5 text-xs text-[#86A4CE]">
               <Tag className="h-3.5 w-3.5 text-[#D7A91D]" />
               <span className="truncate">{productSku}</span>
             </div>
 
-            <h3 className="text-lg font-extrabold leading-snug text-white">
+            <button
+              type="button"
+              onClick={handleOpenProductDetails}
+              className="block w-full text-left text-lg font-extrabold leading-snug text-white transition hover:text-[#E9BC2D]"
+            >
               {productName}
-            </h3>
+            </button>
 
             <p className="mt-2 h-10 overflow-hidden text-sm leading-5 text-slate-400">
               {productDescription}

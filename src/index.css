@@ -68,3 +68,15 @@ html, body {
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
+
+.catalog-product-card,
+.catalog-product-media {
+  contain: paint;
+  isolation: isolate;
+}
+
+.catalog-product-media img {
+  display: block;
+  max-width: 100%;
+  background-color: #091A31;
+}

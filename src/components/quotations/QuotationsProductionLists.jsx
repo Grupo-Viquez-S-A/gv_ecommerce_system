@@ -1,7 +1,57 @@
-import { RiArrowDownSFill, RiArrowLeftSLine, RiArrowRightSFill, RiDownloadFill, RiExportFill, RiEyeFill, RiMailSendFill, RiMoreFill, RiSearchLine } from "react-icons/ri";
+import { RiAddCircleLine, RiArrowDownSFill, RiArrowLeftSLine, RiArrowRightSFill, RiDownloadFill, RiExportFill, RiEyeFill, RiLoader4Line, RiMailSendFill, RiMoreFill, RiSearchLine } from "react-icons/ri";
 import { QuotationPaginationButton as PagBtn, QuotationStatusBadge as StatusBadge, formatQuotationCurrency as formatCurrency, formatQuotationDate as formatDate } from "./QuotationsViewHelpers.jsx";
 
-export default function QuotationsProductionLists({ activeProductionTab, setActiveProductionTab, filtered, filteredProductionOrders, quotations, productionOrders, loading, ordersLoading, openQuotationModal, setSelectedProductionOrder, clearFilters }) {
+export default function QuotationsProductionLists({ activeProductionTab, setActiveProductionTab, filtered, filteredProductionOrders, quotations, productionOrders, loading, ordersLoading, openQuotationModal, setSelectedProductionOrder, onCreateProductionOrder, creatingProductionOrderId, clearFilters }) {
+  const productionOrdersByQuotationId = new Map(
+    productionOrders
+      .filter((order) => order.quotationId)
+      .map((order) => [order.quotationId, order]),
+  );
+
+  const isApprovedQuotation = (quotation) => {
+    const status = String(quotation?.dbStatus || quotation?.status || "").toLowerCase();
+
+    return status === "approved" || status === "aprobada";
+  };
+
+  const getQuotationId = (quotation) => quotation?.quotationId || quotation?.id;
+
+  const renderProductionOrderButton = (quotation, compact = false) => {
+    if (!isApprovedQuotation(quotation)) return null;
+
+    const quotationId = getQuotationId(quotation);
+    const existingOrder = productionOrdersByQuotationId.get(quotationId);
+
+    if (existingOrder) {
+      return (
+        <span
+          className="inline-flex h-7 items-center rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 text-xs font-semibold text-emerald-300"
+          title={existingOrder.code}
+        >
+          OP creada
+        </span>
+      );
+    }
+
+    const isCreating = creatingProductionOrderId === quotationId;
+
+    return (
+      <button
+        type="button"
+        disabled={isCreating}
+        onClick={(event) => {
+          event.stopPropagation();
+          onCreateProductionOrder?.(quotation);
+        }}
+        className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-[#C9A227]/35 bg-[#C9A227]/10 px-2 text-xs font-semibold text-[#F4C542] transition-colors hover:bg-[#C9A227]/20 disabled:cursor-wait disabled:opacity-70 ${compact ? "w-full" : ""}`}
+        title="Crear orden de produccion"
+      >
+        {isCreating ? <RiLoader4Line size={13} className="animate-spin" /> : <RiAddCircleLine size={13} />}
+        Crear orden de producción
+      </button>
+    );
+  };
+
   return <>
         {/* Listados de producción */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-6">
@@ -86,7 +136,8 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-0.5">
+                        <div className="flex items-center justify-end gap-1">
+                          {renderProductionOrderButton(quotation)}
                           <button
                             type="button"
                             onClick={(event) => {
@@ -117,10 +168,17 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
               {!loading && filtered.length > 0 && (
                 <div className="divide-y divide-[#2a3550] lg:hidden">
                   {filtered.map((quotation) => (
-                    <button
+                    <div
                       key={quotation.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => openQuotationModal(quotation)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          openQuotationModal(quotation);
+                        }
+                      }}
                       className="block w-full p-4 text-left transition-colors hover:bg-[#1c2538]/60"
                     >
                       <div className="flex items-start justify-between gap-3">
@@ -138,7 +196,10 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                         <StatusBadge status={quotation.status} />
                         <span className="truncate text-xs text-gray-400">{quotation.agent}</span>
                       </div>
-                    </button>
+                      <div className="mt-3">
+                        {renderProductionOrderButton(quotation, true)}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

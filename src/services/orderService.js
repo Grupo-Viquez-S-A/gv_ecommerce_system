@@ -118,6 +118,21 @@ function getInitials(fullName) {
     .toUpperCase();
 }
 
+export async function createSalesProductionOrderFromQuotation(quotationId) {
+  if (!quotationId) {
+    throw new Error("No se encontro la cotizacion para crear la orden de produccion.");
+  }
+
+  const productionOrder = throwIfError(
+    await supabase.rpc("create_production_order_from_quotation", {
+      p_quotation_id: quotationId,
+    }),
+    "No fue posible crear la orden de produccion",
+  );
+
+  return Array.isArray(productionOrder) ? productionOrder[0] : productionOrder;
+}
+
 /**
  * Loads real production orders that are pending payment or with an
  * advance payment made ("Pendientes de pago" o "Pago adelantado"),

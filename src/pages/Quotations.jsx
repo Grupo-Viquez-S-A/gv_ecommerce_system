@@ -5,7 +5,11 @@ import { hasSystemAccess } from "../utils/roles.js";
 import {
   getQuotations,
 } from "../services/quotationService.js";
-import { getSalesOrderDetail, getSalesOrders } from "../services/orderService.js";
+import {
+  createSalesProductionOrderFromQuotation,
+  getSalesOrderDetail,
+  getSalesOrders,
+} from "../services/orderService.js";
 import {
   QUOTATION_STATUSES,
   normalizeQuotationSearch as normalizeSearchText,
@@ -38,6 +42,7 @@ export default function Quotations() {
   const [productionOrderDetail, setProductionOrderDetail] = useState(null);
   const [productionOrderDetailLoading, setProductionOrderDetailLoading] = useState(false);
   const [productionOrderDetailError, setProductionOrderDetailError] = useState("");
+  const [creatingProductionOrderId, setCreatingProductionOrderId] = useState(null);
   const { user } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
@@ -358,6 +363,36 @@ export default function Quotations() {
     setPaymentSuccess("");
   };
 
+  const handleCreateProductionOrder = async (quotation) => {
+    const quotationId = quotation?.quotationId || quotation?.id;
+
+    if (!quotationId) {
+      window.alert("No se encontro la cotizacion para crear la orden de produccion.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Deseas crear una orden de produccion para la cotizacion ${quotation.number}?`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setCreatingProductionOrderId(quotationId);
+      await createSalesProductionOrderFromQuotation(quotationId);
+      await Promise.all([loadQuotations(), loadProductionOrders()]);
+      setActiveProductionTab("orders");
+      window.alert("Orden de produccion creada correctamente.");
+    } catch (createError) {
+      console.error("Production order creation error:", createError);
+      window.alert(
+        createError?.message || "No fue posible crear la orden de produccion.",
+      );
+    } finally {
+      setCreatingProductionOrderId(null);
+    }
+  };
+
 
   const clearFilters = () => {
     setSearch("");
@@ -419,6 +454,8 @@ export default function Quotations() {
           ordersLoading={ordersLoading}
           openQuotationModal={openQuotationModal}
           setSelectedProductionOrder={setSelectedProductionOrder}
+          onCreateProductionOrder={handleCreateProductionOrder}
+          creatingProductionOrderId={creatingProductionOrderId}
           clearFilters={clearFilters}
         />
 
