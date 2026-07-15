@@ -348,8 +348,14 @@ function normalizeQuotation({
 
 function normalizeQuotationPayload({ client = {}, items = [], status }) {
   const companyId = getText(client.companyId);
+  const identificationType =
+    client.identificationType === "personal" ? "personal" : "legal";
   const businessName = getText(client.businessName);
-  const legalName = getText(client.legalName) || businessName;
+  const legalName = getText(client.legalName);
+  const ownerName = getText(client.ownerName);
+  const legalId = getText(client.legalId);
+  const activityCode = getText(client.activityCode);
+  const businessEmail = getText(client.businessEmail);
   const branchAddress = getText(client.branchAddress);
   const representativeName = getText(client.representativeName);
 
@@ -361,8 +367,32 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
     throw new Error("Ingresa el nombre comercial del cliente.");
   }
 
-  if (!legalName) {
+  if (!legalId) {
+    throw new Error(
+      identificationType === "personal"
+        ? "Ingresa el número de identificación del dueño."
+        : "Ingresa la cédula jurídica del cliente.",
+    );
+  }
+
+  if (identificationType === "legal" && !legalName) {
     throw new Error("Ingresa la razon social del cliente.");
+  }
+
+  if (identificationType === "personal" && !ownerName) {
+    throw new Error("Ingresa el nombre y apellidos del dueño.");
+  }
+
+  if (!activityCode) {
+    throw new Error("Ingresa el código de actividad del cliente.");
+  }
+
+  if (!businessEmail) {
+    throw new Error("Ingresa el correo electrónico principal del cliente.");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail)) {
+    throw new Error("Ingresa un correo electrónico principal válido.");
   }
 
   if (!branchAddress) {
@@ -384,12 +414,14 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       representativeId: getText(client.representativeId),
 
       companyId,
-      legalId: getText(client.legalId),
-      legalName,
+      identificationType,
+      legalId,
+      legalName: identificationType === "legal" ? legalName : "",
+      ownerName: identificationType === "personal" ? ownerName : "",
       businessName,
-      activityCode: getText(client.activityCode),
+      activityCode,
 
-      businessEmail: getText(client.businessEmail),
+      businessEmail,
       businessPhone: getText(client.businessPhone),
 
       branchProvince: getText(client.branchProvince),
@@ -635,11 +667,11 @@ export async function getQuotationClientByLegalId(legalId) {
     await supabase
       .from("businesses")
       .select(
-        "business_id, company_id, legal_id, legal_name, business_name, activity_code, is_active",
+        "business_id, company_id, identification_type, legal_id, legal_name, owner_name, business_name, activity_code, is_active",
       )
       .eq("legal_id", normalizedLegalId)
       .maybeSingle(),
-    "No fue posible buscar el cliente por cedula juridica",
+    "No fue posible buscar el cliente por identificación",
   );
 
   if (!business) {
@@ -757,8 +789,11 @@ export async function getQuotationClientByLegalId(legalId) {
     representativeId: activeRepresentative?.representative_id || "",
 
     companyId: business.company_id || "",
+    identificationType:
+      business.identification_type === "personal" ? "personal" : "legal",
     legalId: business.legal_id || normalizedLegalId,
     legalName: business.legal_name || "",
+    ownerName: business.owner_name || "",
     businessName: business.business_name || business.legal_name || "",
     activityCode: business.activity_code || "",
 
@@ -1033,8 +1068,10 @@ export async function createBusinessQuotation(payload) {
         .from("businesses")
         .insert({
           company_id: client.companyId,
+          identification_type: client.identificationType,
           legal_id: client.legalId,
           legal_name: client.legalName,
+          owner_name: client.ownerName,
           business_name: client.businessName,
           activity_code: client.activityCode,
           is_active: true,

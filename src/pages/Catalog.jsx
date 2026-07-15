@@ -16,6 +16,7 @@ import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
+import QuotationClientIdentityFields from "../components/catalog/QuotationClientIdentityFields.jsx";
 
 import {
   RiErrorWarningLine,
@@ -51,8 +52,10 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   branchId: "",
   representativeId: "",
   companyId: "",
+  identificationType: "legal",
   legalId: "",
   legalName: "",
+  ownerName: "",
   businessName: "",
   activityCode: "",
   businessEmail: "",
@@ -842,17 +845,20 @@ export default function Catalog() {
   const handleQuotationClientFormChange = (fieldName, value) => {
     setQuotationClientForm((currentForm) => ({
       ...currentForm,
-      ...(fieldName === "legalId"
+      ...(fieldName === "legalId" || fieldName === "identificationType"
         ? {
             businessId: "",
             branchId: "",
             representativeId: "",
           }
         : {}),
+      ...(fieldName === "identificationType"
+        ? { legalId: "", legalName: "", ownerName: "" }
+        : {}),
       [fieldName]: value,
     }));
 
-    if (fieldName === "legalId") {
+    if (fieldName === "legalId" || fieldName === "identificationType") {
       setClientLookupMessage("");
       setClientBranches([]);
       setShowNewBranchForm(false);
@@ -875,7 +881,7 @@ export default function Catalog() {
 
       if (!existingClient) {
         setClientLookupMessage(
-          "No se encontro un cliente registrado con esta cedula juridica.",
+          "No se encontró un cliente registrado con esta identificación.",
         );
         return;
       }
@@ -901,8 +907,7 @@ export default function Catalog() {
     } catch (lookupError) {
       console.error("Client lookup error:", lookupError);
       setClientLookupMessage(
-        lookupError?.message ||
-          "No fue posible verificar la cedula juridica.",
+        lookupError?.message || "No fue posible verificar la identificación.",
       );
     } finally {
       setClientLookupLoading(false);
@@ -1348,116 +1353,13 @@ export default function Catalog() {
                         </select>
                       </label>
 
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Cedula juridica
-                        </span>
-                        <input
-                          value={quotationClientForm.legalId}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "legalId",
-                              event.target.value,
-                            )
-                          }
-                          onBlur={handleLookupClientByLegalId}
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 3-101-000000"
-                        />
-                        {(clientLookupLoading || clientLookupMessage) && (
-                          <span className="mt-2 block text-xs text-[#9BB3D3]">
-                            {clientLookupLoading
-                              ? "Verificando cedula juridica..."
-                              : clientLookupMessage}
-                          </span>
-                        )}
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Codigo actividad
-                        </span>
-                        <input
-                          value={quotationClientForm.activityCode}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "activityCode",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Opcional"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Razon social
-                        </span>
-                        <input
-                          value={quotationClientForm.legalName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "legalName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. Cliente S.A."
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Nombre comercial
-                        </span>
-                        <input
-                          value={quotationClientForm.businessName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "businessName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. Tienda Central"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo empresa
-                        </span>
-                        <input
-                          type="email"
-                          value={quotationClientForm.businessEmail}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "businessEmail",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="facturacion@cliente.com"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Telefono empresa
-                        </span>
-                        <input
-                          value={quotationClientForm.businessPhone}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "businessPhone",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 2222-2222"
-                        />
-                      </label>
+                      <QuotationClientIdentityFields
+                        form={quotationClientForm}
+                        lookupLoading={clientLookupLoading}
+                        lookupMessage={clientLookupMessage}
+                        onChange={handleQuotationClientFormChange}
+                        onLookup={handleLookupClientByLegalId}
+                      />
 
                       <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
                         <p className="text-sm font-extrabold text-white">Sucursal</p>
@@ -1980,116 +1882,13 @@ export default function Catalog() {
                         </select>
                       </label>
 
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Cedula juridica
-                        </span>
-                        <input
-                          value={quotationClientForm.legalId}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "legalId",
-                              event.target.value,
-                            )
-                          }
-                          onBlur={handleLookupClientByLegalId}
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 3-101-000000"
-                        />
-                        {(clientLookupLoading || clientLookupMessage) && (
-                          <span className="mt-2 block text-xs text-[#9BB3D3]">
-                            {clientLookupLoading
-                              ? "Verificando cedula juridica..."
-                              : clientLookupMessage}
-                          </span>
-                        )}
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Codigo actividad
-                        </span>
-                        <input
-                          value={quotationClientForm.activityCode}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "activityCode",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Opcional"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Razon social
-                        </span>
-                        <input
-                          value={quotationClientForm.legalName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "legalName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. Cliente S.A."
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Nombre comercial
-                        </span>
-                        <input
-                          value={quotationClientForm.businessName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "businessName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. Tienda Central"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo empresa
-                        </span>
-                        <input
-                          type="email"
-                          value={quotationClientForm.businessEmail}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "businessEmail",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="facturacion@cliente.com"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Telefono empresa
-                        </span>
-                        <input
-                          value={quotationClientForm.businessPhone}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "businessPhone",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Ej. 2222-2222"
-                        />
-                      </label>
+                      <QuotationClientIdentityFields
+                        form={quotationClientForm}
+                        lookupLoading={clientLookupLoading}
+                        lookupMessage={clientLookupMessage}
+                        onChange={handleQuotationClientFormChange}
+                        onLookup={handleLookupClientByLegalId}
+                      />
 
                       <div className="md:col-span-2 border-t border-[#29466F] pt-4">
                         <p className="text-sm font-extrabold text-white">Sucursal</p>
