@@ -49,10 +49,6 @@ function getBoolean(value) {
   return value === true || value === "true";
 }
 
-function getTodayDate() {
-  return getTodayCRDateString();
-}
-
 function getDatePlusDays(days = QUOTATION_VALIDITY_DAYS) {
   return addDaysCRDateString(days);
 }
@@ -1043,9 +1039,11 @@ export async function createBusinessQuotation(payload) {
   let createdBranchId = null;
   let createdRepresentativeId = null;
 
-  const earlyDeliveryDate = client.earlyDelivery
-    ? client.earlyDeliveryDate || getTodayDate()
-    : null;
+  if (client.earlyDelivery && !client.earlyDeliveryDate) {
+    throw new Error("Selecciona la fecha solicitada para la entrega anticipada.");
+  }
+
+  const earlyDeliveryDate = client.earlyDelivery ? client.earlyDeliveryDate : null;
 
   const validUntil = client.validUntil || getDatePlusDays();
 
@@ -1111,6 +1109,23 @@ export async function createBusinessQuotation(payload) {
         },
         createdPhoneIds,
       );
+    } else {
+      throwIfError(
+        await supabase
+          .from("businesses")
+          .update({
+            company_id: client.companyId,
+            identification_type: client.identificationType,
+            legal_name: client.legalName,
+            owner_name: client.ownerName,
+            business_name: client.businessName,
+            activity_code: client.activityCode,
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("business_id", businessId),
+        "No fue posible actualizar la empresa del grupo del cliente",
+      );
     }
 
     if (!branchId) {
@@ -1170,6 +1185,7 @@ export async function createBusinessQuotation(payload) {
     const quotationResponse = await supabase
       .from("quotations")
       .insert({
+        company_id: client.companyId,
         business_id: businessId,
         branch_id: branchId,
         representative_id: representativeId,
@@ -1189,6 +1205,7 @@ export async function createBusinessQuotation(payload) {
       .select(
         `
         quotation_id,
+        company_id,
         quotation_number,
         early_delivery,
         early_delivery_date,

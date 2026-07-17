@@ -101,6 +101,24 @@ function getProductImage(product) {
   return getFileUrl(catalogImage);
 }
 
+function getProductPriceWithIva(product) {
+  const price = Number(product?.price) || 0;
+  const rawIvaAmount = product?.iva_amount;
+  const ivaAmount =
+    rawIvaAmount === null ||
+    rawIvaAmount === undefined ||
+    rawIvaAmount === ""
+      ? NaN
+      : Number(rawIvaAmount);
+
+  if (Number.isFinite(ivaAmount)) {
+    return price + ivaAmount;
+  }
+
+  const ivaPercentage = Number(product?.iva_percentage ?? product?.iva) || 0;
+  return price + price * (ivaPercentage / 100);
+}
+
 function getCategoryName(product) {
   return (
     product?.category?.category_name ||
@@ -464,10 +482,10 @@ export default function ProductCard({
             {isTextileProduct && canPurchase && (
               <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-3 py-2.5">
                 <span className="text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-                  Precio
+                  Precio IVAI
                 </span>
                 <span className="text-base font-extrabold text-[#E9BC2D]">
-                  {formatCurrency(product.price)}
+                  {formatCurrency(getProductPriceWithIva(product))}
                 </span>
               </div>
             )}

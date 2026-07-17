@@ -73,8 +73,18 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   representativeUserId: null,
   notes: "",
   earlyDelivery: false,
+  earlyDeliveryDate: "",
   methodId: "",
 };
+
+function getTodayInputDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 
 function getCartProductId(product) {
   return (
@@ -859,6 +869,9 @@ export default function Catalog() {
       ...(fieldName === "identificationType"
         ? { legalId: "", legalName: "", ownerName: "" }
         : {}),
+      ...(fieldName === "earlyDelivery" && !value
+        ? { earlyDeliveryDate: "" }
+        : {}),
       [fieldName]:
         fieldName === "legalId" && currentForm.identificationType === "legal"
           ? formatLegalId(value)
@@ -902,6 +915,7 @@ export default function Catalog() {
         ...clientFields,
         notes: currentForm.notes,
         earlyDelivery: currentForm.earlyDelivery,
+        earlyDeliveryDate: currentForm.earlyDeliveryDate,
       }));
 
       setClientBranches(branches);
@@ -970,17 +984,28 @@ export default function Catalog() {
         );
 
         if (existingClient) {
+          const selectedCompanyId = clientForm.companyId;
+
           clientForm = {
             ...clientForm,
             ...existingClient,
+            companyId: selectedCompanyId || existingClient.companyId,
             notes: clientForm.notes,
             earlyDelivery: clientForm.earlyDelivery,
+            earlyDeliveryDate: clientForm.earlyDeliveryDate,
           };
           setQuotationClientForm(clientForm);
           setClientLookupMessage(
             "Cliente existente importado al formulario de cotizacion.",
           );
         }
+      }
+
+      if (clientForm.earlyDelivery && !clientForm.earlyDeliveryDate) {
+        setQuotationError(
+          "Selecciona la fecha solicitada para la entrega anticipada.",
+        );
+        return;
       }
 
       const quotation = await createBusinessQuotation({
@@ -1603,28 +1628,50 @@ export default function Catalog() {
                         ) : null}
                       </label>
 
-                      <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={quotationClientForm.earlyDelivery}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "earlyDelivery",
-                              event.target.checked,
-                            )
-                          }
-                          className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
-                        />
+                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
+                        <label className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={quotationClientForm.earlyDelivery}
+                            onChange={(event) =>
+                              handleQuotationClientFormChange(
+                                "earlyDelivery",
+                                event.target.checked,
+                              )
+                            }
+                            className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
+                          />
 
-                        <span>
-                          <span className="block text-sm font-bold text-white">
-                            Entrega anticipada
+                          <span>
+                            <span className="block text-sm font-bold text-white">
+                              Entrega anticipada
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-400">
+                              Marca esta opcion si el cliente solicita una fecha de entrega especifica.
+                            </span>
                           </span>
-                          <span className="mt-1 block text-xs leading-5 text-slate-400">
-                            Si se marca, la cotizacion guardara como fecha de entrega anticipada la fecha de creacion.
-                          </span>
-                        </span>
-                      </label>
+                        </label>
+
+                        {quotationClientForm.earlyDelivery ? (
+                          <label className="mt-4 block">
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Fecha solicitada
+                            </span>
+                            <input
+                              type="date"
+                              value={quotationClientForm.earlyDeliveryDate}
+                              min={getTodayInputDate()}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "earlyDeliveryDate",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#091A31] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+                            />
+                          </label>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2130,28 +2177,50 @@ export default function Catalog() {
                         ) : null}
                       </label>
 
-                      <label className="md:col-span-2 flex items-start gap-3 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={quotationClientForm.earlyDelivery}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "earlyDelivery",
-                              event.target.checked,
-                            )
-                          }
-                          className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
-                        />
+                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
+                        <label className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={quotationClientForm.earlyDelivery}
+                            onChange={(event) =>
+                              handleQuotationClientFormChange(
+                                "earlyDelivery",
+                                event.target.checked,
+                              )
+                            }
+                            className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
+                          />
 
-                        <span>
-                          <span className="block text-sm font-bold text-white">
-                            Entrega anticipada
+                          <span>
+                            <span className="block text-sm font-bold text-white">
+                              Entrega anticipada
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-400">
+                              Marca esta opcion si el cliente solicita una fecha de entrega especifica.
+                            </span>
                           </span>
-                          <span className="mt-1 block text-xs leading-5 text-slate-400">
-                            Si se marca, la cotizacion guardara como fecha de entrega anticipada la fecha de creacion.
-                          </span>
-                        </span>
-                      </label>
+                        </label>
+
+                        {quotationClientForm.earlyDelivery ? (
+                          <label className="mt-4 block">
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Fecha solicitada
+                            </span>
+                            <input
+                              type="date"
+                              value={quotationClientForm.earlyDeliveryDate}
+                              min={getTodayInputDate()}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "earlyDeliveryDate",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#091A31] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+                            />
+                          </label>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>

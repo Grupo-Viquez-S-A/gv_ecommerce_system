@@ -3,7 +3,7 @@ import OrderDetailModal from "../clientPanel/OrderDetailModal.jsx";
 import { getPaymentMethods, reportPayment } from "../../services/quotationService.js";
 import { QuotationProductThumb as ProductThumb, QuotationStatusBadge as StatusBadge, formatQuotationCurrency as formatCurrency, formatQuotationDate as formatDate } from "./QuotationsViewHelpers.jsx";
 
-export default function QuotationsDetails({ drawerOpen, closeDrawer, drawerMode, viewQuote, selectedProductionOrder, closeProductionOrderModal, productionOrderDetail, productionOrderDetailLoading, productionOrderDetailError, showPaymentForm, setShowPaymentForm, paymentMethods, setPaymentMethods, paymentLoading, setPaymentLoading, paymentError, setPaymentError, paymentSuccess, setPaymentSuccess, selectedQuotation, closeQuotationModal }) {
+export default function QuotationsDetails({ drawerOpen, closeDrawer, drawerMode, viewQuote, selectedProductionOrder, closeProductionOrderModal, productionOrderDetail, productionOrderDetailLoading, productionOrderDetailError, showPaymentForm, setShowPaymentForm, paymentMethods, setPaymentMethods, paymentLoading, setPaymentLoading, paymentError, setPaymentError, paymentSuccess, setPaymentSuccess, productionOrderForm, onProductionOrderFieldChange, onSaveProductionOrder, productionOrderSaving, productionOrderSaveError, productionOrderSaveSuccess, selectedQuotation, closeQuotationModal }) {
   return <>
       {/* Fondo del drawer */}
       {drawerOpen && (
@@ -131,6 +131,13 @@ export default function QuotationsDetails({ drawerOpen, closeDrawer, drawerMode,
         paymentLoading={paymentLoading}
         paymentError={paymentError}
         paymentSuccess={paymentSuccess}
+        manageProduction
+        productionOrderForm={productionOrderForm}
+        onProductionOrderFieldChange={onProductionOrderFieldChange}
+        onSaveProductionOrder={onSaveProductionOrder}
+        productionOrderSaving={productionOrderSaving}
+        productionOrderSaveError={productionOrderSaveError}
+        productionOrderSaveSuccess={productionOrderSaveSuccess}
         onOpenPaymentForm={async () => {
           setPaymentError("");
           setPaymentSuccess("");

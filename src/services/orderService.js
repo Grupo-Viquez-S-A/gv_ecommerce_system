@@ -14,6 +14,14 @@ function getNumber(value, fallback = 0) {
   return Number.isFinite(numericValue) ? numericValue : fallback;
 }
 
+function normalizeDateInput(value) {
+  if (!value) {
+    return null;
+  }
+
+  return String(value).slice(0, 10);
+}
+
 function indexRowsByKey(rows = [], keyName) {
   return rows.reduce((indexedRows, row) => {
     const key = row?.[keyName];
@@ -170,7 +178,7 @@ export async function getSalesOrders({
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, total, created_at",
+        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, total, early_delivery, early_delivery_date, created_at",
       )
       .in("quotation_id", quotationIds),
     "No fue posible cargar las cotizaciones asociadas",
@@ -260,6 +268,8 @@ export async function getSalesOrders({
       agent: sellerName,
       avatar: getInitials(sellerName),
       total: getNumber(quotation?.total, 0),
+      earlyDelivery: quotation?.early_delivery === true,
+      earlyDeliveryDate: quotation?.early_delivery_date || null,
       balance: getNumber(order.balance, 0),
       paymentStatus,
       paymentStatusLabel: PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus,
@@ -305,7 +315,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, status, state, notes, is_active, created_at, updated_at, total, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, status, state, notes, is_active, created_at, updated_at, total, early_delivery, early_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", order.quotation_id)
       .eq("is_active", true)
@@ -410,6 +420,8 @@ export async function getSalesOrderDetail(productionOrderId) {
     productionStatus: order.production_order_status || "pendiente",
     paymentStatus: order.payment_status || "pendiente",
     paymentMethod: quotation.payment_methods?.method_name || "No definido",
+    earlyDelivery: quotation.early_delivery === true,
+    earlyDeliveryDate: quotation.early_delivery_date || null,
     committedDeliveryDate: order.committed_delivery_date,
     unexpectedDeliveryDate: order.unexpected_delivery_date,
     nextPaymentDate: order.next_payment_date,
@@ -460,13 +472,94 @@ export async function updateProductionOrderPenaltyPercentage(
 
   const rounded = Math.round(numericPercentage * 100) / 100;
 
-  throwIfError(
-    await supabase
-      .from("production_orders")
-      .update({ penalty_percentage: rounded })
-      .eq("production_order_id", productionOrderId),
-    "No fue posible actualizar el porcentaje de penalizacion",
-  );
+  await updateProductionOrderDetails(productionOrderId, {
+    penaltyPercentage: rounded,
+  });
 
   return rounded;
+}
+
+export async function updateProductionOrderDetails(productionOrderId, values = {}) {
+  if (!productionOrderId) {
+    throw new Error("Se requiere el identificador de la orden de produccion");
+  }
+
+  const updates = {};
+
+  if (Object.prototype.hasOwnProperty.call(values, "committedDeliveryDate")) {
+    updates.committed_delivery_date = normalizeDateInput(values.committedDeliveryDate);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(values, "unexpectedDeliveryDate")) {
+    updates.unexpected_delivery_date = normalizeDateInput(values.unexpectedDeliveryDate);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(values, "nextPaymentDate")) {
+    updates.next_payment_date = normalizeDateInput(values.nextPaymentDate);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(values, "productionStatus")) {
+    const status = String(values.productionStatus || "").trim().toLowerCase();
+
+    if (!status) {
+      throw new Error("Seleccione un estado de produccion valido.");
+    }
+
+    updates.production_order_status = status;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(values, "penaltyPercentage")) {
+    const numericPercentage = Number(values.penaltyPercentage);
+
+    if (!Number.isFinite(numericPercentage)) {
+      throw new Error("Ingrese un porcentaje de penalizacion valido.");
+    }
+
+    if (numericPercentage < 0) {
+      throw new Error("El porcentaje de penalizacion no puede ser negativo.");
+    }
+
+    if (numericPercentage > 100) {
+      throw new Error("El porcentaje de penalizacion no puede ser mayor a 100.");
+    }
+
+    updates.penalty_percentage = Math.round(numericPercentage * 100) / 100;
+  }
+
+  if (!Object.keys(updates).length) {
+    throw new Error("No hay cambios para guardar.");
+  }
+
+  updates.updated_at = new Date().toISOString();
+
+  const updatedOrder = throwIfError(
+    await supabase
+      .from("production_orders")
+      .update(updates)
+      .eq("production_order_id", productionOrderId)
+      .select(
+        "production_order_id, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, updated_at, penalty_percentage",
+      )
+      .maybeSingle(),
+    "No fue posible actualizar la orden de produccion",
+  );
+
+  const productionStatus = String(
+    updatedOrder.production_order_status || "pendiente",
+  ).toLowerCase();
+  const paymentStatus = String(updatedOrder.payment_status || "pendiente").toLowerCase();
+
+  return {
+    productionOrderId: updatedOrder.production_order_id,
+    committedDeliveryDate: updatedOrder.committed_delivery_date,
+    unexpectedDeliveryDate: updatedOrder.unexpected_delivery_date,
+    nextPaymentDate: updatedOrder.next_payment_date,
+    productionStatus,
+    productionStatusLabel:
+      PRODUCTION_STATUS_LABELS[productionStatus] || productionStatus,
+    paymentStatus,
+    paymentStatusLabel: PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus,
+    penaltyPercentage: getNumber(updatedOrder.penalty_percentage, 0),
+    updatedAt: updatedOrder.updated_at,
+  };
 }

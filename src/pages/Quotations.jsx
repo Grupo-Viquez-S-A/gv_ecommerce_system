@@ -9,6 +9,7 @@ import {
   createSalesProductionOrderFromQuotation,
   getSalesOrderDetail,
   getSalesOrders,
+  updateProductionOrderDetails,
 } from "../services/orderService.js";
 import {
   QUOTATION_STATUSES,
@@ -20,6 +21,10 @@ import QuotationsProductionLists from "../components/quotations/QuotationsProduc
 import QuotationsCharts from "../components/quotations/QuotationsCharts.jsx";
 import QuotationsDetails from "../components/quotations/QuotationsDetails.jsx";
 import OperationalMetrics from "../components/shared/OperationalMetrics.jsx";
+
+function toDateInputValue(value) {
+  return value ? String(value).slice(0, 10) : "";
+}
 
 /* --- PÁGINA PRINCIPAL --- */
 export default function Quotations() {
@@ -42,6 +47,16 @@ export default function Quotations() {
   const [productionOrderDetail, setProductionOrderDetail] = useState(null);
   const [productionOrderDetailLoading, setProductionOrderDetailLoading] = useState(false);
   const [productionOrderDetailError, setProductionOrderDetailError] = useState("");
+  const [productionOrderForm, setProductionOrderForm] = useState({
+    committedDeliveryDate: "",
+    unexpectedDeliveryDate: "",
+    nextPaymentDate: "",
+    productionStatus: "pendiente",
+    penaltyPercentage: "4",
+  });
+  const [productionOrderSaving, setProductionOrderSaving] = useState(false);
+  const [productionOrderSaveError, setProductionOrderSaveError] = useState("");
+  const [productionOrderSaveSuccess, setProductionOrderSaveSuccess] = useState("");
   const [creatingProductionOrderId, setCreatingProductionOrderId] = useState(null);
   const { user } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -132,6 +147,29 @@ export default function Quotations() {
       mounted = false;
     };
   }, [selectedProductionOrder]);
+
+  useEffect(() => {
+    if (!productionOrderDetail) {
+      setProductionOrderForm({
+        committedDeliveryDate: "",
+        unexpectedDeliveryDate: "",
+        nextPaymentDate: "",
+        productionStatus: "pendiente",
+        penaltyPercentage: "4",
+      });
+      return;
+    }
+
+    setProductionOrderForm({
+      committedDeliveryDate: toDateInputValue(productionOrderDetail.committedDeliveryDate),
+      unexpectedDeliveryDate: toDateInputValue(productionOrderDetail.unexpectedDeliveryDate),
+      nextPaymentDate: toDateInputValue(productionOrderDetail.nextPaymentDate),
+      productionStatus: productionOrderDetail.productionStatus || "pendiente",
+      penaltyPercentage: String(productionOrderDetail.penaltyPercentage ?? 4),
+    });
+    setProductionOrderSaveError("");
+    setProductionOrderSaveSuccess("");
+  }, [productionOrderDetail]);
 
   const companyOptions = useMemo(
     () => [
@@ -358,9 +396,55 @@ export default function Quotations() {
     setSelectedProductionOrder(null);
     setProductionOrderDetail(null);
     setProductionOrderDetailError("");
+    setProductionOrderSaveError("");
+    setProductionOrderSaveSuccess("");
     setShowPaymentForm(false);
     setPaymentError("");
     setPaymentSuccess("");
+  };
+
+  const handleProductionOrderFieldChange = (field, value) => {
+    setProductionOrderForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+    setProductionOrderSaveError("");
+    setProductionOrderSaveSuccess("");
+  };
+
+  const handleSaveProductionOrder = async () => {
+    if (!productionOrderDetail?.productionOrderId) return;
+
+    try {
+      setProductionOrderSaving(true);
+      setProductionOrderSaveError("");
+      setProductionOrderSaveSuccess("");
+
+      const updatedOrder = await updateProductionOrderDetails(
+        productionOrderDetail.productionOrderId,
+        productionOrderForm,
+      );
+
+      setProductionOrderDetail((current) =>
+        current ? { ...current, ...updatedOrder } : current,
+      );
+      setProductionOrders((current) =>
+        current.map((order) =>
+          order.productionOrderId === updatedOrder.productionOrderId
+            ? { ...order, ...updatedOrder }
+            : order,
+        ),
+      );
+      setProductionOrderSaveSuccess("Cambios guardados correctamente.");
+      await loadProductionOrders();
+    } catch (saveError) {
+      console.error("Production order update error:", saveError);
+      setProductionOrderSaveError(
+        saveError?.message || "No fue posible guardar los cambios de la orden.",
+      );
+    } finally {
+      setProductionOrderSaving(false);
+    }
   };
 
   const handleCreateProductionOrder = async (quotation) => {
@@ -479,6 +563,12 @@ export default function Quotations() {
         paymentLoading={paymentLoading} setPaymentLoading={setPaymentLoading}
         paymentError={paymentError} setPaymentError={setPaymentError}
         paymentSuccess={paymentSuccess} setPaymentSuccess={setPaymentSuccess}
+        productionOrderForm={productionOrderForm}
+        onProductionOrderFieldChange={handleProductionOrderFieldChange}
+        onSaveProductionOrder={handleSaveProductionOrder}
+        productionOrderSaving={productionOrderSaving}
+        productionOrderSaveError={productionOrderSaveError}
+        productionOrderSaveSuccess={productionOrderSaveSuccess}
         selectedQuotation={selectedQuotation}
         closeQuotationModal={closeQuotationModal}
       />

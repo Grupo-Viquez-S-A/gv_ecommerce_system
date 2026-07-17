@@ -1,5 +1,7 @@
 export const CR_TIME_ZONE = "America/Costa_Rica";
 
+const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})/;
+
 function toDateObject(value) {
   if (!value) return null;
 
@@ -42,6 +44,19 @@ function pad(value) {
 }
 
 export function formatDateCR(value, options) {
+  const dateOnlyMatch = DATE_ONLY_PATTERN.exec(String(value || ""));
+
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+
+    return new Intl.DateTimeFormat("es-CR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      ...options,
+    }).format(new Date(Number(year), Number(month) - 1, Number(day)));
+  }
+
   const date = toDateObject(value);
 
   if (!date) return "";
@@ -56,6 +71,17 @@ export function formatDateCR(value, options) {
 }
 
 export function formatDateShortCR(value) {
+  const dateOnlyMatch = DATE_ONLY_PATTERN.exec(String(value || ""));
+
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+
+    return new Intl.DateTimeFormat("es-CR", {
+      day: "numeric",
+      month: "short",
+    }).format(new Date(Number(year), Number(month) - 1, Number(day)));
+  }
+
   const date = toDateObject(value);
 
   if (!date) return "";
@@ -106,6 +132,12 @@ export function addDaysCRDateString(days = 0, fromValue = new Date()) {
 
 export function toDateInputValueCR(value) {
   if (!value) return "";
+
+  const dateOnlyMatch = DATE_ONLY_PATTERN.exec(String(value));
+
+  if (dateOnlyMatch) {
+    return `${dateOnlyMatch[1]}-${dateOnlyMatch[2]}-${dateOnlyMatch[3]}`;
+  }
 
   const { year, month, day } = getCRDateParts(value);
 

@@ -89,6 +89,24 @@ function formatDimension(value, unit) {
   return `${value}${unit ? ` ${unit}` : ""}`;
 }
 
+function getProductPriceWithIva(product) {
+  const price = Number(product?.price) || 0;
+  const rawIvaAmount = product?.iva_amount;
+  const ivaAmount =
+    rawIvaAmount === null ||
+    rawIvaAmount === undefined ||
+    rawIvaAmount === ""
+      ? NaN
+      : Number(rawIvaAmount);
+
+  if (Number.isFinite(ivaAmount)) {
+    return price + ivaAmount;
+  }
+
+  const ivaPercentage = Number(product?.iva_percentage ?? product?.iva) || 0;
+  return price + price * (ivaPercentage / 100);
+}
+
 export default function CatalogProductDetailsModal({
   product,
   onClose,
@@ -235,9 +253,14 @@ export default function CatalogProductDetailsModal({
             </p>
 
             {showPrice && isTextileProduct && (
-              <p className="mt-2 text-lg font-extrabold text-[#E9BC2D]">
-                {formatCurrency(product.price)}
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+                  Precio IVAI
+                </span>
+                <span className="text-lg font-extrabold text-[#E9BC2D]">
+                  {formatCurrency(getProductPriceWithIva(product))}
+                </span>
+              </div>
             )}
           </div>
 

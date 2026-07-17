@@ -16,6 +16,26 @@ import DetailInfoCard from "./DetailInfoCard.jsx";
 import DetailProductsTable from "./DetailProductsTable.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 
+const PRODUCTION_STATUS_OPTIONS = [
+  { value: "pendiente", label: "Pendiente" },
+  { value: "en_proceso", label: "En proceso" },
+  { value: "pausada", label: "Pausada" },
+  { value: "finalizada", label: "Finalizada" },
+  { value: "cancelada", label: "Cancelada" },
+];
+
+function openNativeDatePicker(event) {
+  const input = event.currentTarget;
+
+  if (typeof input.showPicker === "function") {
+    try {
+      input.showPicker();
+    } catch {
+      // Some browsers only allow showPicker from a direct pointer action.
+    }
+  }
+}
+
 function formatDate(dateValue) {
   if (!dateValue) {
     return "Sin fecha";
@@ -41,6 +61,13 @@ export default function OrderDetailModal({
   onOpenPaymentForm,
   onBackFromPaymentForm,
   onSubmitPayment,
+  manageProduction = false,
+  productionOrderForm = {},
+  onProductionOrderFieldChange,
+  onSaveProductionOrder,
+  productionOrderSaving = false,
+  productionOrderSaveError = "",
+  productionOrderSaveSuccess = "",
 }) {
   return (
     <ClientDetailModal
@@ -133,6 +160,15 @@ export default function OrderDetailModal({
               value={formatCurrency(order.total, "CRC 0")}
               icon={<RiMoneyDollarCircleFill size={20} />}
             />
+            <DetailInfoCard
+              label="Entrega anticipada"
+              value={
+                order.earlyDelivery
+                  ? `Si${order.earlyDeliveryDate ? ` - ${formatDate(order.earlyDeliveryDate)}` : ""}`
+                  : "No"
+              }
+              icon={<RiCalendarCheckFill size={20} />}
+            />
           </div>
 
           {(order.paymentStatus === "parcial" ||
@@ -210,6 +246,149 @@ export default function OrderDetailModal({
               icon={<RiStore2Fill size={20} />}
             />
           </div>
+
+          {manageProduction && (
+            <section className="rounded-lg border border-[#2a3550] bg-[#10192b] p-4">
+              <div className="mb-4">
+                <h3 className="text-base font-bold text-white">
+                  Fechas y estado de la orden
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Actualiza las fechas operativas y el estado de produccion.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <label className="space-y-2">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                    Fecha compromiso
+                  </span>
+                  <input
+                    type="date"
+                    value={productionOrderForm.committedDeliveryDate || ""}
+                    onPointerDown={openNativeDatePicker}
+                    onClick={openNativeDatePicker}
+                    onFocus={openNativeDatePicker}
+                    onChange={(event) =>
+                      onProductionOrderFieldChange?.(
+                        "committedDeliveryDate",
+                        event.target.value,
+                      )
+                    }
+                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                    Fecha imprevisto
+                  </span>
+                  <input
+                    type="date"
+                    value={productionOrderForm.unexpectedDeliveryDate || ""}
+                    onPointerDown={openNativeDatePicker}
+                    onClick={openNativeDatePicker}
+                    onFocus={openNativeDatePicker}
+                    onChange={(event) =>
+                      onProductionOrderFieldChange?.(
+                        "unexpectedDeliveryDate",
+                        event.target.value,
+                      )
+                    }
+                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                    Proxima fecha de pago
+                  </span>
+                  <input
+                    type="date"
+                    value={productionOrderForm.nextPaymentDate || ""}
+                    onPointerDown={openNativeDatePicker}
+                    onClick={openNativeDatePicker}
+                    onFocus={openNativeDatePicker}
+                    onChange={(event) =>
+                      onProductionOrderFieldChange?.(
+                        "nextPaymentDate",
+                        event.target.value,
+                      )
+                    }
+                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                    Estado de la orden
+                  </span>
+                  <select
+                    value={productionOrderForm.productionStatus || "pendiente"}
+                    onChange={(event) =>
+                      onProductionOrderFieldChange?.(
+                        "productionStatus",
+                        event.target.value,
+                      )
+                    }
+                    className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227]"
+                  >
+                    {PRODUCTION_STATUS_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-2">
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                    Penalizacion (%)
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={productionOrderForm.penaltyPercentage || ""}
+                    onChange={(event) =>
+                      onProductionOrderFieldChange?.(
+                        "penaltyPercentage",
+                        event.target.value,
+                      )
+                    }
+                    className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227]"
+                  />
+                </label>
+              </div>
+
+              {(productionOrderSaveError || productionOrderSaveSuccess) && (
+                <div className="mt-4">
+                  {productionOrderSaveError && (
+                    <p className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                      {productionOrderSaveError}
+                    </p>
+                  )}
+                  {productionOrderSaveSuccess && (
+                    <p className="rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-2 text-sm text-green-200">
+                      {productionOrderSaveSuccess}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={onSaveProductionOrder}
+                  disabled={productionOrderSaving}
+                  className="rounded-lg border border-[#C9A227]/50 bg-[#C9A227]/15 px-4 py-2 text-sm font-semibold text-[#F5D875] transition hover:bg-[#C9A227]/25 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {productionOrderSaving ? "Guardando..." : "Guardar cambios"}
+                </button>
+              </div>
+            </section>
+          )}
 
           <section>
             <div className="mb-3">
