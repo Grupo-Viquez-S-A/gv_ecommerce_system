@@ -42,9 +42,9 @@ export async function getUserFormCatalogs() {
     await Promise.all([
       supabase
         .from("companies")
-        .select("company_id, company_name, is_active")
+        .select("company_id, company_name, commercial_name, is_active")
         .eq("is_active", true)
-        .order("company_name", { ascending: true }),
+        .order("commercial_name", { ascending: true }),
       supabase
         .from("departments")
         .select("department_id, name, is_active")

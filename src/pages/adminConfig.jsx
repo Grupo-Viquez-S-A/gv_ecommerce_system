@@ -223,7 +223,7 @@ export default function AdminConfig() {
       setAdminCatalogs({
         companies: (catalogs.companies || []).map((company) => ({
           id: company.company_id,
-          label: company.company_name,
+          label: company.commercial_name || company.company_name,
         })).filter((c) => c.id && c.label),
 
         departments: (catalogs.departments || []).map((dept) => ({

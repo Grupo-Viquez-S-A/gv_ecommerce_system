@@ -140,7 +140,9 @@ export async function getEcommerceUsers() {
         "membership_id, user_id, company_id, department_id, role_id, is_active, start_date, end_date, created_at, updated_at",
       )
       .in("user_id", userIds),
-    supabase.from("companies").select("company_id, company_name"),
+    supabase
+      .from("companies")
+      .select("company_id, company_name, commercial_name"),
     supabase.from("roles").select("role_id, role_name, role_code"),
     supabase.from("departments").select("department_id, name"),
   ]);
@@ -203,7 +205,7 @@ export async function getEcommerceUsers() {
     const membershipCompanies = memberships
       .map((membership) => companiesById.get(membership.company_id))
       .filter(Boolean)
-      .map((company) => company.company_name)
+      .map((company) => company.commercial_name || company.company_name)
       .filter(Boolean);
 
     const fullName = `${profile.name || ""} ${profile.surname || ""}`.trim();

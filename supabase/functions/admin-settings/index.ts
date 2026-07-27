@@ -9,6 +9,7 @@
 // isCallerAuthorized check below).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import nodemailer from "npm:nodemailer@6.9.16";
 
 const ACCOUNT_MANAGEMENT_ROLE_CODES = new Set([
   "admin",
@@ -21,6 +22,152 @@ const ACCOUNT_MANAGEMENT_ROLE_CODES = new Set([
   "president",
 ]);
 
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function getRequiredEmailSecret(name: string) {
+  const value = String(Deno.env.get(name) || "").trim();
+  if (!value) {
+    throw new Error(`Falta configurar el secret ${name}.`);
+  }
+  return value;
+}
+
+async function sendWelcomeEmail({
+  email,
+  name,
+  applicationIds,
+}: {
+  email: string;
+  name: string;
+  applicationIds: string[];
+}) {
+  const smtpHost = getRequiredEmailSecret("SMTP_HOST");
+  const smtpPort = Number(getRequiredEmailSecret("SMTP_PORT"));
+  const smtpUsername = getRequiredEmailSecret("SMTP_USERNAME");
+  const smtpPassword = getRequiredEmailSecret("SMTP_PASSWORD");
+  const fromEmail =
+    String(Deno.env.get("SMTP_FROM_EMAIL") || "").trim() || smtpUsername;
+  const fromName =
+    String(Deno.env.get("SMTP_FROM_NAME") || "").trim() || "Grupo Víquez";
+
+  if (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535) {
+    throw new Error("El secret SMTP_PORT no contiene un puerto válido.");
+  }
+
+  const { data: applications, error: applicationsError } = await adminClient
+    .from("applications")
+    .select("application_id, application_code")
+    .in("application_id", applicationIds)
+    .eq("is_active", true);
+
+  if (applicationsError) throw applicationsError;
+
+  const hasSaasAccess = (applications ?? []).some(
+    (application) => application.application_code === "enterprise_saas",
+  );
+  const siteUrl = String(Deno.env.get("SITE_URL") || "").trim();
+  const ecommerceUrl = String(
+    Deno.env.get("ECOMMERCE_CLIENT_REDIRECT_URL") || "",
+  ).trim();
+  const loginUrl = hasSaasAccess ? siteUrl : ecommerceUrl || siteUrl;
+  const safeName = escapeHtml(name || "nuevo usuario");
+  const safeEmail = escapeHtml(email);
+  const safeLoginUrl = escapeHtml(loginUrl);
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: {
+      user: smtpUsername,
+      pass: smtpPassword,
+    },
+    connectionTimeout: 15_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 30_000,
+  });
+
+  try {
+    await transporter.sendMail({
+      from: {
+        name: fromName,
+        address: fromEmail,
+      },
+      to: email,
+      subject: "Bienvenido a Grupo Víquez | Tu cuenta fue creada",
+      text: [
+        `Hola ${name || "nuevo usuario"},`,
+        "",
+        "Tu cuenta para los sistemas de Grupo Víquez fue creada correctamente.",
+        "",
+        `Usuario: ${email}`,
+        "",
+        loginUrl ? `Ingresar al sistema: ${loginUrl}` : "",
+        "",
+        "Soporte Técnico - Grupo Víquez",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      html: `<!doctype html>
+<html lang="es">
+  <body style="margin:0;padding:0;background:#020b18;font-family:Arial,Helvetica,sans-serif;color:#ffffff;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#020b18;padding:32px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#071b39;border:1px solid #29466d;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td align="center" style="padding:30px 32px 22px;background:#031329;border-bottom:1px solid #29466d;">
+                <div style="font-size:13px;letter-spacing:4px;color:#d8e5f7;">GRUPO</div>
+                <div style="margin-top:4px;font-size:24px;font-weight:700;letter-spacing:3px;color:#e6ac21;">VÍQUEZ</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <div style="font-size:12px;font-weight:700;letter-spacing:2px;color:#e6ac21;text-transform:uppercase;">Cuenta creada</div>
+                <h1 style="margin:10px 0 12px;font-size:28px;line-height:1.2;color:#ffffff;">¡Bienvenido al sistema!</h1>
+                <p style="margin:0 0 22px;font-size:16px;line-height:1.65;color:#a9c1e3;">
+                  Hola <strong style="color:#ffffff;">${safeName}</strong>. Tu cuenta fue creada correctamente y ya puedes acceder a las aplicaciones asignadas.
+                </p>
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#031329;border:1px solid #29466d;border-radius:12px;">
+                  <tr>
+                    <td style="padding:22px;">
+                      <div style="margin-bottom:8px;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#7596c4;text-transform:uppercase;">Usuario</div>
+                      <div style="font-size:16px;color:#ffffff;word-break:break-all;">${safeEmail}</div>
+                    </td>
+                  </tr>
+                </table>
+                ${
+                  loginUrl
+                    ? `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;"><tr><td style="border-radius:10px;background:#e6ac21;"><a href="${safeLoginUrl}" style="display:inline-block;padding:14px 24px;font-size:15px;font-weight:700;color:#031329;text-decoration:none;">Ingresar al sistema</a></td></tr></table>`
+                    : ""
+                }
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 32px;background:#031329;border-top:1px solid #29466d;font-size:12px;line-height:1.6;color:#7596c4;">
+                Soporte Técnico · Grupo Víquez<br>
+                Este es un mensaje automático enviado desde soporte@grupoviquez.com.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`,
+    });
+  } finally {
+    transporter.close();
+  }
+}
+
 function normalizeOrigin(value: string | undefined) {
   const candidate = String(value || "").trim().replace(/\/+$/, "");
   if (!candidate) return "";
@@ -32,15 +179,37 @@ function normalizeOrigin(value: string | undefined) {
   }
 }
 
-function getConfiguredCorsHeaders() {
-  const configuredOrigin = normalizeOrigin(
-    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
-      Deno.env.get("SITE_URL") ||
-      Deno.env.get("APP_URL"),
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://www.grupoviquez.com",
+  "http://192.168.100.6:5000",
+  "http://192.168.100.6:5001",
+];
+
+function getAllowedOrigins() {
+  const configuredOrigins = [
+    ...(Deno.env.get("CORS_ALLOWED_ORIGINS") || "").split(","),
+    Deno.env.get("CORS_ALLOWED_ORIGIN"),
+    Deno.env.get("SITE_URL"),
+    Deno.env.get("APP_URL"),
+    ...DEFAULT_ALLOWED_ORIGINS,
+  ]
+    .map((origin) => normalizeOrigin(origin || undefined))
+    .filter(Boolean);
+
+  return new Set(configuredOrigins);
+}
+
+function getCorsHeaders(request: Request) {
+  const requestOrigin = normalizeOrigin(
+    request.headers.get("Origin") || undefined,
   );
+  const allowedOrigin =
+    requestOrigin && getAllowedOrigins().has(requestOrigin)
+      ? requestOrigin
+      : "";
 
   return {
-    ...(configuredOrigin ? { "Access-Control-Allow-Origin": configuredOrigin } : {}),
+    ...(allowedOrigin ? { "Access-Control-Allow-Origin": allowedOrigin } : {}),
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -55,13 +224,7 @@ function isOriginAllowed(request: Request) {
   const requestOrigin = normalizeOrigin(request.headers.get("Origin") || undefined);
   if (!requestOrigin) return true;
 
-  const configuredOrigin = normalizeOrigin(
-    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
-      Deno.env.get("SITE_URL") ||
-      Deno.env.get("APP_URL"),
-  );
-
-  return Boolean(configuredOrigin && requestOrigin === configuredOrigin);
+  return getAllowedOrigins().has(requestOrigin);
 }
 
 function isUuid(value: string) {
@@ -72,13 +235,14 @@ function isValidEmail(value: string) {
   return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-const corsHeaders = getConfiguredCorsHeaders();
-const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
-
-function jsonResponse(body: Record<string, unknown>, status = 200) {
+function jsonResponse(
+  request: Request,
+  body: Record<string, unknown>,
+  status = 200,
+) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(request), "Content-Type": "application/json" },
   });
 }
 
@@ -229,14 +393,54 @@ function validateAdminPayload(action: unknown, payload: any) {
     return "Acción administrativa inválida.";
   }
 
-  if (action === "create-user") {
-    if (!isValidEmail(String(payload?.email || "").trim().toLowerCase())) return "El correo no es válido.";
-    if (typeof payload?.password !== "string" || payload.password.length < 12 || payload.password.length > 128) {
+  if (["create-user", "update-user"].includes(String(action))) {
+    const email = String(payload?.email || "").trim().toLowerCase();
+    const password = payload?.password;
+    const profile = payload?.profile || {};
+    const membership = payload?.membership || {};
+    const applicationIds = payload?.applicationIds;
+    const moduleIds = payload?.moduleIds;
+
+    if (!String(profile.name || "").trim() || !String(profile.surname || "").trim()) {
+      return "El nombre y los apellidos son obligatorios.";
+    }
+    if (!isValidEmail(email)) return "El correo no es válido.";
+    if (
+      action === "create-user" &&
+      (typeof password !== "string" || password.length < 12 || password.length > 128)
+    ) {
       return "La contraseña temporal debe tener entre 12 y 128 caracteres.";
     }
-    const membership = payload?.membership || {};
+    if (
+      action === "update-user" &&
+      password !== undefined &&
+      (typeof password !== "string" || password.length < 12 || password.length > 128)
+    ) {
+      return "La nueva contraseña debe tener entre 12 y 128 caracteres.";
+    }
     if (![membership.company_id, membership.department_id, membership.role_id].every((id) => isUuid(String(id || "")))) {
       return "La empresa, el departamento o el rol no son válidos.";
+    }
+    if (
+      membership.membership_id &&
+      !isUuid(String(membership.membership_id))
+    ) {
+      return "La membresía del usuario no es válida.";
+    }
+    if (
+      !Array.isArray(applicationIds) ||
+      applicationIds.length === 0 ||
+      !applicationIds.every((applicationId) =>
+        isUuid(String(applicationId || ""))
+      )
+    ) {
+      return "Selecciona al menos una aplicación válida.";
+    }
+    if (
+      !Array.isArray(moduleIds) ||
+      !moduleIds.every((moduleId) => isUuid(String(moduleId || "")))
+    ) {
+      return "La selección de módulos no es válida.";
     }
   }
 
@@ -258,6 +462,7 @@ async function handleList() {
     departmentsResponse,
     rolesResponse,
     companiesResponse,
+    applicationsResponse,
     modulesResponse,
     departmentModulesResponse,
   ] = await Promise.all([
@@ -268,9 +473,12 @@ async function handleList() {
         user_id, name, surname, email, identification, phone, is_active, created_at,
         user_memberships (
           membership_id, company_id, department_id, role_id, is_active, start_date, end_date,
-          companies ( company_id, company_name ),
+          companies ( company_id, company_name, commercial_name ),
           departments ( department_id, name ),
           roles ( role_id, role_name, role_code )
+        ),
+        user_applications (
+          user_application_id, application_id, is_active, start_date, end_date
         ),
         profile_modules ( module_id, can_view, can_create, can_edit, can_delete )
       `,
@@ -279,6 +487,13 @@ async function handleList() {
     adminClient.from("departments").select("*").order("name"),
     adminClient.from("roles").select("*").order("role_name"),
     adminClient.from("companies").select("*").order("company_name"),
+    adminClient
+      .from("applications")
+      .select(
+        "application_id, application_code, name, description, is_active",
+      )
+      .eq("is_active", true)
+      .order("name"),
     adminClient.from("modules").select("*").order("display_order"),
     adminClient.from("department_modules").select("*"),
   ]);
@@ -288,6 +503,7 @@ async function handleList() {
     departmentsResponse,
     rolesResponse,
     companiesResponse,
+    applicationsResponse,
     modulesResponse,
     departmentModulesResponse,
   ]) {
@@ -299,6 +515,7 @@ async function handleList() {
     departments: departmentsResponse.data ?? [],
     roles: rolesResponse.data ?? [],
     companies: companiesResponse.data ?? [],
+    applications: applicationsResponse.data ?? [],
     modules: modulesResponse.data ?? [],
     departmentModules: departmentModulesResponse.data ?? [],
   };
@@ -317,7 +534,7 @@ async function replaceProfileModules(
 
   if (!moduleIds.length) return;
 
-  const rows = moduleIds.map((moduleId) => ({
+  const rows = [...new Set(moduleIds)].map((moduleId) => ({
     profile_id: userId,
     module_id: moduleId,
     can_view: true,
@@ -333,9 +550,102 @@ async function replaceProfileModules(
   if (insertError) throw insertError;
 }
 
+function getTodayCRDateString() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Costa_Rica",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+async function validateActiveApplicationIds(applicationIds: string[] = []) {
+  const uniqueApplicationIds = [...new Set(applicationIds)];
+  const { data, error } = await adminClient
+    .from("applications")
+    .select("application_id")
+    .in("application_id", uniqueApplicationIds)
+    .eq("is_active", true);
+
+  if (error) throw error;
+  if ((data ?? []).length !== uniqueApplicationIds.length) {
+    throw new Error(
+      "Una o más aplicaciones seleccionadas no existen o están inactivas.",
+    );
+  }
+
+  return uniqueApplicationIds;
+}
+
+async function replaceUserApplications(
+  userId: string,
+  applicationIds: string[],
+) {
+  const today = getTodayCRDateString();
+  const { data: existingAssignments, error: existingError } =
+    await adminClient
+      .from("user_applications")
+      .select("application_id, start_date")
+      .eq("user_id", userId);
+
+  if (existingError) throw existingError;
+
+  const selectedApplicationIds = new Set(applicationIds);
+  const assignmentsByApplicationId = new Map(
+    (existingAssignments ?? []).map((assignment) => [
+      assignment.application_id,
+      assignment,
+    ]),
+  );
+  const applicationIdsToDisable = (existingAssignments ?? [])
+    .map((assignment) => assignment.application_id)
+    .filter(
+      (applicationId) => !selectedApplicationIds.has(applicationId),
+    );
+
+  if (applicationIdsToDisable.length > 0) {
+    const { error: disableError } = await adminClient
+      .from("user_applications")
+      .update({
+        is_active: false,
+        end_date: today,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .in("application_id", applicationIdsToDisable);
+
+    if (disableError) throw disableError;
+  }
+
+  const rows = applicationIds.map((applicationId) => ({
+    user_id: userId,
+    application_id: applicationId,
+    is_active: true,
+    start_date:
+      assignmentsByApplicationId.get(applicationId)?.start_date || today,
+    end_date: null,
+    updated_at: new Date().toISOString(),
+  }));
+
+  const { error: upsertError } = await adminClient
+    .from("user_applications")
+    .upsert(rows, { onConflict: "user_id,application_id" });
+
+  if (upsertError) throw upsertError;
+}
+
 async function handleCreateUser(payload: any) {
-  const { email, password, profile = {}, membership = {}, moduleIds = [] } =
-    payload;
+  const {
+    email,
+    password,
+    profile = {},
+    membership = {},
+    applicationIds = [],
+    moduleIds = [],
+  } = payload;
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const validApplicationIds =
+    await validateActiveApplicationIds(applicationIds);
 
   if (!email || !password) {
     throw new Error("El correo y la contraseña temporal son obligatorios.");
@@ -347,9 +657,12 @@ async function handleCreateUser(payload: any) {
 
   const { data: createdUser, error: createUserError } =
     await adminClient.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password,
       email_confirm: true,
+      user_metadata: {
+        created_from: "ecommerce_admin",
+      },
     });
 
   if (createUserError) throw createUserError;
@@ -358,15 +671,20 @@ async function handleCreateUser(payload: any) {
   if (!userId) throw new Error("No fue posible crear el usuario en Auth.");
 
   try {
-    const { error: profileError } = await adminClient.from("profiles").insert({
-      user_id: userId,
-      name: profile.name || "",
-      surname: profile.surname || "",
-      email,
-      identification: profile.identification || null,
-      phone: profile.phone || null,
-      is_active: true,
-    });
+    const { error: profileError } = await adminClient
+      .from("profiles")
+      .upsert(
+        {
+          user_id: userId,
+          name: profile.name || "",
+          surname: profile.surname || "",
+          email: normalizedEmail,
+          identification: profile.identification || null,
+          phone: profile.phone || null,
+          is_active: true,
+        },
+        { onConflict: "user_id" },
+      );
 
     if (profileError) throw profileError;
 
@@ -382,19 +700,7 @@ async function handleCreateUser(payload: any) {
 
     if (membershipError) throw membershipError;
 
-    const today = new Date().toISOString().slice(0, 10);
-    const { error: applicationError } = await adminClient
-      .from("user_applications")
-      .insert({
-        user_id: userId,
-        application_id: ECOMMERCE_APPLICATION_ID,
-        is_active: true,
-        start_date: today,
-        end_date: null,
-      });
-
-    if (applicationError) throw applicationError;
-
+    await replaceUserApplications(userId, validApplicationIds);
     await replaceProfileModules(userId, moduleIds);
   } catch (error) {
     // Roll back the auth user if any downstream insert fails, so we don't
@@ -403,7 +709,27 @@ async function handleCreateUser(payload: any) {
     throw error;
   }
 
-  return { userId };
+  try {
+    await sendWelcomeEmail({
+      email: normalizedEmail,
+      name: [profile.name, profile.surname].filter(Boolean).join(" "),
+      applicationIds: validApplicationIds,
+    });
+
+    return { userId, emailSent: true };
+  } catch (emailError) {
+    console.error(
+      "Welcome email delivery failed:",
+      getErrorMessage(emailError, "Error SMTP no identificado."),
+    );
+
+    return {
+      userId,
+      emailSent: false,
+      emailWarning:
+        "El usuario fue creado, pero no fue posible enviar el correo de bienvenida.",
+    };
+  }
 }
 
 async function handleUpdateUser(payload: any) {
@@ -413,13 +739,17 @@ async function handleUpdateUser(payload: any) {
     password,
     profile = {},
     membership = {},
+    applicationIds = [],
     moduleIds = [],
   } = payload;
 
   if (!userId) throw new Error("Falta el identificador del usuario.");
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const validApplicationIds =
+    await validateActiveApplicationIds(applicationIds);
 
   const authUpdate: Record<string, unknown> = {};
-  if (email) authUpdate.email = email;
+  if (normalizedEmail) authUpdate.email = normalizedEmail;
   if (password) authUpdate.password = password;
 
   if (Object.keys(authUpdate).length > 0) {
@@ -435,7 +765,7 @@ async function handleUpdateUser(payload: any) {
     .update({
       name: profile.name || "",
       surname: profile.surname || "",
-      email,
+      email: normalizedEmail,
       identification: profile.identification || null,
       phone: profile.phone || null,
       updated_at: new Date().toISOString(),
@@ -473,6 +803,7 @@ async function handleUpdateUser(payload: any) {
   }
 
   await replaceProfileModules(userId, moduleIds);
+  await replaceUserApplications(userId, validApplicationIds);
 
   return { userId };
 }
@@ -590,15 +921,23 @@ async function handleSetRoleStatus(payload: any) {
 
 Deno.serve(async (request: Request) => {
   if (!isOriginAllowed(request)) {
-    return jsonResponse({ ok: false, error: "Origen no permitido." }, 403);
+    return jsonResponse(
+      request,
+      { ok: false, error: "Origen no permitido." },
+      403,
+    );
   }
 
   if (request.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(request) });
   }
 
   if (request.method !== "POST") {
-    return jsonResponse({ ok: false, error: "Método no permitido." }, 405);
+    return jsonResponse(
+      request,
+      { ok: false, error: "Método no permitido." },
+      405,
+    );
   }
 
   try {
@@ -607,6 +946,7 @@ Deno.serve(async (request: Request) => {
 
     if (!authorized) {
       return jsonResponse(
+        request,
         { ok: false, error: "No tienes permisos para administrar el sistema." },
         403,
       );
@@ -616,7 +956,11 @@ Deno.serve(async (request: Request) => {
     const { action, ...payload } = body ?? {};
     const validationError = validateAdminPayload(action, payload);
     if (validationError) {
-      return jsonResponse({ ok: false, error: validationError }, 400);
+      return jsonResponse(
+        request,
+        { ok: false, error: validationError },
+        400,
+      );
     }
 
     let data: Record<string, unknown> = {};
@@ -647,16 +991,24 @@ Deno.serve(async (request: Request) => {
         data = await handleSetRoleStatus(payload);
         break;
       default:
-        return jsonResponse({ ok: false, error: `Acción desconocida: ${action}` }, 400);
+        return jsonResponse(
+          request,
+          { ok: false, error: `Acción desconocida: ${action}` },
+          400,
+        );
     }
 
-    return jsonResponse({ ok: true, ...data });
+    return jsonResponse(request, { ok: true, ...data });
   } catch (error) {
     console.error("admin-settings error:", getErrorDetails(error));
     const message = getErrorMessage(
       error,
       "No fue posible completar la operacion administrativa.",
     );
-    return jsonResponse({ ok: false, error: message, message }, 500);
+    return jsonResponse(
+      request,
+      { ok: false, error: message, message },
+      500,
+    );
   }
 });
