@@ -2,6 +2,7 @@
 
 export default function ClientCatalogGrid({
   products = [],
+  showPrices = false,
   onOpenProductDetails,
 }) {
   const validProducts = Array.isArray(products) ? products : [];
@@ -25,6 +26,7 @@ export default function ClientCatalogGrid({
             `client-catalog-product-${index}`
           }
           product={product}
+          showPrice={showPrices}
           onOpenProductDetails={onOpenProductDetails}
         />
       ))}

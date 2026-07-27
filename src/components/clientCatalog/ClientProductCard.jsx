@@ -4,7 +4,7 @@
   Ruler,
   Tag,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import ColorDots from "../catalog/ColorDots";
 import CompositionBadges from "../catalog/CompositionBadges";
@@ -12,6 +12,7 @@ import {
   getOptimizedSupabaseImageUrl,
   isChromiumLikeBrowser,
 } from "../../utils/supabaseImageUrl.js";
+import { formatCurrency } from "../../utils/formatCurrency.js";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -122,8 +123,29 @@ function getCollectionName(product) {
   );
 }
 
+function getProductPriceWithIva(product) {
+  const price = Number(product?.price) || 0;
+  const rawIvaAmount = product?.iva_amount;
+  const ivaAmount =
+    rawIvaAmount === null ||
+    rawIvaAmount === undefined ||
+    rawIvaAmount === ""
+      ? NaN
+      : Number(rawIvaAmount);
+
+  if (Number.isFinite(ivaAmount)) {
+    return price + ivaAmount;
+  }
+
+  const ivaPercentage =
+    Number(product?.iva_percentage ?? product?.iva) || 0;
+
+  return price + price * (ivaPercentage / 100);
+}
+
 export default function ClientProductCard({
   product,
+  showPrice = false,
   onOpenProductDetails,
 }) {
   const originalProductImage = getProductImage(product);
@@ -136,11 +158,19 @@ export default function ClientProductCard({
       }),
     [originalProductImage],
   );
-  const [productImage, setProductImage] = useState(optimizedProductImage);
-
-  useEffect(() => {
-    setProductImage(optimizedProductImage);
-  }, [optimizedProductImage]);
+  const [failedImages, setFailedImages] = useState({
+    optimized: null,
+    original: null,
+  });
+  const optimizedImageFailed =
+    failedImages.optimized === optimizedProductImage;
+  const originalImageFailed =
+    failedImages.original === originalProductImage;
+  const productImage = optimizedImageFailed
+    ? isChromiumLikeBrowser() || originalImageFailed
+      ? null
+      : originalProductImage
+    : optimizedProductImage;
 
   const isTextileProduct =
     product?.catalog_type === "textile_products";
@@ -213,14 +243,11 @@ export default function ClientProductCard({
             loading="lazy"
             decoding="async"
             onError={() => {
-              if (isChromiumLikeBrowser()) {
-                setProductImage(null);
-                return;
-              }
-
-              if (productImage !== originalProductImage) {
-                setProductImage(originalProductImage);
-              }
+              setFailedImages((current) =>
+                productImage === optimizedProductImage
+                  ? { ...current, optimized: optimizedProductImage }
+                  : { ...current, original: originalProductImage },
+              );
             }}
           />
         ) : (
@@ -278,6 +305,17 @@ export default function ClientProductCard({
           <p className="mt-2 h-10 overflow-hidden text-sm leading-5 text-slate-400">
             {productDescription}
           </p>
+
+          {showPrice && isTextileProduct && (
+            <div className="mt-3 flex items-baseline justify-between gap-3 rounded-xl border border-[#D7A91D]/20 bg-[#D7A91D]/10 px-3 py-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
+                Precio IVAI
+              </span>
+              <span className="text-base font-extrabold text-[#E9BC2D]">
+                {formatCurrency(getProductPriceWithIva(product))}
+              </span>
+            </div>
+          )}
         </div>
 
         {isTextileProduct ? (

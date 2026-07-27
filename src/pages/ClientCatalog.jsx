@@ -32,7 +32,7 @@ import {
 
 const PAGE_SIZE = 8;
 
-export default function ClientCatalog() {
+export default function ClientCatalog({ showPrices = false }) {
   const mainContentRef = useRef(null);
   const catalogRequestRef = useRef(0);
 
@@ -770,6 +770,7 @@ export default function ClientCatalog() {
 
                 <ClientCatalogGrid
                   products={currentProducts}
+                  showPrices={showPrices}
                   onOpenProductDetails={
                     handleOpenProductDetails
                   }
@@ -793,6 +794,7 @@ export default function ClientCatalog() {
 
       <CatalogProductDetailsModal
         product={selectedProductDetails}
+        showPrice={showPrices}
         onClose={() => setSelectedProductDetails(null)}
         onViewTechnicalSheet={handleOpenTechnicalSheet}
       />

@@ -33,7 +33,7 @@ export default function PublicClientCatalog() {
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto">
-        <ClientCatalog />
+        <ClientCatalog showPrices />
       </main>
     </div>
   );
