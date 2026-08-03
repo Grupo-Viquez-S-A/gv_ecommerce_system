@@ -14,7 +14,7 @@ import {
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import { isClientAccount, hasSystemAccess } from "../utils/roles.js";
+import { isClientAccount, hasSystemAccess, isSalesAgent } from "../utils/roles.js";
 
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
@@ -118,6 +118,7 @@ function DashSideBar({
 
   const activeCompany = currentCompany || DEFAULT_COMPANY;
   const isClientUser = isClientAccount(user);
+  const isSalesAgentUser = isSalesAgent(user);
   const canAccessUserAdministration = !isClientUser && hasSystemAccess(user);
 
   const handleCloseMobileSidebar = () => {
@@ -249,19 +250,23 @@ function DashSideBar({
             collapsed={sidebarCollapsed}
           />
 
-          <NavItem
-            icon={<RiStoreFill size={18} />}
-            label="Ventas"
-            to="/ventas"
-            collapsed={sidebarCollapsed}
-          />
+          {!isSalesAgentUser && (
+            <>
+              <NavItem
+                icon={<RiStoreFill size={18} />}
+                label="Ventas"
+                to="/ventas"
+                collapsed={sidebarCollapsed}
+              />
 
-          <NavItem
-            icon={<RiFileListFill size={18} />}
-            label="Ordenes de venta"
-            to="/pedidos"
-            collapsed={sidebarCollapsed}
-          />
+              <NavItem
+                icon={<RiFileListFill size={18} />}
+                label="Ordenes de venta"
+                to="/pedidos"
+                collapsed={sidebarCollapsed}
+              />
+            </>
+          )}
 
             </>
           )}
@@ -499,19 +504,23 @@ function DashSideBar({
               collapsed={false}
             />
 
-            <NavItem
-              icon={<RiStoreFill size={18} />}
-              label="Ventas"
-              to="/ventas"
-              collapsed={false}
-            />
+            {!isSalesAgentUser && (
+              <>
+                <NavItem
+                  icon={<RiStoreFill size={18} />}
+                  label="Ventas"
+                  to="/ventas"
+                  collapsed={false}
+                />
 
-            <NavItem
-              icon={<RiFileListFill size={18} />}
-              label="Ordenes de venta"
-              to="/pedidos"
-              collapsed={false}
-            />
+                <NavItem
+                  icon={<RiFileListFill size={18} />}
+                  label="Ordenes de venta"
+                  to="/pedidos"
+                  collapsed={false}
+                />
+              </>
+            )}
 
               </>
             )}

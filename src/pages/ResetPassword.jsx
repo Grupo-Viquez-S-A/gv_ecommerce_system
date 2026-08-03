@@ -34,7 +34,9 @@ function ResetPassword() {
 
       if (sessionError || !data?.session) {
         setLinkStatus("invalid");
-        setError("Debes iniciar sesion primero para poder cambiar tu contrasena.");
+        setError(
+          "Primero inicia sesión con el correo y la contraseña temporal que recibiste.",
+        );
         return;
       }
 
@@ -95,13 +97,23 @@ function ResetPassword() {
         });
 
       if (activationError || activationData?.ok === false) {
+        let activationMessage = activationData?.error || activationError?.message;
+
+        if (activationError?.context instanceof Response) {
+          try {
+            const responseBody = await activationError.context.clone().json();
+            activationMessage = responseBody?.error || responseBody?.message || activationMessage;
+          } catch {
+            // Conserva el mensaje original cuando la respuesta no contiene JSON.
+          }
+        }
+
         console.error("Error completando activacion del cliente:", {
           activationError,
           activationData,
         });
         setError(
-          activationData?.error ||
-            activationError?.message ||
+          activationMessage ||
             "La contrasena se actualizo, pero no fue posible completar la activacion. Intenta de nuevo.",
         );
         return;
@@ -163,6 +175,14 @@ function ResetPassword() {
             </div>
           )}
 
+          {isInvalidLink ? (
+            <Link
+              to="/"
+              className="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#c9a227] to-[#e6bb45] px-4 py-3.5 text-sm font-bold text-white transition hover:opacity-90"
+            >
+              Iniciar sesión con la contraseña temporal
+            </Link>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">Nueva contrasena</label>
@@ -173,7 +193,7 @@ function ResetPassword() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   minLength={8}
-                  disabled={isValidatingLink || isInvalidLink || success}
+                  disabled={isValidatingLink || success}
                   placeholder="Minimo 8 caracteres"
                   autoComplete="new-password"
                   className="min-w-0 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400 disabled:opacity-60"
@@ -198,7 +218,7 @@ function ResetPassword() {
                   value={confirmPassword}
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   minLength={8}
-                  disabled={isValidatingLink || isInvalidLink || success}
+                  disabled={isValidatingLink || success}
                   placeholder="Repite la contrasena"
                   autoComplete="new-password"
                   className="min-w-0 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400 disabled:opacity-60"
@@ -214,6 +234,7 @@ function ResetPassword() {
               {loading ? "Guardando..." : "Guardar nueva contrasena"}
             </button>
           </form>
+          )}
 
           <Link to="/" className="mt-5 block text-center text-sm font-semibold text-[#c9a227] hover:underline">
             Volver al inicio de sesion

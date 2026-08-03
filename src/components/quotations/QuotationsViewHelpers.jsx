@@ -17,6 +17,10 @@ const dateFormatter = new Intl.DateTimeFormat("es-CR", { timeZone: "America/Cost
 export function formatQuotationCurrency(value) { return currencyFormatter.format(Number(value) || 0); }
 export function formatQuotationDate(value) { const date = value ? new Date(value) : null; return !date || Number.isNaN(date.getTime()) ? "-" : dateFormatter.format(date); }
 export function normalizeQuotationSearch(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+export function isQuotationApproved(quotation) {
+  const status = normalizeQuotationSearch(quotation?.dbStatus || quotation?.status);
+  return status === "approved" || status === "aprobada";
+}
 export function QuotationPaginationButton({ icon, label, active = false }) { return <button type="button" className={`flex h-7 w-7 items-center justify-center rounded text-xs transition-colors ${active ? "bg-[#C9A227] text-white" : "text-gray-500 hover:bg-[#C9A227]/15 hover:text-white"}`}>{icon || label}</button>; }
 export function QuotationProductThumb({ item }) { return item.imageUrl ? <img src={item.imageUrl} alt={item.name || "Producto"} className="h-20 w-20 rounded-lg border border-[#2a3550] bg-[#0B1120] object-cover" loading="lazy" /> : <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-[#2a3550] bg-[#10192b] text-xs font-bold text-[#C9A227]">IMG</div>; }
 export function QuotationStatusBadge({ status }) { const config = QUOTATION_STATUS_CONFIG[status] || QUOTATION_STATUS_CONFIG.Pendiente; return <span className={`inline-block rounded-md border px-2.5 py-1 text-xs font-medium ${config.bg} ${config.text} ${config.border}`}>{status}</span>; }

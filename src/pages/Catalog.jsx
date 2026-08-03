@@ -24,10 +24,20 @@ import {
   RiRefreshLine,
 } from "react-icons/ri";
 import {
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  FileText,
+  Headphones,
+  Info,
+  LocateFixed,
+  MapPin,
   Minus,
   Plus,
+  ShieldCheck,
   ShoppingCart,
   Trash2,
+  UserRound,
   X,
 } from "lucide-react";
 
@@ -68,6 +78,9 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   branchDistrict: "",
   branchAddress: "",
   branchPhone: "",
+  branchLatitude: "",
+  branchLongitude: "",
+  branchLocationAccuracy: "",
   representativeName: "",
   representativeEmail: "",
   representativeUserId: null,
@@ -130,11 +143,30 @@ function getCartProductType(product) {
     : "Tela";
 }
 
+function getCartProductImage(product) {
+  return (
+    product?.main_image_url ||
+    product?.cover_image_url ||
+    product?.image_url ||
+    ""
+  );
+}
+
+function formatCartCurrency(value) {
+  return new Intl.NumberFormat("es-CR", {
+    style: "currency",
+    currency: "CRC",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0);
+}
+
 export default function Catalog() {
   const { user } = useAuth();
   const canPurchase = hasCatalogPurchaseAccess(user);
   const mainContentRef = useRef(null);
   const catalogRequestRef = useRef(0);
+  const cartConfirmationTimerRef = useRef(null);
 
   const [activeCatalog, setActiveCatalog] = useState(
     CATALOG_TYPES.FABRICS,
@@ -161,7 +193,10 @@ export default function Catalog() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [cartItems, setCartItems] = useState([]);
+  const [cartConfirmation, setCartConfirmation] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [branchLocationLoading, setBranchLocationLoading] = useState(false);
+  const [branchLocationError, setBranchLocationError] = useState("");
   const [quotationCompanies, setQuotationCompanies] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [quotationClientForm, setQuotationClientForm] = useState(
@@ -649,6 +684,55 @@ export default function Catalog() {
     }
   }, [currentPage, totalPages]);
 
+  useEffect(
+    () => () => {
+      if (cartConfirmationTimerRef.current) {
+        window.clearTimeout(cartConfirmationTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!cartOpen) {
+      return undefined;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const layoutScrollContainer = mainContentRef.current?.parentElement;
+    const previousLayoutOverflow = layoutScrollContainer?.style.overflow;
+    const previousLayoutOverscroll =
+      layoutScrollContainer?.style.overscrollBehavior;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    if (layoutScrollContainer) {
+      layoutScrollContainer.style.overflow = "hidden";
+      layoutScrollContainer.style.overscrollBehavior = "none";
+    }
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      if (layoutScrollContainer) {
+        layoutScrollContainer.style.overflow = previousLayoutOverflow || "";
+        layoutScrollContainer.style.overscrollBehavior =
+          previousLayoutOverscroll || "";
+      }
+    };
+  }, [cartOpen]);
+
+  const cartSubtotal = cartItems.reduce(
+    (total, item) => total + item.unitPrice * item.quantity,
+    0,
+  );
+  const cartTaxes = cartItems.reduce(
+    (total, item) => total + item.ivaAmount * item.quantity,
+    0,
+  );
+  const cartEstimatedTotal = cartSubtotal + cartTaxes;
+
   const handleCatalogChange = (nextCatalog) => {
     if (
       !nextCatalog ||
@@ -812,6 +896,11 @@ export default function Catalog() {
           productId,
           unitPrice,
           ivaAmount,
+          description:
+            product?.description ||
+            product?.short_description ||
+            "Producto seleccionado para cotización.",
+          imageUrl: getCartProductImage(product),
           hasSublimation,
           hasEmbroidery,
           sublimationPrice,
@@ -819,6 +908,21 @@ export default function Catalog() {
         },
       ];
     });
+
+    setCartConfirmation({
+      id: Date.now(),
+      name: itemName,
+      quantity: safeQuantity,
+    });
+
+    if (cartConfirmationTimerRef.current) {
+      window.clearTimeout(cartConfirmationTimerRef.current);
+    }
+
+    cartConfirmationTimerRef.current = window.setTimeout(() => {
+      setCartConfirmation(null);
+      cartConfirmationTimerRef.current = null;
+    }, 3500);
   };
 
   const handleOpenCart = () => {
@@ -857,6 +961,12 @@ export default function Catalog() {
   };
 
   const handleQuotationClientFormChange = (fieldName, value) => {
+    const branchAddressChanged = [
+      "branchProvince",
+      "branchDistrict",
+      "branchAddress",
+    ].includes(fieldName);
+
     setQuotationClientForm((currentForm) => ({
       ...currentForm,
       ...(fieldName === "legalId" || fieldName === "identificationType"
@@ -872,6 +982,13 @@ export default function Catalog() {
       ...(fieldName === "earlyDelivery" && !value
         ? { earlyDeliveryDate: "" }
         : {}),
+      ...(branchAddressChanged && currentForm[fieldName] !== value
+        ? {
+            branchLatitude: "",
+            branchLongitude: "",
+            branchLocationAccuracy: "",
+          }
+        : {}),
       [fieldName]:
         fieldName === "legalId" && currentForm.identificationType === "legal"
           ? formatLegalId(value)
@@ -879,6 +996,10 @@ export default function Catalog() {
             ? formatPhoneNumber(value)
             : value,
     }));
+
+    if (branchAddressChanged) {
+      setBranchLocationError("");
+    }
 
     if (fieldName === "legalId" || fieldName === "identificationType") {
       setClientLookupMessage("");
@@ -946,6 +1067,9 @@ export default function Catalog() {
       branchDistrict: branch.district,
       branchAddress: branch.address,
       branchPhone: branch.branchPhone || "",
+      branchLatitude: branch.latitude ?? "",
+      branchLongitude: branch.longitude ?? "",
+      branchLocationAccuracy: branch.location_accuracy_meters ?? "",
       representativeId: branch.representative?.representative_id || "",
       representativeName: branch.representative?.name || "",
       representativeEmail: branch.representative?.email || "",
@@ -962,11 +1086,59 @@ export default function Catalog() {
       branchDistrict: "",
       branchAddress: "",
       branchPhone: "",
+      branchLatitude: "",
+      branchLongitude: "",
+      branchLocationAccuracy: "",
       representativeId: "",
       representativeName: "",
       representativeEmail: "",
       representativeUserId: null,
     }));
+    setBranchLocationError("");
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setBranchLocationError(
+        "Este dispositivo o navegador no permite obtener la ubicación.",
+      );
+      return;
+    }
+
+    setBranchLocationLoading(true);
+    setBranchLocationError("");
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setQuotationClientForm((currentForm) => ({
+          ...currentForm,
+          branchLatitude: coords.latitude.toFixed(7),
+          branchLongitude: coords.longitude.toFixed(7),
+          branchLocationAccuracy: Number.isFinite(coords.accuracy)
+            ? coords.accuracy.toFixed(1)
+            : "",
+        }));
+        setBranchLocationLoading(false);
+      },
+      (error) => {
+        const errorMessages = {
+          1: "Permite el acceso a tu ubicación para registrar la sucursal.",
+          2: "No fue posible determinar la ubicación actual.",
+          3: "La solicitud de ubicación tardó demasiado. Inténtalo nuevamente.",
+        };
+
+        setBranchLocationError(
+          errorMessages[error.code] ||
+            "No fue posible obtener la ubicación actual.",
+        );
+        setBranchLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 20000,
+      },
+    );
   };
 
   const handleSaveCartQuotation = async (status) => {
@@ -1563,10 +1735,12 @@ export default function Catalog() {
 
                       <label>
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo representante
+                          Correo representante *
                         </span>
                         <input
                           type="email"
+                          required
+                          autoComplete="email"
                           value={quotationClientForm.representativeEmail}
                           onChange={(event) =>
                             handleQuotationClientFormChange(
@@ -1675,6 +1849,7 @@ export default function Catalog() {
                     </div>
                   </div>
                 </div>
+
               ) : (
                 <p className="mt-4 rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-4 py-3 text-sm text-slate-500">
                   Selecciona cantidades en las tarjetas del catálogo para preparar el pedido.
@@ -1752,7 +1927,7 @@ export default function Catalog() {
 
       {cartOpen && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#020817]/85 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[120] flex items-center justify-center overscroll-none bg-[#020817]/90 p-2 backdrop-blur-md sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Carrito de compra"
@@ -1762,15 +1937,15 @@ export default function Catalog() {
             }
           }}
         >
-          <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[#35547E] bg-[#102441] shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-[#29466F] px-5 py-4">
+          <div className="flex h-[96vh] w-full max-w-[1550px] flex-col overflow-hidden rounded-2xl border border-[#29466F] bg-[radial-gradient(circle_at_50%_0%,#0d294b_0%,#071a31_42%,#061426_100%)] shadow-[0_28px_100px_rgba(0,0,0,0.6)] sm:h-[94vh]">
+            <div className="flex items-start justify-between gap-4 border-b border-[#29466F] px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31] text-[#D7A91D]">
-                  <ShoppingCart className="h-5 w-5" />
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl border border-[#35547E] bg-[#091A31]/80 text-[#9BB3D3] shadow-inner sm:h-14 sm:w-14">
+                  <ShoppingCart className="h-6 w-6" />
                 </div>
 
                 <div className="min-w-0">
-                  <h2 className="text-lg font-extrabold text-white">
+                  <h2 className="text-xl font-extrabold text-[#E9BC2D] sm:text-2xl">
                     Carrito de compra
                   </h2>
 
@@ -1786,28 +1961,42 @@ export default function Catalog() {
               <button
                 type="button"
                 onClick={handleCloseCart}
-                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-[#45648D] bg-[#132F58] text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] hover:text-[#E9BC2D]"
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-[#D7A91D]/25 bg-[#D7A91D]/5 text-[#E9BC2D] transition hover:border-[#D7A91D] hover:bg-[#D7A91D]/10 sm:h-12 sm:w-12"
                 aria-label="Cerrar carrito de compra"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:p-5 lg:overflow-hidden lg:p-6">
               {cartItems.length > 0 ? (
-                <div className="space-y-3">
-                  {cartItems.map((item) => (
+                <div className="grid gap-5 lg:h-full lg:grid-cols-[minmax(0,2fr)_minmax(310px,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-7">
+                  <div className="space-y-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:space-y-0 lg:overflow-hidden lg:pr-2">
+                    <div className="space-y-4 lg:max-h-[45%] lg:flex-none lg:overflow-y-auto lg:overscroll-contain lg:[-ms-overflow-style:none] lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
+                    {cartItems.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col gap-3 rounded-xl border border-[#35547E] bg-[#091A31] p-3 sm:flex-row sm:items-center sm:justify-between"
+                      className="grid gap-4 rounded-xl border border-[#29466F] bg-[#0A1E37]/90 p-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)] sm:grid-cols-[124px_minmax(0,1fr)_auto] sm:items-center sm:p-4"
                     >
+                      <div className="flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-[#45648D] bg-[#102B4A] sm:h-32 sm:w-[124px]">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="h-full w-full object-contain p-1"
+                          />
+                        ) : (
+                          <ShoppingCart className="h-8 w-8 text-[#5E7EA8]" />
+                        )}
+                      </div>
+
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
                             {item.catalogType}
                           </span>
 
-                          <span className="truncate text-xs text-[#86A4CE]">
+                          <span className="max-w-full truncate text-xs text-[#86A4CE]">
                             {item.sku}
                           </span>
 
@@ -1830,12 +2019,16 @@ export default function Catalog() {
                             </span>
                           )}
 
-                        <p className="mt-1 truncate text-sm font-bold text-white">
+                        <p className="mt-2 text-base font-extrabold text-white sm:text-lg">
                           {item.name}
+                        </p>
+
+                        <p className="mt-1 line-clamp-2 max-w-xl text-sm leading-5 text-[#9BB3D3]">
+                          {item.description}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      <div className="flex flex-wrap items-center justify-between gap-3 sm:w-44 sm:flex-col sm:items-end">
                         <div className="flex items-center overflow-hidden rounded-xl border border-[#35547E] bg-[#102441]">
                           <button
                             type="button"
@@ -1870,26 +2063,38 @@ export default function Catalog() {
                           </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCartItem(item.id)}
-                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-red-300/25 text-red-100 transition hover:bg-red-500/10"
-                          aria-label={`Quitar ${item.name} del carrito`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-4">
+                          <p className="text-base font-extrabold text-white sm:text-lg">
+                            {formatCartCurrency(item.unitPrice * item.quantity)}
+                          </p>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCartItem(item.id)}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-300/25 text-red-100 transition hover:bg-red-500/10"
+                            aria-label={`Quitar ${item.name} del carrito`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  ))}
+                    ))}
+                    </div>
 
-                  <div className="rounded-xl border border-[#35547E] bg-[#091A31] p-4">
-                    <div>
-                      <h3 className="text-sm font-extrabold uppercase tracking-[0.12em] text-[#D7A91D]">
+                  <div className="rounded-xl border border-[#29466F] bg-[#0A1E37]/90 p-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:p-5 lg:mt-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#132F58] text-[#E9BC2D]">
+                        <UserRound className="h-5 w-5" />
+                      </div>
+                      <div>
+                      <h3 className="text-base font-extrabold text-[#E9BC2D]">
                         Datos del cliente
                       </h3>
                       <p className="mt-1 text-sm text-slate-400">
-                        Empresa cliente, sucursal y representante para guardar la cotizacion.
+                        Complete la información para guardar la cotización.
                       </p>
+                      </div>
                     </div>
 
                     {quotationError && (
@@ -2089,6 +2294,78 @@ export default function Catalog() {
                         </>
                       )}
 
+                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#091A31] text-[#E9BC2D]">
+                              <MapPin className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-extrabold text-white">
+                                Ubicación de la sucursal
+                              </p>
+                              <p className="mt-1 text-xs leading-5 text-slate-400">
+                                Obtén las coordenadas precisas desde este dispositivo.
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleUseCurrentLocation}
+                            disabled={branchLocationLoading || quotationSubmitting}
+                            className="inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-[#D7A91D]/45 bg-[#D7A91D]/10 px-4 text-sm font-bold text-[#E9BC2D] transition hover:border-[#D7A91D] hover:bg-[#D7A91D]/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {branchLocationLoading ? (
+                              <RiLoader4Line className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <LocateFixed className="h-4 w-4" />
+                            )}
+                            {branchLocationLoading
+                              ? "Obteniendo ubicación..."
+                              : "Ubicación actual"}
+                          </button>
+                        </div>
+
+                        {quotationClientForm.branchLatitude !== "" &&
+                        quotationClientForm.branchLongitude !== "" ? (
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+                                Latitud
+                              </span>
+                              <span className="mt-1 block font-mono text-sm text-white">
+                                {quotationClientForm.branchLatitude}
+                              </span>
+                            </div>
+                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+                                Longitud
+                              </span>
+                              <span className="mt-1 block font-mono text-sm text-white">
+                                {quotationClientForm.branchLongitude}
+                              </span>
+                            </div>
+                            <p className="text-xs text-emerald-200 sm:col-span-2">
+                              Ubicación capturada
+                              {quotationClientForm.branchLocationAccuracy !== ""
+                                ? ` con una precisión aproximada de ${quotationClientForm.branchLocationAccuracy} m.`
+                                : "."}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="mt-4 text-xs text-amber-200">
+                            Aún no se han registrado coordenadas para esta sucursal.
+                          </p>
+                        )}
+
+                        {branchLocationError && (
+                          <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                            {branchLocationError}
+                          </p>
+                        )}
+                      </div>
+
                       <div className="md:col-span-2 border-t border-[#29466F] pt-4 text-sm font-extrabold text-white">
                         Representante
                       </div>
@@ -2112,10 +2389,12 @@ export default function Catalog() {
 
                       <label>
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo representante
+                          Correo representante *
                         </span>
                         <input
                           type="email"
+                          required
+                          autoComplete="email"
                           value={quotationClientForm.representativeEmail}
                           onChange={(event) =>
                             handleQuotationClientFormChange(
@@ -2224,6 +2503,62 @@ export default function Catalog() {
                     </div>
                   </div>
                 </div>
+
+                  <aside className="rounded-xl border border-[#29466F] bg-[#0A1E37]/90 p-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:h-full lg:min-h-0 lg:overflow-y-auto lg:p-6">
+                    <div className="flex items-center gap-3 text-[#E9BC2D]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/5">
+                        <ClipboardList className="h-5 w-5" />
+                      </div>
+                      <h3 className="text-lg font-extrabold">Resumen del pedido</h3>
+                    </div>
+
+                    <dl className="mt-7 space-y-5 text-sm sm:text-base">
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-slate-300">
+                          Subtotal ({cartItemsCount}{" "}
+                          {cartItemsCount === 1 ? "producto" : "productos"})
+                        </dt>
+                        <dd className="font-bold text-white">
+                          {formatCartCurrency(cartSubtotal)}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-slate-400">Impuestos</dt>
+                        <dd className="font-bold text-white">
+                          {formatCartCurrency(cartTaxes)}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-4 border-t border-[#45648D] pt-5">
+                        <dt className="font-extrabold text-white">Total estimado</dt>
+                        <dd className="text-xl font-extrabold text-[#E9BC2D]">
+                          {formatCartCurrency(cartEstimatedTotal)}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div className="mt-6 flex gap-3 rounded-xl border border-[#D7A91D]/35 bg-[#071A31]/70 p-4 text-sm leading-5 text-[#B6C7DD]">
+                      <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#9BB3D3]" />
+                      <p>
+                        Este es un estimado. Los precios finales pueden variar al generar la cotización.
+                      </p>
+                    </div>
+
+                    <ul className="mt-7 space-y-5 text-sm text-[#9BB3D3] sm:text-base">
+                      <li className="flex items-center gap-4">
+                        <CalendarDays className="h-5 w-5 flex-shrink-0 text-[#E9BC2D]" />
+                        Precios válidos por 15 días
+                      </li>
+                      <li className="flex items-center gap-4">
+                        <ShieldCheck className="h-5 w-5 flex-shrink-0 text-[#E9BC2D]" />
+                        Cotización sin compromiso
+                      </li>
+                      <li className="flex items-center gap-4">
+                        <Headphones className="h-5 w-5 flex-shrink-0 text-[#E9BC2D]" />
+                        Atención personalizada
+                      </li>
+                    </ul>
+                  </aside>
+                </div>
               ) : (
                 <div className="flex min-h-[260px] flex-col items-center justify-center rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-6 py-10 text-center">
                   <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[#35547E] bg-[#102441] text-[#D7A91D]">
@@ -2241,7 +2576,7 @@ export default function Catalog() {
               )}
             </div>
 
-            <div className="flex flex-col gap-3 border-t border-[#29466F] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 border-t border-[#29466F] bg-[#0A1E37]/75 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
               <button
                 type="button"
                 onClick={handleClearCart}
@@ -2257,9 +2592,10 @@ export default function Catalog() {
                   type="button"
                   onClick={handleQuoteCart}
                   disabled={cartItems.length === 0 || quotationSubmitting}
-                  className="rounded-xl border border-[#45648D] bg-[#132F58] px-5 py-2.5 text-sm font-bold text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#E9BC2D] bg-[#E9BC2D] px-6 py-3 text-sm font-extrabold text-[#071426] shadow-[0_8px_24px_rgba(233,188,45,0.18)] transition hover:border-[#F5D875] hover:bg-[#F5D875] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {quotationSubmitting ? "Guardando..." : "Cotizar"}
+                  <FileText className="h-4 w-4" />
+                  {quotationSubmitting ? "Guardando..." : "Cotizar pedido"}
                 </button>
 
               </div>
@@ -2281,6 +2617,54 @@ export default function Catalog() {
           setSelectedTechnicalSheetProduct(null)
         }
       />
+
+      {cartConfirmation && (
+        <div
+          key={cartConfirmation.id}
+          role="status"
+          aria-live="polite"
+          className="fixed right-4 top-20 z-[100] w-[calc(100%-2rem)] max-w-sm overflow-hidden rounded-2xl border border-emerald-400/35 bg-[#10192b] shadow-[0_24px_70px_rgba(0,0,0,0.45)] sm:right-6"
+        >
+          <div className="flex items-start gap-3 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-white">
+                Artículo agregado al carrito
+              </p>
+              <p className="mt-1 text-sm text-gray-300">
+                {cartConfirmation.name}
+                {cartConfirmation.quantity > 1
+                  ? ` · ${cartConfirmation.quantity} unidades`
+                  : ""}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setCartConfirmation(null);
+                  handleOpenCart();
+                }}
+                className="mt-3 text-sm font-semibold text-[#E9BC2D] transition hover:text-[#F5D875]"
+              >
+                Ver carrito
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCartConfirmation(null)}
+              aria-label="Cerrar confirmación"
+              className="rounded-lg p-1 text-gray-500 transition hover:bg-white/5 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="h-1 bg-emerald-400" />
+        </div>
+      )}
     </>
   );
 }

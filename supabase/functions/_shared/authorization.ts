@@ -26,11 +26,13 @@ function isActiveRecord(record: any, today: string) {
 
 export async function authorizeCompanyAction({
   supabaseAdmin, userId, companyId, allowedRoleCodes,
+  allowAnyActiveCompany = false,
 }: {
   supabaseAdmin: any;
   userId: string;
   companyId: string;
   allowedRoleCodes: Set<string>;
+  allowAnyActiveCompany?: boolean;
 }): Promise<AuthorizationResult> {
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Costa_Rica",
@@ -54,11 +56,16 @@ export async function authorizeCompanyAction({
   if (profileError) return { authorized: false, status: 500, message: "No fue posible validar el perfil del usuario.", details: profileError };
   if (!profile || profile.is_active === false) return { authorized: false, status: 403, message: "Tu perfil de usuario no esta activo." };
 
-  const { data: memberships, error: membershipError } = await supabaseAdmin
+  let membershipsQuery = supabaseAdmin
     .from("user_memberships")
     .select("company_id, role_id, is_active, start_date, end_date")
-    .eq("user_id", userId)
-    .eq("company_id", companyId);
+    .eq("user_id", userId);
+
+  if (!allowAnyActiveCompany) {
+    membershipsQuery = membershipsQuery.eq("company_id", companyId);
+  }
+
+  const { data: memberships, error: membershipError } = await membershipsQuery;
 
   if (membershipError) return { authorized: false, status: 500, message: "No fue posible validar la membresia del usuario.", details: membershipError };
   const roleIds = [...new Set((memberships || [])
@@ -66,7 +73,15 @@ export async function authorizeCompanyAction({
     .map((record: any) => record.role_id)
     .filter(Boolean))];
 
-  if (roleIds.length === 0) return { authorized: false, status: 403, message: "No tienes una membresia activa para la empresa solicitada." };
+  if (roleIds.length === 0) {
+    return {
+      authorized: false,
+      status: 403,
+      message: allowAnyActiveCompany
+        ? "No tienes una membresia empresarial activa."
+        : "No tienes una membresia activa para la empresa solicitada.",
+    };
+  }
 
   const { data: roles, error: rolesError } = await supabaseAdmin
     .from("roles").select("role_code, role_name").in("role_id", roleIds);

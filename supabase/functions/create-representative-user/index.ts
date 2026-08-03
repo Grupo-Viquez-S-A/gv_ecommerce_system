@@ -1,4 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  getSmtpConfig,
+  isSmtpConfigured,
+  sendSmtpMail,
+} from "../_shared/mailer.ts";
 
 const ACCOUNT_MANAGEMENT_ROLE_CODES = new Set([
   "admin",
@@ -9,6 +14,12 @@ const ACCOUNT_MANAGEMENT_ROLE_CODES = new Set([
   "encargado",
   "presidente",
   "president",
+  "sales_agent",
+  "agente_ventas",
+  "agente de ventas",
+  "vendedor",
+  "comercial",
+  "director",
 ]);
 
 function normalizeOrigin(value: string | undefined) {
@@ -22,15 +33,24 @@ function normalizeOrigin(value: string | undefined) {
   }
 }
 
-function getConfiguredCorsHeaders() {
-  const configuredOrigin = normalizeOrigin(
-    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
-      Deno.env.get("SITE_URL") ||
-      Deno.env.get("APP_URL"),
-  );
+function isLocalDevelopmentOrigin(origin: string) {
+  if (!origin) return false;
 
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) &&
+      ["5000", "5001"].includes(url.port)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getConfiguredCorsHeaders() {
   return {
-    ...(configuredOrigin ? { "Access-Control-Allow-Origin": configuredOrigin } : {}),
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -51,7 +71,10 @@ function isOriginAllowed(request: Request) {
       Deno.env.get("APP_URL"),
   );
 
-  return Boolean(configuredOrigin && requestOrigin === configuredOrigin);
+  return Boolean(
+    (configuredOrigin && requestOrigin === configuredOrigin) ||
+      isLocalDevelopmentOrigin(requestOrigin),
+  );
 }
 
 function isUuid(value: string) {
@@ -327,7 +350,16 @@ function generateTempPassword() {
   return `Gv${base}${Math.floor(Math.random() * 90 + 10)}!`;
 }
 
-function getClientRedirectUrl() {
+function getClientRedirectUrl(request: Request) {
+  const requestOrigin = normalizeOrigin(request.headers.get("Origin") || undefined);
+
+  // Las cotizaciones creadas desde el e-commerce local deben enviar al mismo
+  // ambiente. Solo aceptamos los orígenes locales que también pasan la
+  // validación CORS de esta función.
+  if (isLocalDevelopmentOrigin(requestOrigin)) {
+    return `${requestOrigin}/`;
+  }
+
   return (
     Deno.env.get("ECOMMERCE_CLIENT_REDIRECT_URL") ||
     Deno.env.get("SITE_URL") ||
@@ -338,38 +370,70 @@ function getClientRedirectUrl() {
     .replace(/\/+$/, "");
 }
 
-async function sendPasswordSetupEmail({
-  supabaseUrl,
-  anonKey,
+function escapeHtml(value: unknown) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function sendTemporaryAccessEmail({
   email,
+  fullName,
+  tempPassword,
+  loginUrl,
 }: {
-  supabaseUrl: string;
-  anonKey: string;
   email: string;
+  fullName: string;
+  tempPassword: string;
+  loginUrl: string;
 }) {
-  const redirectBaseUrl = getClientRedirectUrl();
-  const redirectTo = redirectBaseUrl
-    ? `${redirectBaseUrl}/restablecer-contrasena`
-    : undefined;
-
-  const supabasePublic = createClient(supabaseUrl, anonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-
-  const { error } = await supabasePublic.auth.resetPasswordForEmail(email, {
-    redirectTo,
-  });
-
-  if (error) {
-    throw error;
+  const smtpConfig = getSmtpConfig("ECOMMERCE_SMTP");
+  if (!isSmtpConfigured(smtpConfig)) {
+    throw new Error(
+      "Faltan variables SMTP para enviar el acceso temporal del representante.",
+    );
   }
+
+  const safeName = escapeHtml(fullName);
+  const safeEmail = escapeHtml(email);
+  const safePassword = escapeHtml(tempPassword);
+  const safeLoginUrl = escapeHtml(loginUrl);
+
+  await sendSmtpMail({
+    ...smtpConfig,
+    to: email,
+    subject: "Acceso temporal al e-commerce de Grupo Viquez",
+    text: [
+      `Hola ${fullName},`,
+      "",
+      "Se creo tu cuenta con el rol Cliente para consultar tus cotizaciones.",
+      `Correo: ${email}`,
+      `Contrasena temporal: ${tempPassword}`,
+      loginUrl ? `Ingresar: ${loginUrl}` : "",
+      "",
+      "Inicia sesion con esta contrasena temporal. Luego podras establecer una nueva contrasena.",
+    ].filter(Boolean).join("\n"),
+    html: `
+      <div style="font-family:Arial,sans-serif;color:#102441;line-height:1.55">
+        <h2>Bienvenido al e-commerce de Grupo Viquez</h2>
+        <p>Hola ${safeName},</p>
+        <p>Se creo tu cuenta con el rol <strong>Cliente</strong> para consultar tus cotizaciones.</p>
+        <div style="padding:16px;border:1px solid #d7a91d;border-radius:10px;background:#fffaf0">
+          <p style="margin:0 0 8px"><strong>Correo:</strong> ${safeEmail}</p>
+          <p style="margin:0"><strong>Contrasena temporal:</strong> <code>${safePassword}</code></p>
+        </div>
+        <p>Inicia sesion con esta contrasena temporal. Luego podras establecer una nueva contrasena.</p>
+        ${loginUrl ? `<p><a href="${safeLoginUrl}" style="display:inline-block;padding:12px 18px;border-radius:8px;background:#d7a91d;color:#071426;text-decoration:none;font-weight:bold">Iniciar sesion</a></p>` : ""}
+      </div>
+    `,
+  });
 
   return {
     sent: true,
-    redirect_to: redirectTo || null,
+    login_url: loginUrl || null,
   };
 }
 
@@ -437,6 +501,7 @@ Deno.serve(async (request) => {
   }
 
   const authorization = request.headers.get("Authorization") || "";
+  let isServiceRoleRequest = authorization === `Bearer ${serviceRoleKey}`;
 
   const supabaseAuth = createClient(supabaseUrl, anonKey, {
     auth: {
@@ -458,15 +523,35 @@ Deno.serve(async (request) => {
   });
 
   try {
-    const { data: currentUserData, error: currentUserError } =
-      await supabaseAuth.auth.getUser();
+    if (!isServiceRoleRequest && authorization.startsWith("Bearer ")) {
+      const presentedKey = authorization.slice("Bearer ".length).trim();
+      const presentedAdmin = createClient(supabaseUrl, presentedKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      });
+      const { error: presentedAdminError } =
+        await presentedAdmin.auth.admin.listUsers({ page: 1, perPage: 1 });
 
-    if (currentUserError || !currentUserData.user) {
-      return errorResponse(
-        "Debes iniciar sesion para crear el acceso del representante.",
-        401,
-        currentUserError,
-      );
+      isServiceRoleRequest = !presentedAdminError;
+    }
+
+    let currentUserId: string | null = null;
+
+    if (!isServiceRoleRequest) {
+      const { data: currentUserData, error: currentUserError } =
+        await supabaseAuth.auth.getUser();
+
+      if (currentUserError || !currentUserData.user) {
+        return errorResponse(
+          "Debes iniciar sesion para crear el acceso del representante.",
+          401,
+          currentUserError,
+        );
+      }
+
+      currentUserId = currentUserData.user.id;
     }
 
     let body: any;
@@ -555,19 +640,21 @@ Deno.serve(async (request) => {
       return errorResponse("El cliente no pertenece a la empresa indicada.", 409);
     }
 
-    const authorizationResult = await authorizeCompanyAction({
-      supabaseAdmin,
-      userId: currentUserData.user.id,
-      companyId,
-      allowedRoleCodes: ACCOUNT_MANAGEMENT_ROLE_CODES,
-    });
+    if (!isServiceRoleRequest) {
+      const authorizationResult = await authorizeCompanyAction({
+        supabaseAdmin,
+        userId: currentUserId as string,
+        companyId,
+        allowedRoleCodes: ACCOUNT_MANAGEMENT_ROLE_CODES,
+      });
 
-    if (!authorizationResult.authorized) {
-      return errorResponse(
-        authorizationResult.message,
-        authorizationResult.status,
-        authorizationResult.details,
-      );
+      if (!authorizationResult.authorized) {
+        return errorResponse(
+          authorizationResult.message,
+          authorizationResult.status,
+          authorizationResult.details,
+        );
+      }
     }
 
     let userId = representative.user_id || null;
@@ -598,7 +685,7 @@ Deno.serve(async (request) => {
     let accountState: "new" | "pending" | "active" = "active";
     let finalMustChangePassword = false;
     let tempPassword: string | null = null;
-    let emailNotification: { sent: boolean; error: string | null; redirect_to?: string | null } = {
+    let emailNotification: { sent: boolean; error: string | null; login_url?: string | null } = {
       sent: false,
       error: null,
     };
@@ -759,7 +846,24 @@ Deno.serve(async (request) => {
       );
     }
 
-    if (!existingMembership) {
+    if (existingMembership) {
+      const { error: membershipUpdateError } = await supabaseAdmin
+        .from("user_memberships")
+        .update({
+          is_active: true,
+          start_date: startDate,
+          end_date: null,
+        })
+        .eq("membership_id", existingMembership.membership_id);
+
+      if (membershipUpdateError) {
+        return errorResponse(
+          "No fue posible reactivar el rol Cliente del representante.",
+          500,
+          membershipUpdateError,
+        );
+      }
+    } else {
       const { error: membershipError } = await supabaseAdmin
         .from("user_memberships")
         .insert({
@@ -797,7 +901,24 @@ Deno.serve(async (request) => {
       );
     }
 
-    if (!existingApplication) {
+    if (existingApplication) {
+      const { error: applicationUpdateError } = await supabaseAdmin
+        .from("user_applications")
+        .update({
+          is_active: true,
+          start_date: startDate,
+          end_date: null,
+        })
+        .eq("user_application_id", existingApplication.user_application_id);
+
+      if (applicationUpdateError) {
+        return errorResponse(
+          "No fue posible reactivar el acceso al e-commerce.",
+          500,
+          applicationUpdateError,
+        );
+      }
+    } else {
       const { error: applicationError } = await supabaseAdmin
         .from("user_applications")
         .insert({
@@ -819,16 +940,17 @@ Deno.serve(async (request) => {
 
     if (accountState === "new" || accountState === "pending") {
       try {
-        emailNotification = await sendPasswordSetupEmail({
-          supabaseUrl,
-          anonKey,
+        emailNotification = await sendTemporaryAccessEmail({
           email,
+          fullName,
+          tempPassword: tempPassword as string,
+          loginUrl: getClientRedirectUrl(request),
         });
       } catch (emailError) {
         console.error("No fue posible enviar el correo de activacion:", getErrorDetails(emailError));
         emailNotification = {
           sent: false,
-          error: "No fue posible enviar el correo para crear/restablecer contraseña.",
+          error: "No fue posible enviar el correo con la contrasena temporal.",
         };
       }
     }

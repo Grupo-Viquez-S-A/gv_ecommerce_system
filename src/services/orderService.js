@@ -299,7 +299,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
+        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, status_change_note, status_changed_at, status_changed_by, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
       )
       .eq("production_order_id", productionOrderId)
       .eq("is_active", true)
@@ -340,7 +340,7 @@ export async function getSalesOrderDetail(productionOrderId) {
   const productIds = [...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean))];
   const sizeIds = [...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean))];
 
-  const [products, productFiles, sizes, payments] = await Promise.all([
+  const [products, productFiles, sizes, payments, statusHistory] = await Promise.all([
     productIds.length
       ? throwIfError(
           await supabase
@@ -376,6 +376,16 @@ export async function getSalesOrderDetail(productionOrderId) {
         .eq("production_order_id", order.production_order_id)
         .eq("is_valid", true),
       "No fue posible cargar los pagos de la orden",
+    ),
+    throwIfError(
+      await supabase
+        .from("production_order_status_history")
+        .select(
+          "history_id, previous_status, new_status, note, changed_by, created_at",
+        )
+        .eq("production_order_id", order.production_order_id)
+        .order("created_at", { ascending: false }),
+      "No fue posible cargar el historial de estados",
     ),
   ]);
 
@@ -425,6 +435,8 @@ export async function getSalesOrderDetail(productionOrderId) {
     committedDeliveryDate: order.committed_delivery_date,
     unexpectedDeliveryDate: order.unexpected_delivery_date,
     nextPaymentDate: order.next_payment_date,
+    statusChangeNote: order.status_change_note || "",
+    statusChangedAt: order.status_changed_at,
     balance: getNumber(order.balance, 0),
     amountPaid,
     overdueDays: getNumber(order.overdue_days, 0),
@@ -437,6 +449,14 @@ export async function getSalesOrderDetail(productionOrderId) {
     total: getNumber(quotation.total, 0),
     itemsCount: items.length,
     notes: quotation.notes || "",
+    statusHistory: (statusHistory || []).map((entry) => ({
+      id: entry.history_id,
+      previousStatus: entry.previous_status,
+      newStatus: entry.new_status,
+      note: entry.note,
+      changedBy: entry.changed_by,
+      createdAt: entry.created_at,
+    })),
     items,
   };
 }
@@ -508,6 +528,10 @@ export async function updateProductionOrderDetails(productionOrderId, values = {
     updates.production_order_status = status;
   }
 
+  if (Object.prototype.hasOwnProperty.call(values, "statusChangeNote")) {
+    updates.status_change_note = String(values.statusChangeNote || "").trim();
+  }
+
   if (Object.prototype.hasOwnProperty.call(values, "penaltyPercentage")) {
     const numericPercentage = Number(values.penaltyPercentage);
 
@@ -538,7 +562,7 @@ export async function updateProductionOrderDetails(productionOrderId, values = {
       .update(updates)
       .eq("production_order_id", productionOrderId)
       .select(
-        "production_order_id, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, updated_at, penalty_percentage",
+        "production_order_id, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, status_change_note, status_changed_at, updated_at, penalty_percentage",
       )
       .maybeSingle(),
     "No fue posible actualizar la orden de produccion",
@@ -554,6 +578,8 @@ export async function updateProductionOrderDetails(productionOrderId, values = {
     committedDeliveryDate: updatedOrder.committed_delivery_date,
     unexpectedDeliveryDate: updatedOrder.unexpected_delivery_date,
     nextPaymentDate: updatedOrder.next_payment_date,
+    statusChangeNote: updatedOrder.status_change_note || "",
+    statusChangedAt: updatedOrder.status_changed_at,
     productionStatus,
     productionStatusLabel:
       PRODUCTION_STATUS_LABELS[productionStatus] || productionStatus,

@@ -1,9 +1,9 @@
-import { RiAddFill, RiEyeFill } from "react-icons/ri";
+import { RiAddFill, RiDownloadFill, RiEyeFill, RiLoader4Line, RiMailSendFill } from "react-icons/ri";
 import OrderDetailModal from "../clientPanel/OrderDetailModal.jsx";
 import { getPaymentMethods, reportPayment } from "../../services/quotationService.js";
-import { QuotationProductThumb as ProductThumb, QuotationStatusBadge as StatusBadge, formatQuotationCurrency as formatCurrency, formatQuotationDate as formatDate } from "./QuotationsViewHelpers.jsx";
+import { QuotationProductThumb as ProductThumb, QuotationStatusBadge as StatusBadge, formatQuotationCurrency as formatCurrency, formatQuotationDate as formatDate, isQuotationApproved } from "./QuotationsViewHelpers.jsx";
 
-export default function QuotationsDetails({ drawerOpen, closeDrawer, drawerMode, viewQuote, selectedProductionOrder, closeProductionOrderModal, productionOrderDetail, productionOrderDetailLoading, productionOrderDetailError, showPaymentForm, setShowPaymentForm, paymentMethods, setPaymentMethods, paymentLoading, setPaymentLoading, paymentError, setPaymentError, paymentSuccess, setPaymentSuccess, productionOrderForm, onProductionOrderFieldChange, onSaveProductionOrder, productionOrderSaving, productionOrderSaveError, productionOrderSaveSuccess, selectedQuotation, closeQuotationModal }) {
+export default function QuotationsDetails({ manageProduction = false, drawerOpen, closeDrawer, drawerMode, viewQuote, selectedProductionOrder, closeProductionOrderModal, productionOrderDetail, productionOrderDetailLoading, productionOrderDetailError, showPaymentForm, setShowPaymentForm, paymentMethods, setPaymentMethods, paymentLoading, setPaymentLoading, paymentError, setPaymentError, paymentSuccess, setPaymentSuccess, productionOrderForm, onProductionOrderFieldChange, onSaveProductionOrder, productionOrderSaving, productionOrderSaveError, productionOrderSaveSuccess, selectedQuotation, closeQuotationModal, onDownloadQuotation, downloadingQuotationId, onSendQuotation, sendingQuotationId }) {
   return <>
       {/* Fondo del drawer */}
       {drawerOpen && (
@@ -131,7 +131,7 @@ export default function QuotationsDetails({ drawerOpen, closeDrawer, drawerMode,
         paymentLoading={paymentLoading}
         paymentError={paymentError}
         paymentSuccess={paymentSuccess}
-        manageProduction
+        manageProduction={manageProduction}
         productionOrderForm={productionOrderForm}
         onProductionOrderFieldChange={onProductionOrderFieldChange}
         onSaveProductionOrder={onSaveProductionOrder}
@@ -436,11 +436,41 @@ export default function QuotationsDetails({ drawerOpen, closeDrawer, drawerMode,
             </div>
 
             {/* Footer del modal */}
-            <div className="border-t border-[#2a3550] px-5 py-4">
+            <div className="flex flex-col gap-3 border-t border-[#2a3550] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-gray-500">
                 Cotizacion {selectedQuotation.number} —{" "}
                 {selectedQuotation.status}
               </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={!isQuotationApproved(selectedQuotation) || sendingQuotationId === (selectedQuotation.quotationId || selectedQuotation.id)}
+                  onClick={() => onSendQuotation?.(selectedQuotation)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#C9A227]/50 px-4 py-2.5 text-sm font-bold text-[#F4C542] transition hover:bg-[#C9A227]/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  title={isQuotationApproved(selectedQuotation) ? "Enviar al representante de la sucursal" : "Disponible cuando la cotizacion sea aprobada"}
+                >
+                  {sendingQuotationId === (selectedQuotation.quotationId || selectedQuotation.id) ? (
+                    <RiLoader4Line size={17} className="animate-spin" />
+                  ) : (
+                    <RiMailSendFill size={17} />
+                  )}
+                  Enviar por correo
+                </button>
+                <button
+                type="button"
+                disabled={!isQuotationApproved(selectedQuotation) || downloadingQuotationId === (selectedQuotation.quotationId || selectedQuotation.id)}
+                onClick={() => onDownloadQuotation?.(selectedQuotation)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-4 py-2.5 text-sm font-bold text-[#091A31] transition hover:bg-[#D7B538] disabled:cursor-not-allowed disabled:opacity-40"
+                title={isQuotationApproved(selectedQuotation) ? "Descargar proforma PDF" : "Disponible cuando la cotización sea aprobada"}
+              >
+                {downloadingQuotationId === (selectedQuotation.quotationId || selectedQuotation.id) ? (
+                  <RiLoader4Line size={17} className="animate-spin" />
+                ) : (
+                  <RiDownloadFill size={17} />
+                )}
+                Descargar proforma PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>

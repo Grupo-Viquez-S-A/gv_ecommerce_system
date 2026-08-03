@@ -37,7 +37,11 @@ export default function ClientActionButtons({
   `;
 
   return (
-    <div className="flex items-center gap-1">
+    <div
+      className="flex items-center gap-1"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
       <button
         type="button"
         onClick={() => onOpenBranches(client)}

@@ -589,11 +589,8 @@ export default function Clients() {
     setDrawerOpen(true);
   };
 
-  const openViewDrawer = (client) => {
-    setDrawerMode("view");
-    setViewClient(cloneClient(client));
-    setEditClient(null);
-    setDrawerOpen(true);
+  const openClientDetails = (client) => {
+    setBranchModal(cloneClient(client));
   };
 
   const handleSaveClient = async () => {
@@ -724,7 +721,7 @@ export default function Clients() {
               onClearFilters={clearFilters}
               onOpenBranches={setBranchModal}
               onOpenRepresentatives={setRepModal}
-              onView={openViewDrawer}
+              onView={openClientDetails}
               onEdit={openEditDrawer}
               onDeactivate={setDeactivateModal}
               emptyTitle={
@@ -744,7 +741,7 @@ export default function Clients() {
               onClearFilters={clearFilters}
               onOpenBranches={setBranchModal}
               onOpenRepresentatives={setRepModal}
-              onView={openViewDrawer}
+              onView={openClientDetails}
               onEdit={openEditDrawer}
               onDeactivate={setDeactivateModal}
               emptyTitle={

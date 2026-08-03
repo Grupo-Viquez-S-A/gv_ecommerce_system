@@ -19,7 +19,17 @@ export default function ClientMobileList({
         clients.map((client) => (
           <div
             key={client.id}
-            className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4"
+            onClick={() => onView(client)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onView(client);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`Ver detalle de ${client.name}`}
+            className="cursor-pointer rounded-xl border border-[#2a3550] bg-[#141d2e] p-4 transition-colors hover:border-[#C9A227]/45 hover:bg-[#1c2538] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C9A227]"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
               <div className="flex items-center gap-3 min-w-0">

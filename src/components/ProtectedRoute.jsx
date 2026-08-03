@@ -1,6 +1,6 @@
 ﻿import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import { isClientAccount, hasSystemAccess } from "../utils/roles.js";
+import { isClientAccount, hasSystemAccess, isSalesAgent } from "../utils/roles.js";
 
 const CLIENT_ALLOWED_ROUTES = [
   "/mis-pedidos",
@@ -11,6 +11,7 @@ const CLIENT_ALLOWED_ROUTES = [
 ];
 
 const SYSTEM_ONLY_ROUTES = ["/admin/usuarios"];
+const SALES_AGENT_RESTRICTED_ROUTES = ["/ventas", "/pedidos"];
 
 function isSystemOnlyRoute(pathname) {
   return SYSTEM_ONLY_ROUTES.some(
@@ -20,6 +21,12 @@ function isSystemOnlyRoute(pathname) {
 
 function isAllowedClientRoute(pathname) {
   return CLIENT_ALLOWED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
+function isSalesAgentRestrictedRoute(pathname) {
+  return SALES_AGENT_RESTRICTED_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
@@ -49,6 +56,10 @@ function ProtectedRoute({ children }) {
 
   if (isClientAccount(user) && !isAllowedClientRoute(location.pathname)) {
     return <Navigate to="/mis-pedidos" replace />;
+  }
+
+  if (isSalesAgent(user) && isSalesAgentRestrictedRoute(location.pathname)) {
+    return <Navigate to="/cotizaciones" replace />;
   }
 
   if (

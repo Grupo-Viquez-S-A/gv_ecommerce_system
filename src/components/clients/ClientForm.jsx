@@ -20,6 +20,7 @@ import {
   formatLegalId,
   formatPhoneNumber,
 } from "../../utils/inputMasks.js";
+import BranchLocationMap from "./BranchLocationMap.jsx";
 
 const PHONE_TYPES = [
   "General",
@@ -93,6 +94,10 @@ function normalizeBranch(branch = {}, index = 0) {
     province: branch.province || "",
     district: branch.district || "",
     address: branch.address || "",
+    latitude: branch.latitude ?? "",
+    longitude: branch.longitude ?? "",
+    locationAccuracy:
+      branch.locationAccuracy ?? branch.location_accuracy_meters ?? "",
     status:
       branch.status ||
       (branch.is_active === false ? "Inactivo" : "Activo"),
@@ -941,6 +946,12 @@ export default function ClientForm({ form, onChange }) {
                       className={`${inputClassName} resize-none`}
                     />
                   </div>
+
+                  <BranchLocationMap
+                    latitude={branch.latitude}
+                    longitude={branch.longitude}
+                    accuracy={branch.locationAccuracy}
+                  />
 
                   <div>
                     <FieldLabel>Estado de la sucursal</FieldLabel>

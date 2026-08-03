@@ -1,23 +1,63 @@
 import { RiAddCircleLine, RiArrowDownSFill, RiArrowLeftSLine, RiArrowRightSFill, RiDownloadFill, RiExportFill, RiEyeFill, RiLoader4Line, RiMailSendFill, RiMoreFill, RiSearchLine } from "react-icons/ri";
-import { QuotationPaginationButton as PagBtn, QuotationStatusBadge as StatusBadge, formatQuotationCurrency as formatCurrency, formatQuotationDate as formatDate } from "./QuotationsViewHelpers.jsx";
+import { QuotationPaginationButton as PagBtn, QuotationStatusBadge as StatusBadge, formatQuotationCurrency as formatCurrency, formatQuotationDate as formatDate, isQuotationApproved } from "./QuotationsViewHelpers.jsx";
 
-export default function QuotationsProductionLists({ activeProductionTab, setActiveProductionTab, filtered, filteredProductionOrders, quotations, productionOrders, loading, ordersLoading, openQuotationModal, setSelectedProductionOrder, onCreateProductionOrder, creatingProductionOrderId, clearFilters }) {
+export default function QuotationsProductionLists({ activeProductionTab, setActiveProductionTab, filtered, filteredProductionOrders, quotations, productionOrders, loading, ordersLoading, openQuotationModal, setSelectedProductionOrder, onCreateProductionOrder, creatingProductionOrderId, onDownloadQuotation, downloadingQuotationId, onSendQuotation, sendingQuotationId, clearFilters }) {
   const productionOrdersByQuotationId = new Map(
     productionOrders
       .filter((order) => order.quotationId)
       .map((order) => [order.quotationId, order]),
   );
 
-  const isApprovedQuotation = (quotation) => {
-    const status = String(quotation?.dbStatus || quotation?.status || "").toLowerCase();
-
-    return status === "approved" || status === "aprobada";
-  };
-
   const getQuotationId = (quotation) => quotation?.quotationId || quotation?.id;
 
+  const renderDownloadButton = (quotation, compact = false) => {
+    const quotationId = getQuotationId(quotation);
+    const isDownloading = downloadingQuotationId === quotationId;
+    const isApproved = isQuotationApproved(quotation);
+
+    return (
+      <button
+        type="button"
+        disabled={isDownloading || !isApproved}
+        onClick={(event) => {
+          event.stopPropagation();
+          onDownloadQuotation?.(quotation);
+        }}
+        className={`inline-flex items-center justify-center gap-1.5 rounded-lg text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 ${compact ? "h-9 flex-1 border border-[#2a3550] px-3 text-xs font-semibold" : "h-7 w-7"}`}
+        title={isApproved ? "Descargar proforma PDF" : "Disponible cuando la cotización sea aprobada"}
+        aria-label={`Descargar proforma ${quotation.number}`}
+      >
+        {isDownloading ? <RiLoader4Line size={13} className="animate-spin" /> : <RiDownloadFill size={13} />}
+        {compact && "Descargar PDF"}
+      </button>
+    );
+  };
+
+  const renderSendButton = (quotation, compact = false) => {
+    const quotationId = getQuotationId(quotation);
+    const isSending = sendingQuotationId === quotationId;
+    const isApproved = isQuotationApproved(quotation);
+
+    return (
+      <button
+        type="button"
+        disabled={isSending || !isApproved}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSendQuotation?.(quotation);
+        }}
+        className={`inline-flex items-center justify-center gap-1.5 rounded-lg text-gray-400 transition-colors hover:bg-[#C9A227]/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-40 ${compact ? "h-9 flex-1 border border-[#2a3550] px-3 text-xs font-semibold" : "h-7 w-7"}`}
+        title={isApproved ? "Enviar proforma al representante de la sucursal" : "Disponible cuando la cotizacion sea aprobada"}
+        aria-label={`Enviar proforma ${quotation.number}`}
+      >
+        {isSending ? <RiLoader4Line size={13} className="animate-spin" /> : <RiMailSendFill size={13} />}
+        {compact && "Enviar correo"}
+      </button>
+    );
+  };
+
   const renderProductionOrderButton = (quotation, compact = false) => {
-    if (!isApprovedQuotation(quotation)) return null;
+    if (!isQuotationApproved(quotation)) return null;
 
     const quotationId = getQuotationId(quotation);
     const existingOrder = productionOrdersByQuotationId.get(quotationId);
@@ -43,7 +83,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
           event.stopPropagation();
           onCreateProductionOrder?.(quotation);
         }}
-        className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-[#C9A227]/35 bg-[#C9A227]/10 px-2 text-xs font-semibold text-[#F4C542] transition-colors hover:bg-[#C9A227]/20 disabled:cursor-wait disabled:opacity-70 ${compact ? "w-full" : ""}`}
+        className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-[#C9A227]/35 bg-[#C9A227]/10 px-2 text-xs font-semibold text-[#F4C542] transition-colors hover:bg-[#C9A227]/20 disabled:cursor-wait disabled:opacity-70 ${compact ? "flex-1" : ""}`}
         title="Crear orden de produccion"
       >
         {isCreating ? <RiLoader4Line size={13} className="animate-spin" /> : <RiAddCircleLine size={13} />}
@@ -149,12 +189,8 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                           >
                             <RiEyeFill size={13} />
                           </button>
-                          <button type="button" className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Descargar">
-                            <RiDownloadFill size={13} />
-                          </button>
-                          <button type="button" className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Enviar">
-                            <RiMailSendFill size={13} />
-                          </button>
+                          {renderDownloadButton(quotation)}
+                          {renderSendButton(quotation)}
                           <button type="button" className="w-7 h-7 rounded-lg text-gray-400 hover:text-white hover:bg-[#C9A227]/15 flex items-center justify-center transition-colors cursor-pointer" title="Más opciones">
                             <RiMoreFill size={13} />
                           </button>
@@ -196,8 +232,10 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                         <StatusBadge status={quotation.status} />
                         <span className="truncate text-xs text-gray-400">{quotation.agent}</span>
                       </div>
-                      <div className="mt-3">
+                      <div className="mt-3 flex gap-2">
                         {renderProductionOrderButton(quotation, true)}
+                        {renderDownloadButton(quotation, true)}
+                        {renderSendButton(quotation, true)}
                       </div>
                     </div>
                   ))}

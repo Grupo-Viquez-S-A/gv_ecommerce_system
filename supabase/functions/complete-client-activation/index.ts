@@ -11,15 +11,24 @@ function normalizeOrigin(value: string | undefined) {
   }
 }
 
-function getConfiguredCorsHeaders() {
-  const configuredOrigin = normalizeOrigin(
-    Deno.env.get("CORS_ALLOWED_ORIGIN") ||
-      Deno.env.get("SITE_URL") ||
-      Deno.env.get("APP_URL"),
-  );
+function isLocalDevelopmentOrigin(origin: string) {
+  if (!origin) return false;
 
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) &&
+      ["5000", "5001"].includes(url.port)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getConfiguredCorsHeaders() {
   return {
-    ...(configuredOrigin ? { "Access-Control-Allow-Origin": configuredOrigin } : {}),
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -40,7 +49,10 @@ function isOriginAllowed(request: Request) {
       Deno.env.get("APP_URL"),
   );
 
-  return Boolean(configuredOrigin && requestOrigin === configuredOrigin);
+  return Boolean(
+    (configuredOrigin && requestOrigin === configuredOrigin) ||
+      isLocalDevelopmentOrigin(requestOrigin),
+  );
 }
 
 const corsHeaders = getConfiguredCorsHeaders();

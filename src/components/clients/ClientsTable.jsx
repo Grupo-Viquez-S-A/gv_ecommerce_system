@@ -52,7 +52,16 @@ export default function ClientsTable({
                 {clients.map((client) => (
                   <tr
                     key={client.id}
-                    className="border-b border-[#2a3550] last:border-0 hover:bg-[#1c2538] transition-colors"
+                    onClick={() => onView(client)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onView(client);
+                      }
+                    }}
+                    tabIndex={0}
+                    aria-label={`Ver detalle de ${client.name}`}
+                    className="cursor-pointer border-b border-[#2a3550] transition-colors last:border-0 hover:bg-[#1c2538] focus:bg-[#1c2538] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#C9A227]"
                   >
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">

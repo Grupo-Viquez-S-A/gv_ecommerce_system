@@ -46,6 +46,11 @@ function formatDate(dateValue) {
   return formatted || "Sin fecha";
 }
 
+function formatStatusLabel(status) {
+  return PRODUCTION_STATUS_OPTIONS.find((option) => option.value === status)?.label
+    || String(status || "Sin estado").replaceAll("_", " ");
+}
+
 export default function OrderDetailModal({
   isOpen,
   order,
@@ -247,16 +252,40 @@ export default function OrderDetailModal({
             />
           </div>
 
-          {manageProduction && (
-            <section className="rounded-lg border border-[#2a3550] bg-[#10192b] p-4">
+          <section className="rounded-lg border border-[#2a3550] bg-[#10192b] p-4">
               <div className="mb-4">
                 <h3 className="text-base font-bold text-white">
                   Fechas y estado de la orden
                 </h3>
                 <p className="text-sm text-gray-500">
-                  Actualiza las fechas operativas y el estado de produccion.
+                  {manageProduction
+                    ? "Actualiza las fechas operativas y el estado de produccion."
+                    : "Información operativa de solo lectura."}
                 </p>
               </div>
+
+              {manageProduction &&
+                productionOrderForm.productionStatus !== order.productionStatus && (
+                  <label className="mt-4 block space-y-2">
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                      Nota del cambio de estado *
+                    </span>
+                    <textarea
+                      value={productionOrderForm.statusChangeNote || ""}
+                      onChange={(event) =>
+                        onProductionOrderFieldChange?.(
+                          "statusChangeNote",
+                          event.target.value,
+                        )
+                      }
+                      maxLength={1000}
+                      rows={3}
+                      required
+                      placeholder="Explica el motivo o contexto del cambio de estado..."
+                      className="w-full resize-y rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-[#C9A227]"
+                    />
+                  </label>
+                )}
 
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <label className="space-y-2">
@@ -265,6 +294,7 @@ export default function OrderDetailModal({
                   </span>
                   <input
                     type="date"
+                    disabled={!manageProduction}
                     value={productionOrderForm.committedDeliveryDate || ""}
                     onPointerDown={openNativeDatePicker}
                     onClick={openNativeDatePicker}
@@ -275,7 +305,7 @@ export default function OrderDetailModal({
                         event.target.value,
                       )
                     }
-                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227] disabled:cursor-default disabled:opacity-75"
                   />
                 </label>
 
@@ -285,6 +315,7 @@ export default function OrderDetailModal({
                   </span>
                   <input
                     type="date"
+                    disabled={!manageProduction}
                     value={productionOrderForm.unexpectedDeliveryDate || ""}
                     onPointerDown={openNativeDatePicker}
                     onClick={openNativeDatePicker}
@@ -295,7 +326,7 @@ export default function OrderDetailModal({
                         event.target.value,
                       )
                     }
-                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227] disabled:cursor-default disabled:opacity-75"
                   />
                 </label>
 
@@ -305,6 +336,7 @@ export default function OrderDetailModal({
                   </span>
                   <input
                     type="date"
+                    disabled={!manageProduction}
                     value={productionOrderForm.nextPaymentDate || ""}
                     onPointerDown={openNativeDatePicker}
                     onClick={openNativeDatePicker}
@@ -315,7 +347,7 @@ export default function OrderDetailModal({
                         event.target.value,
                       )
                     }
-                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                    className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227] disabled:cursor-default disabled:opacity-75"
                   />
                 </label>
 
@@ -324,6 +356,7 @@ export default function OrderDetailModal({
                     Estado de la orden
                   </span>
                   <select
+                    disabled={!manageProduction}
                     value={productionOrderForm.productionStatus || "pendiente"}
                     onChange={(event) =>
                       onProductionOrderFieldChange?.(
@@ -331,7 +364,7 @@ export default function OrderDetailModal({
                         event.target.value,
                       )
                     }
-                    className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227]"
+                    className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227] disabled:cursor-default disabled:opacity-75"
                   >
                     {PRODUCTION_STATUS_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -347,6 +380,7 @@ export default function OrderDetailModal({
                   </span>
                   <input
                     type="number"
+                    disabled={!manageProduction}
                     min="0"
                     max="100"
                     step="0.01"
@@ -357,7 +391,7 @@ export default function OrderDetailModal({
                         event.target.value,
                       )
                     }
-                    className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227]"
+                    className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227] disabled:cursor-default disabled:opacity-75"
                   />
                 </label>
               </div>
@@ -377,15 +411,52 @@ export default function OrderDetailModal({
                 </div>
               )}
 
-              <div className="mt-4 flex justify-end">
+              {manageProduction && <div className="mt-4 flex justify-end">
                 <button
                   type="button"
                   onClick={onSaveProductionOrder}
-                  disabled={productionOrderSaving}
+                  disabled={
+                    productionOrderSaving ||
+                    (productionOrderForm.productionStatus !== order.productionStatus &&
+                      !productionOrderForm.statusChangeNote?.trim())
+                  }
                   className="rounded-lg border border-[#C9A227]/50 bg-[#C9A227]/15 px-4 py-2 text-sm font-semibold text-[#F5D875] transition hover:bg-[#C9A227]/25 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {productionOrderSaving ? "Guardando..." : "Guardar cambios"}
                 </button>
+              </div>}
+            </section>
+
+          {order.statusHistory?.length > 0 && (
+            <section className="rounded-lg border border-[#2a3550] bg-[#10192b] p-4">
+              <div className="mb-4">
+                <h3 className="text-base font-bold text-white">
+                  Historial de cambios de estado
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Notas registradas durante el seguimiento de producción.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {order.statusHistory.map((entry) => (
+                  <article
+                    key={entry.id}
+                    className="rounded-lg border border-[#2a3550] bg-[#182235] p-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-white">
+                        {formatStatusLabel(entry.previousStatus)} → {formatStatusLabel(entry.newStatus)}
+                      </p>
+                      <time className="text-xs text-gray-500">
+                        {formatDate(entry.createdAt)}
+                      </time>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm text-gray-300">
+                      {entry.note}
+                    </p>
+                  </article>
+                ))}
               </div>
             </section>
           )}

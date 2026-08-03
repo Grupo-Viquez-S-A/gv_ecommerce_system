@@ -181,14 +181,16 @@ async function authorizeCompanyAction({
 }
 
 function getSmtpConfig() {
-  const host = Deno.env.get("SMTP_HOST") || "";
-  const port = Number(Deno.env.get("SMTP_PORT") || "465");
-  const username = Deno.env.get("SMTP_USERNAME") || "";
-  const password = Deno.env.get("SMTP_PASSWORD") || "";
-  const fromEmail = Deno.env.get("SMTP_FROM_EMAIL") ||
-    Deno.env.get("SMTP_SENDER_EMAIL") || username;
-  const fromName = Deno.env.get("SMTP_FROM_NAME") ||
-    Deno.env.get("SMTP_SENDER_NAME") || "Grupo Viquez S.A";
+  const ecommerceSecret = (name: string) =>
+    Deno.env.get(`ECOMMERCE_SMTP_${name}`) || Deno.env.get(`SMTP_${name}`) || "";
+  const host = ecommerceSecret("HOST");
+  const port = Number(ecommerceSecret("PORT") || "465");
+  const username = ecommerceSecret("USERNAME");
+  const password = ecommerceSecret("PASSWORD");
+  const fromEmail = ecommerceSecret("FROM_EMAIL") ||
+    ecommerceSecret("SENDER_EMAIL") || username;
+  const fromName = ecommerceSecret("FROM_NAME") ||
+    ecommerceSecret("SENDER_NAME") || "E-commerce - Grupo Viquez S.A";
   return { host, port, username, password, fromEmail, fromName };
 }
 

@@ -87,7 +87,8 @@ export default function MainLayout() {
           currentCompany={currentCompany}
           companies={availableCompanies}
           onCompanyChange={handleCompanyChange}
-          onOpenSidebar={toggleSidebar}
+          onOpenSidebar={toggleSidebar}
+          userId={user?.id}
         />
 
         <main className="flex-1 overflow-y-auto">

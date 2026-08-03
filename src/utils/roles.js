@@ -30,6 +30,18 @@ export function hasSystemAccess(user) {
   );
 }
 
+export function isSalesAgent(user) {
+  const roleCode = normalizeRoleValue(user?.role?.code);
+  const roleName = normalizeRoleValue(user?.role?.name);
+
+  return (
+    roleCode === "sales_agent" ||
+    roleCode === "sales agent" ||
+    roleCode === "agente_ventas" ||
+    roleName === "agente de ventas"
+  );
+}
+
 const CATALOG_PURCHASE_ROLE_CODES = new Set([
   ...SYSTEM_ACCESS_ROLE_CODES,
   "sales_agent",

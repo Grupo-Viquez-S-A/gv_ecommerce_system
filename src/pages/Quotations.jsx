@@ -13,6 +13,7 @@ import {
 } from "../services/orderService.js";
 import {
   QUOTATION_STATUSES,
+  isQuotationApproved,
   normalizeQuotationSearch as normalizeSearchText,
 } from "../components/quotations/QuotationsViewHelpers.jsx";
 import QuotationsPageHeader from "../components/quotations/QuotationsPageHeader.jsx";
@@ -21,6 +22,8 @@ import QuotationsProductionLists from "../components/quotations/QuotationsProduc
 import QuotationsCharts from "../components/quotations/QuotationsCharts.jsx";
 import QuotationsDetails from "../components/quotations/QuotationsDetails.jsx";
 import OperationalMetrics from "../components/shared/OperationalMetrics.jsx";
+import { downloadQuotationProforma } from "../utils/proformaPdf.js";
+import { sendQuotationProformaEmail } from "../services/proformaEmailService.js";
 
 function toDateInputValue(value) {
   return value ? String(value).slice(0, 10) : "";
@@ -53,6 +56,7 @@ export default function Quotations() {
     nextPaymentDate: "",
     productionStatus: "pendiente",
     penaltyPercentage: "4",
+    statusChangeNote: "",
   });
   const [productionOrderSaving, setProductionOrderSaving] = useState(false);
   const [productionOrderSaveError, setProductionOrderSaveError] = useState("");
@@ -64,6 +68,8 @@ export default function Quotations() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
+  const [downloadingQuotationId, setDownloadingQuotationId] = useState(null);
+  const [sendingQuotationId, setSendingQuotationId] = useState(null);
 
   const loadQuotations = useCallback(async () => {
     try {
@@ -156,6 +162,7 @@ export default function Quotations() {
         nextPaymentDate: "",
         productionStatus: "pendiente",
         penaltyPercentage: "4",
+        statusChangeNote: "",
       });
       return;
     }
@@ -166,6 +173,7 @@ export default function Quotations() {
       nextPaymentDate: toDateInputValue(productionOrderDetail.nextPaymentDate),
       productionStatus: productionOrderDetail.productionStatus || "pendiente",
       penaltyPercentage: String(productionOrderDetail.penaltyPercentage ?? 4),
+      statusChangeNote: "",
     });
     setProductionOrderSaveError("");
     setProductionOrderSaveSuccess("");
@@ -392,6 +400,39 @@ export default function Quotations() {
     setSelectedQuotation(null);
   };
 
+  const handleDownloadProforma = async (quotation) => {
+    if (!quotation || !isQuotationApproved(quotation)) return;
+
+    const quotationId = quotation.quotationId || quotation.id;
+
+    try {
+      setDownloadingQuotationId(quotationId);
+      await downloadQuotationProforma(quotation);
+    } catch (downloadError) {
+      console.error("Quotation proforma download error:", downloadError);
+      window.alert("No fue posible generar la proforma. Intenta de nuevo.");
+    } finally {
+      setDownloadingQuotationId(null);
+    }
+  };
+
+  const handleSendProforma = async (quotation) => {
+    if (!quotation || !isQuotationApproved(quotation)) return;
+
+    const quotationId = quotation.quotationId || quotation.id;
+
+    try {
+      setSendingQuotationId(quotationId);
+      const result = await sendQuotationProformaEmail(quotation);
+      window.alert(result?.message || "La proforma fue enviada al representante de la sucursal.");
+    } catch (sendError) {
+      console.error("Quotation proforma email error:", sendError);
+      window.alert(sendError?.message || "No fue posible enviar la proforma por correo.");
+    } finally {
+      setSendingQuotationId(null);
+    }
+  };
+
   const closeProductionOrderModal = () => {
     setSelectedProductionOrder(null);
     setProductionOrderDetail(null);
@@ -424,10 +465,11 @@ export default function Quotations() {
         productionOrderDetail.productionOrderId,
         productionOrderForm,
       );
-
-      setProductionOrderDetail((current) =>
-        current ? { ...current, ...updatedOrder } : current,
+      const refreshedDetail = await getSalesOrderDetail(
+        productionOrderDetail.productionOrderId,
       );
+
+      setProductionOrderDetail(refreshedDetail);
       setProductionOrders((current) =>
         current.map((order) =>
           order.productionOrderId === updatedOrder.productionOrderId
@@ -540,6 +582,10 @@ export default function Quotations() {
           setSelectedProductionOrder={setSelectedProductionOrder}
           onCreateProductionOrder={handleCreateProductionOrder}
           creatingProductionOrderId={creatingProductionOrderId}
+          onDownloadQuotation={handleDownloadProforma}
+          downloadingQuotationId={downloadingQuotationId}
+          onSendQuotation={handleSendProforma}
+          sendingQuotationId={sendingQuotationId}
           clearFilters={clearFilters}
         />
 
@@ -551,6 +597,7 @@ export default function Quotations() {
       </div>
 
       <QuotationsDetails
+        manageProduction={hasSystemAccess(user)}
         drawerOpen={drawerOpen} closeDrawer={closeDrawer}
         drawerMode={drawerMode} viewQuote={viewQuote}
         selectedProductionOrder={selectedProductionOrder}
@@ -571,6 +618,10 @@ export default function Quotations() {
         productionOrderSaveSuccess={productionOrderSaveSuccess}
         selectedQuotation={selectedQuotation}
         closeQuotationModal={closeQuotationModal}
+        onDownloadQuotation={handleDownloadProforma}
+        downloadingQuotationId={downloadingQuotationId}
+        onSendQuotation={handleSendProforma}
+        sendingQuotationId={sendingQuotationId}
       />
     </>
   );

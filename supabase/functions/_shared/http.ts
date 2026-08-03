@@ -13,6 +13,28 @@ function normalizeOrigin(value: string | undefined) {
   }
 }
 
+function isLocalDevelopmentOrigin(origin: string) {
+  if (!origin) return false;
+
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) &&
+      ["5000", "5001"].includes(url.port)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function canUseOrigin(requestOrigin: string, configuredOrigin: string) {
+  return Boolean(
+    requestOrigin &&
+      (requestOrigin === configuredOrigin || isLocalDevelopmentOrigin(requestOrigin)),
+  );
+}
+
 export function getCorsHeaders(request: Request) {
   const configuredOrigin = normalizeOrigin(
     Deno.env.get("CORS_ALLOWED_ORIGIN") ||
@@ -31,8 +53,10 @@ export function getCorsHeaders(request: Request) {
     "Cache-Control": "no-store",
   };
 
-  if (configuredOrigin && (!requestOrigin || requestOrigin === configuredOrigin)) {
+  if (!requestOrigin && configuredOrigin) {
     headers["Access-Control-Allow-Origin"] = configuredOrigin;
+  } else if (canUseOrigin(requestOrigin, configuredOrigin)) {
+    headers["Access-Control-Allow-Origin"] = requestOrigin;
   }
 
   return headers;
@@ -67,7 +91,7 @@ export function isOriginAllowed(request: Request) {
       Deno.env.get("APP_URL"),
   );
 
-  return Boolean(configuredOrigin && requestOrigin === configuredOrigin);
+  return canUseOrigin(requestOrigin, configuredOrigin);
 }
 
 export function isUuid(value: string) {

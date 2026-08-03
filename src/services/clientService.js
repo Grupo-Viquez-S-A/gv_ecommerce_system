@@ -59,6 +59,9 @@ const BRANCH_COLUMNS = `
   province,
   district,
   address,
+  latitude,
+  longitude,
+  location_accuracy_meters,
   is_active,
   created_at,
   updated_at
@@ -402,6 +405,12 @@ function createBranchItem(
     province: branch.province || "",
     district: branch.district || "",
     address: branch.address || "",
+    latitude: branch.latitude ?? null,
+    longitude: branch.longitude ?? null,
+    locationAccuracy:
+      branch.location_accuracy_meters ?? null,
+    location_accuracy_meters:
+      branch.location_accuracy_meters ?? null,
     phone: getPrimaryValue(branchPhones, "phone"),
     phones: branchPhones,
     sales: formatSalesAmount(salesByBranchId[branch.branch_id]),

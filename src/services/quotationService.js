@@ -53,6 +53,15 @@ function getDatePlusDays(days = QUOTATION_VALIDITY_DAYS) {
   return addDaysCRDateString(days);
 }
 
+function getNullableNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+}
+
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
     return response?.data;
@@ -258,6 +267,7 @@ function normalizeQuotation({
   representative,
   seller,
   products,
+  groupCompany,
 }) {
   const sellerName = formatProfileName(seller);
 
@@ -285,7 +295,15 @@ function normalizeQuotation({
       item.has_sublimation === true
         ? getNumber(item.product?.sublimation_price, 0)
         : 0,
+    sublimationUnitPrice:
+      item.has_sublimation === true
+        ? getNumber(item.product?.sublimation_price, 0)
+        : 0,
     embroideryPrice:
+      item.has_embroidery === true
+        ? getNumber(item.product?.embroidery_price, 0)
+        : 0,
+    embroideryUnitPrice:
       item.has_embroidery === true
         ? getNumber(item.product?.embroidery_price, 0)
         : 0,
@@ -335,6 +353,17 @@ function normalizeQuotation({
     notes: quotation.notes || "",
 
     business,
+    groupCompany: groupCompany
+      ? {
+          id: groupCompany.company_id,
+          legalId: groupCompany.legal_id || "",
+          name: groupCompany.company_name || "",
+          commercialName: groupCompany.commercial_name || "",
+          email: groupCompany.email || "",
+          address: groupCompany.address || "",
+          phones: Array.isArray(groupCompany.phones) ? groupCompany.phones : [],
+        }
+      : null,
     branch,
     representative,
     seller,
@@ -353,7 +382,13 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
   const activityCode = getText(client.activityCode);
   const businessEmail = getText(client.businessEmail);
   const branchAddress = getText(client.branchAddress);
+  const branchLatitude = getNullableNumber(client.branchLatitude);
+  const branchLongitude = getNullableNumber(client.branchLongitude);
+  const branchLocationAccuracy = getNullableNumber(
+    client.branchLocationAccuracy,
+  );
   const representativeName = getText(client.representativeName);
+  const representativeEmail = getText(client.representativeEmail)?.toLowerCase();
 
   if (!companyId) {
     throw new Error("Selecciona la empresa del grupo.");
@@ -395,8 +430,39 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
     throw new Error("Ingresa la direccion de la sucursal.");
   }
 
+  if (!client.branchId && (branchLatitude === null || branchLongitude === null)) {
+    throw new Error(
+      "Obtén la ubicación actual para registrar las coordenadas de la sucursal.",
+    );
+  }
+
+  if (
+    branchLatitude !== null &&
+    (branchLatitude < -90 || branchLatitude > 90)
+  ) {
+    throw new Error("La latitud de la sucursal no es válida.");
+  }
+
+  if (
+    branchLongitude !== null &&
+    (branchLongitude < -180 || branchLongitude > 180)
+  ) {
+    throw new Error("La longitud de la sucursal no es válida.");
+  }
+
   if (!representativeName) {
     throw new Error("Ingresa el nombre del representante.");
+  }
+
+  if (!representativeEmail) {
+    throw new Error("Ingresa el correo electronico del representante.");
+  }
+
+  if (
+    representativeEmail.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(representativeEmail)
+  ) {
+    throw new Error("Ingresa un correo electronico valido para el representante.");
   }
 
   if (!items.length) {
@@ -424,9 +490,12 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       branchDistrict: getText(client.branchDistrict),
       branchAddress,
       branchPhone: getText(client.branchPhone),
+      branchLatitude,
+      branchLongitude,
+      branchLocationAccuracy,
 
       representativeName,
-      representativeEmail: getText(client.representativeEmail),
+      representativeEmail,
       representativeUserId: getText(client.representativeUserId),
 
       notes: getText(client.notes),
@@ -478,6 +547,52 @@ async function insertPhone(phonePayload, createdPhoneIds) {
   const phone = throwIfError(response, "No fue posible guardar un telefono");
 
   createdPhoneIds.push(phone.phone_id);
+}
+
+async function syncQuotationBranchPhone({
+  branchId,
+  phone,
+  createdPhoneIds,
+}) {
+  const normalizedPhone = getText(phone);
+
+  if (!branchId || !normalizedPhone) {
+    return;
+  }
+
+  const existingPhones = throwIfError(
+    await supabase
+      .from("phones")
+      .select("phone_id, is_primary, created_at")
+      .eq("branch_id", branchId)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(1),
+    "No fue posible verificar el teléfono de la sucursal",
+  );
+
+  const existingPhone = existingPhones?.[0] || null;
+  const phonePayload = {
+    business_id: null,
+    company_id: null,
+    branch_id: branchId,
+    phone: normalizedPhone,
+    type: "Oficina",
+    is_primary: true,
+  };
+
+  if (existingPhone) {
+    throwIfError(
+      await supabase
+        .from("phones")
+        .update(phonePayload)
+        .eq("phone_id", existingPhone.phone_id),
+      "No fue posible actualizar el teléfono de la sucursal",
+    );
+    return;
+  }
+
+  await insertPhone(phonePayload, createdPhoneIds);
 }
 
 async function rollbackQuotation({
@@ -698,7 +813,7 @@ export async function getQuotationClientByLegalId(legalId) {
       await supabase
         .from("branches")
         .select(
-          "branch_id, business_id, province, district, address, is_active, created_at",
+          "branch_id, business_id, province, district, address, latitude, longitude, location_accuracy_meters, is_active, created_at",
         )
         .eq("business_id", business.business_id)
         .order("created_at", { ascending: true }),
@@ -766,6 +881,9 @@ export async function getQuotationClientByLegalId(legalId) {
       province: branch.province || "",
       district: branch.district || "",
       address: branch.address || "",
+      latitude: branch.latitude,
+      longitude: branch.longitude,
+      location_accuracy_meters: branch.location_accuracy_meters,
       is_active: branch.is_active !== false,
       branchPhone: getPhoneForBranch(branch.branch_id),
       representative: rep
@@ -800,6 +918,9 @@ export async function getQuotationClientByLegalId(legalId) {
     branchDistrict: activeBranch?.district || "",
     branchAddress: activeBranch?.address || "",
     branchPhone: activeBranchPhone,
+    branchLatitude: activeBranch?.latitude ?? "",
+    branchLongitude: activeBranch?.longitude ?? "",
+    branchLocationAccuracy: activeBranch?.location_accuracy_meters ?? "",
 
     representativeName: activeRepresentative?.name || "",
     representativeEmail: activeRepresentative?.email || "",
@@ -815,6 +936,7 @@ export async function getQuotations({ ownerUserId } = {}) {
     .select(
       `
         quotation_id,
+        company_id,
         business_id,
         branch_id,
         representative_id,
@@ -895,7 +1017,7 @@ export async function getQuotations({ ownerUserId } = {}) {
         ? throwIfError(
             await supabase
               .from("branches")
-              .select("branch_id, business_id, province, district, address, is_active")
+              .select("branch_id, business_id, province, district, address, latitude, longitude, location_accuracy_meters, is_active")
               .in("branch_id", branchIds),
             "No fue posible cargar las sucursales de las cotizaciones",
           )
@@ -978,6 +1100,41 @@ export async function getQuotations({ ownerUserId } = {}) {
   ]);
 
   const businessesById = indexById(businesses, "business_id");
+  const companyIds = [
+    ...new Set(
+      [
+        ...quotations.map((item) => item.company_id),
+        ...businesses.map((item) => item.company_id),
+      ].filter(Boolean),
+    ),
+  ];
+  const [companies, companyPhones] = await Promise.all([
+    companyIds.length
+      ? throwIfError(
+          await supabase
+            .from("companies")
+            .select(
+              "company_id, legal_id, company_name, commercial_name, email, address, is_active",
+            )
+            .in("company_id", companyIds),
+          "No fue posible cargar las empresas emisoras de las cotizaciones",
+        )
+      : [],
+    companyIds.length
+      ? throwIfError(
+          await supabase
+            .from("phones")
+            .select("phone_id, company_id, phone, type, is_primary")
+            .in("company_id", companyIds),
+          "No fue posible cargar los telefonos de las empresas emisoras",
+        )
+      : [],
+  ]);
+  const phonesByCompanyId = groupById(companyPhones, "company_id");
+  companies.forEach((company) => {
+    company.phones = phonesByCompanyId[company.company_id] || [];
+  });
+  const companiesById = indexById(companies, "company_id");
   const branchesById = indexById(branches, "branch_id");
   const representativesById = indexById(representatives, "representative_id");
   const sellersById = indexById(sellers, "user_id");
@@ -987,6 +1144,7 @@ export async function getQuotations({ ownerUserId } = {}) {
   const quoteProductsByQuotationId = groupById(quoteProducts, "quotation_id");
 
   return quotations.map((quotation) => {
+    const business = businessesById[quotation.business_id];
     const quotationProducts = (
       quoteProductsByQuotationId[quotation.quotation_id] || []
     ).map((item) => ({
@@ -998,7 +1156,9 @@ export async function getQuotations({ ownerUserId } = {}) {
 
     return normalizeQuotation({
       quotation,
-      business: businessesById[quotation.business_id],
+      business,
+      groupCompany:
+        companiesById[quotation.company_id] || companiesById[business?.company_id],
       branch: branchesById[quotation.branch_id],
       representative: representativesById[quotation.representative_id],
       seller: sellersById[quotation.user_id],
@@ -1136,6 +1296,9 @@ export async function createBusinessQuotation(payload) {
           province: client.branchProvince,
           district: client.branchDistrict,
           address: client.branchAddress,
+          latitude: client.branchLatitude,
+          longitude: client.branchLongitude,
+          location_accuracy_meters: client.branchLocationAccuracy,
           is_active: true,
         })
         .select("branch_id")
@@ -1148,7 +1311,29 @@ export async function createBusinessQuotation(payload) {
 
       branchId = branch.branch_id;
       createdBranchId = branchId;
+    } else if (
+      client.branchLatitude !== null &&
+      client.branchLongitude !== null
+    ) {
+      throwIfError(
+        await supabase
+          .from("branches")
+          .update({
+            latitude: client.branchLatitude,
+            longitude: client.branchLongitude,
+            location_accuracy_meters: client.branchLocationAccuracy,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("branch_id", branchId),
+        "No fue posible actualizar la ubicación de la sucursal",
+      );
     }
+
+    await syncQuotationBranchPhone({
+      branchId,
+      phone: client.branchPhone,
+      createdPhoneIds,
+    });
 
     if (!representativeId) {
       const representativeResponse = await supabase
@@ -1239,7 +1424,7 @@ export async function createBusinessQuotation(payload) {
     let accessError = null;
     let representativeAccessMessage = null;
 
-    if (representativeId && client.representativeEmail && !client.representativeUserId) {
+    if (representativeId && client.representativeEmail) {
       try {
         const accessResult = await createRepresentativeUser({
           representative_id: representativeId,
@@ -1253,19 +1438,21 @@ export async function createBusinessQuotation(payload) {
         });
 
         representativeAccessMessage = getRepresentativeAccessMessage(accessResult);
+
+        if (accessResult?.account_state === "active") {
+          try {
+            await notifyNewQuotation({ quotationId, representativeId });
+          } catch (notificationError) {
+            console.error(
+              "No fue posible enviar la notificacion de nueva cotizacion:",
+              notificationError,
+            );
+          }
+        }
       } catch (error) {
         console.error("No fue posible crear el acceso del representante:", error);
         accessError =
           "La cotizacion fue creada correctamente, pero no se pudo crear el acceso del representante.";
-      }
-    } else if (representativeId && client.representativeUserId) {
-      try {
-        await notifyNewQuotation({ quotationId, representativeId });
-      } catch (error) {
-        console.error(
-          "No fue posible enviar la notificacion de nueva cotizacion:",
-          error,
-        );
       }
     }
 

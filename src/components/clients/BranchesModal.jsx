@@ -1,10 +1,33 @@
 ﻿import {
+  RiBuilding2Fill,
   RiCloseLine,
+  RiFileList3Fill,
   RiMailFill,
   RiMapPinFill,
   RiPhoneFill,
   RiStoreFill,
+  RiUserFill,
 } from "react-icons/ri";
+
+import BranchLocationMap from "./BranchLocationMap.jsx";
+
+function InfoItem({ icon, label, value }) {
+  return (
+    <div className="rounded-xl border border-[#2a3550] bg-[#1c2538] p-3.5">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex-shrink-0 text-[#C9A227]">{icon}</div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            {label}
+          </p>
+          <p className="mt-1 break-words text-sm font-medium text-white">
+            {value || "No registrado"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function BranchesModal({ client, onClose }) {
   if (!client) {
@@ -30,11 +53,23 @@ export default function BranchesModal({ client, onClose }) {
     },
   ];
 
+  const generalPhones = (client.clientPhones || [])
+    .map((phone) => phone.phone)
+    .filter(Boolean);
+  const identificationLabel =
+    client.identificationType === "personal"
+      ? "Identificación personal"
+      : "Cédula jurídica";
+  const legalDetail =
+    client.identificationType === "personal"
+      ? client.ownerName
+      : client.legalName;
+
   return (
     <>
       <button
         type="button"
-        aria-label="Cerrar modal de sucursales"
+        aria-label="Cerrar detalle del cliente"
         onClick={onClose}
         className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 cursor-default"
       />
@@ -44,7 +79,7 @@ export default function BranchesModal({ client, onClose }) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="branches-modal-title"
-          className="pointer-events-auto max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-[#2a3550] bg-[#141d2e] shadow-2xl sm:max-h-[90dvh]"
+          className="pointer-events-auto max-h-[94dvh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-[#2a3550] bg-[#141d2e] shadow-2xl [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:max-h-[90dvh]"
         >
           {/* Encabezado */}
           <div className="sticky top-0 z-10 flex items-center justify-between gap-4 rounded-t-2xl border-b border-[#2a3550] bg-[#141d2e] px-4 py-4 sm:px-6">
@@ -65,7 +100,7 @@ export default function BranchesModal({ client, onClose }) {
                 </h3>
 
                 <p className="text-sm text-gray-400 truncate">
-                  {client.company || "Empresa no asignada"}
+                  Detalle completo · {client.company || "Empresa no asignada"}
                 </p>
               </div>
             </div>
@@ -96,6 +131,54 @@ export default function BranchesModal({ client, onClose }) {
             ))}
           </div>
 
+          <section className="border-b border-[#2a3550] px-4 py-5 sm:px-6">
+            <div className="mb-4">
+              <h4 className="text-base font-bold text-white">
+                Información del cliente
+              </h4>
+              <p className="text-sm text-gray-500">
+                Datos de contacto, identificación y relación comercial.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <InfoItem
+                icon={<RiBuilding2Fill size={16} />}
+                label="Nombre comercial"
+                value={client.name}
+              />
+              <InfoItem
+                icon={<RiMailFill size={16} />}
+                label="Correo principal"
+                value={client.email}
+              />
+              <InfoItem
+                icon={<RiPhoneFill size={16} />}
+                label="Teléfonos generales"
+                value={generalPhones.join(" · ")}
+              />
+              <InfoItem
+                icon={<RiFileList3Fill size={16} />}
+                label={identificationLabel}
+                value={client.legalId}
+              />
+              <InfoItem
+                icon={<RiUserFill size={16} />}
+                label={
+                  client.identificationType === "personal"
+                    ? "Dueño"
+                    : "Razón social"
+                }
+                value={legalDetail}
+              />
+              <InfoItem
+                icon={<RiFileList3Fill size={16} />}
+                label="Código de actividad"
+                value={client.activityCode}
+              />
+            </div>
+          </section>
+
           {/* Sucursales */}
           <div className="px-4 py-5 sm:px-6">
             <div className="mb-4">
@@ -107,13 +190,14 @@ export default function BranchesModal({ client, onClose }) {
             </div>
 
             {client.branches?.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {client.branches.map((branch, index) => (
                   <article
                     key={`${branch.name || "sucursal"}-${index}`}
                     className="bg-[#1c2538] border border-[#2a3550] rounded-xl p-4 hover:border-[#C9A227]/50 transition-colors"
                   >
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#C9A227]/15 flex items-center justify-center text-[#C9A227] flex-shrink-0">
                         <RiMapPinFill size={14} />
                       </div>
@@ -128,6 +212,17 @@ export default function BranchesModal({ client, onClose }) {
                           {branch.representatives?.length === 1 ? "" : "s"}
                         </div>
                       </div>
+                      </div>
+
+                      <span
+                        className={`flex-shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${
+                          branch.status === "Inactivo"
+                            ? "bg-red-500/10 text-red-300"
+                            : "bg-emerald-500/10 text-emerald-300"
+                        }`}
+                      >
+                        {branch.status || "Activo"}
+                      </span>
                     </div>
 
                     <div className="space-y-2">
@@ -144,32 +239,73 @@ export default function BranchesModal({ client, onClose }) {
                         </div>
                       )}
 
-                      {branch.phone && (
-                        <div className="flex items-center gap-2">
+                      {(branch.phones?.length
+                        ? branch.phones
+                        : branch.phone
+                          ? [{ phone: branch.phone, type: "Oficina" }]
+                          : []
+                      ).map((phone, phoneIndex) => (
+                        <div
+                          key={phone.phone_id || phone.id || `${phone.phone}-${phoneIndex}`}
+                          className="flex items-center gap-2"
+                        >
                           <RiPhoneFill
                             size={12}
                             className="text-gray-500 flex-shrink-0"
                           />
 
                           <span className="text-xs text-gray-300">
-                            {branch.phone}
+                            {phone.phone}
+                            {phone.type ? ` · ${phone.type}` : ""}
                           </span>
                         </div>
-                      )}
-
-                      {branch.email && (
-                        <div className="flex items-center gap-2">
-                          <RiMailFill
-                            size={12}
-                            className="text-gray-500 flex-shrink-0"
-                          />
-
-                          <span className="text-xs text-gray-300 break-all">
-                            {branch.email}
-                          </span>
-                        </div>
-                      )}
+                      ))}
                     </div>
+
+                    {branch.representatives?.length > 0 && (
+                      <div className="mt-3 rounded-xl border border-[#2a3550] bg-[#141d2e]/70 p-3">
+                        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                          Representantes
+                        </p>
+                        <div className="space-y-2">
+                          {branch.representatives.map((representative, representativeIndex) => (
+                            <div
+                              key={representative.representative_id || representative.id || `${representative.name}-${representativeIndex}`}
+                              className="flex items-start gap-2"
+                            >
+                              <RiUserFill className="mt-0.5 flex-shrink-0 text-[#C9A227]" />
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium text-white">
+                                  {representative.name || "Sin nombre"}
+                                </p>
+                                {representative.email && (
+                                  <p className="break-all text-[11px] text-gray-500">
+                                    {representative.email}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {branch.latitude !== null &&
+                      branch.latitude !== undefined &&
+                      branch.longitude !== null &&
+                      branch.longitude !== undefined && (
+                        <div className="mt-3">
+                          <BranchLocationMap
+                            latitude={branch.latitude}
+                            longitude={branch.longitude}
+                            accuracy={
+                              branch.locationAccuracy ??
+                              branch.location_accuracy_meters
+                            }
+                            compact
+                          />
+                        </div>
+                      )}
 
                     <div className="mt-3 pt-3 border-t border-[#2a3550] flex items-center justify-between gap-3">
                       <div className="text-xs text-gray-500">

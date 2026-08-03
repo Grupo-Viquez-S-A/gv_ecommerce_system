@@ -2,8 +2,9 @@
 import {
   RiArrowDownSFill,
   RiMenuFill,
-  RiNotification3Fill,
 } from "react-icons/ri";
+
+import NotificationCenter from "./NotificationCenter";
 
 const FALLBACK_COMPANY = {
   name: "Grupo Víquez S.A.",
@@ -41,7 +42,7 @@ export default function AppTopBar({
   companies = [],
   onCompanyChange,
   onOpenSidebar,
-  onNotificationsClick,
+  userId,
 }) {
   const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
 
@@ -129,17 +130,7 @@ export default function AppTopBar({
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={onNotificationsClick}
-          className="invisible pointer-events-none relative w-9 h-9 rounded-lg bg-[#1c2538] border border-[#2a3550] flex items-center justify-center text-gray-400"
-          aria-label="Notificaciones"
-          title="Notificaciones"
-        >
-          <RiNotification3Fill size={16} />
-
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <NotificationCenter application="ecommerce" userId={userId} />
       </div>
     </header>
   );
