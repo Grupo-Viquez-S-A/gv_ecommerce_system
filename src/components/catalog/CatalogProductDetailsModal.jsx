@@ -12,6 +12,7 @@ import {
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
+import PetCostumeNotice from "./PetCostumeNotice";
 import { formatCurrency } from "../../utils/formatCurrency.js";
 
 function normalizeHexColor(value) {
@@ -338,6 +339,10 @@ export default function CatalogProductDetailsModal({
                 <p className="rounded-2xl border border-[#29466F] bg-[#091A31] p-4 text-sm leading-6 text-slate-300">
                   {productDescription}
                 </p>
+
+                <div className="mt-4">
+                  <PetCostumeNotice />
+                </div>
               </div>
 
               {isTextileProduct ? (

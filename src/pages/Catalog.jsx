@@ -16,6 +16,7 @@ import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
+import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
 import QuotationClientIdentityFields from "../components/catalog/QuotationClientIdentityFields.jsx";
 
 import {
@@ -1249,6 +1250,8 @@ export default function Catalog() {
           activeCatalog={activeCatalog}
           onChange={handleCatalogChange}
         />
+
+        <PetCostumeNotice />
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
