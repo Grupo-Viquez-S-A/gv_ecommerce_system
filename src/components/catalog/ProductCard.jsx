@@ -486,7 +486,9 @@ export default function ProductCard({
                   Precio IVAI
                 </span>
                 <span className="text-base font-extrabold text-[#E9BC2D]">
-                  {formatCurrency(getProductPriceWithIva(product))}
+                  {product?.is_available === false
+                    ? "No disponible"
+                    : formatCurrency(getProductPriceWithIva(product))}
                 </span>
               </div>
             )}

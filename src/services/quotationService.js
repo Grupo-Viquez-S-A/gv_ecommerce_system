@@ -1145,7 +1145,7 @@ export async function getQuotations({ ownerUserId } = {}) {
       ? throwIfError(
           await supabase
             .from("textile_product_variants")
-            .select("variant_id, product_id, sku, gtin, size_id, color:color_name, price, tax_rate:iva, stock:stock_quantity, minimum_stock, width, height, length, weight, is_active")
+            .select("variant_id, product_id, sku, gtin, size_id, color:color_name, price, tax_rate:iva, stock:stock_quantity, minimum_stock, is_active")
             .in("variant_id", variantIds),
           "No fue posible cargar las variantes cotizadas",
         )

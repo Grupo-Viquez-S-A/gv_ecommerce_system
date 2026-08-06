@@ -391,6 +391,7 @@ function createTextileProductCatalogItem({
     product_name: product.product_name || "Producto sin nombre",
     description: product.description || "",
     price: normalizePrice(primaryVariant?.price ?? product.price),
+    is_available: Boolean(primaryVariant),
     variant_id: primaryVariant?.variant_id || null,
     gtin: primaryVariant?.gtin || null,
     stock: primaryVariant?.stock ?? 0,
@@ -593,7 +594,7 @@ export async function getVariantAvailability(variantIds = []) {
   if (ids.length === 0) return [];
   const { data, error } = await supabase
     .from("textile_product_variants")
-    .select("variant_id, sku, stock:stock_quantity, inventory_tracking_enabled, is_active")
+    .select("variant_id, sku, stock:stock_quantity, reserved_quantity, is_active")
     .in("variant_id", ids);
   if (error) throw new Error(`No fue posible revalidar inventario: ${error.message}`);
   return data || [];
@@ -646,8 +647,10 @@ export async function getTextileProductCatalogProducts() {
   const variantRows = (variantsResponse.data || []).map((variant) => ({
     ...variant,
     color: variant.color_name || "Sin color",
+    color_id: createCatalogFilterId(variant.color_name || "Sin color"),
     tax_rate: variant.iva,
     stock: variant.stock_quantity,
+    available_quantity: Number(variant.stock_quantity || 0) - Number(variant.reserved_quantity || 0),
   }));
   const variantIds = variantRows.map((variant) => variant.variant_id);
 
@@ -804,7 +807,7 @@ export async function getTextileProductCatalogProducts() {
       sizesById,
       dimensionsById,
     }),
-  ).filter((product) => product.variants.length > 0);
+  );
 }
 
 export async function getCatalogProducts(
