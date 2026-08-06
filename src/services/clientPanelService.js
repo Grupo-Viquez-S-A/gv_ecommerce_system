@@ -95,7 +95,7 @@ function getProductImageUrl(files = []) {
   return getFileUrl(imageFile);
 }
 
-function normalizeProductItem(item, product, files = [], sizeName = null) {
+function normalizeProductItem(item, product, variant, files = [], sizeName = null) {
   const hasSublimation = item.has_sublimation === true;
   const hasEmbroidery = item.has_embroidery === true;
 
@@ -104,12 +104,17 @@ function normalizeProductItem(item, product, files = [], sizeName = null) {
     quoteProductId: item.quote_product_id,
     quotationId: item.quotation_id,
     productId: item.product_id,
+    variantId: item.variant_id || null,
+    gtin: item.snapshot_gtin || null,
     name: product?.product_name || product?.fabric_name || "Producto sin nombre",
-    sku: product?.sku || product?.fabric_code || item.product_id || "Sin codigo",
+    sku: item.snapshot_sku || variant?.sku || product?.sku || product?.fabric_code || item.product_id || "Sin codigo",
+    color: item.snapshot_color || null,
+    description: item.snapshot_description || product?.description || "",
     imageUrl: product?.image_url || product?.main_image_url || product?.cover_image_url || getProductImageUrl(files),
-    sizeName,
+    sizeName: item.snapshot_size_name || sizeName,
     quantity: getNumber(item.quantity, 0),
-    unitPrice: getNumber(item.unit_price, 0),
+    unitPrice: getNumber(item.snapshot_price, getNumber(item.unit_price, 0)),
+    taxRate: getNumber(item.snapshot_tax_rate, 0),
     ivaAmount: getNumber(item.iva_amount, 0),
     subtotal: getNumber(item.subtotal, 0),
     total: getNumber(item.total, 0),
@@ -129,7 +134,7 @@ async function getQuotationProducts(quotationIds = []) {
     await supabase
       .from("quote_products")
       .select(
-        "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery, created_at, updated_at",
+        "quote_product_id, quotation_id, product_id, variant_id, size_id, snapshot_sku, snapshot_gtin, snapshot_size_id, snapshot_size_name, snapshot_color, snapshot_description, snapshot_price, snapshot_tax_rate, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery, created_at, updated_at",
       )
       .in("quotation_id", quotationIds),
     "No fue posible cargar los productos cotizados",
@@ -137,8 +142,9 @@ async function getQuotationProducts(quotationIds = []) {
 
   const productIds = [...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean))];
   const sizeIds = [...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean))];
+  const variantIds = [...new Set(quoteProducts.map((item) => item.variant_id).filter(Boolean))];
 
-  const [products, productFiles, sizes] = await Promise.all([
+  const [products, variants, productFiles, sizes] = await Promise.all([
     productIds.length
       ? throwIfError(
           await supabase
@@ -148,6 +154,16 @@ async function getQuotationProducts(quotationIds = []) {
             )
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos",
+        )
+      : [],
+
+    variantIds.length
+      ? throwIfError(
+          await supabase
+            .from("textile_product_variants")
+            .select("variant_id, sku, gtin, price, tax_rate:iva, stock:stock_quantity, minimum_stock")
+            .in("variant_id", variantIds),
+          "No fue posible cargar las variantes cotizadas",
         )
       : [],
 
@@ -174,6 +190,7 @@ async function getQuotationProducts(quotationIds = []) {
   ]);
 
   const productsById = indexRowsByKey(products, "product_id");
+  const variantsById = indexRowsByKey(variants, "variant_id");
   const filesByProductId = groupRowsByKey(productFiles, "product_id");
   const sizesById = indexRowsByKey(sizes, "size_id");
 
@@ -181,6 +198,7 @@ async function getQuotationProducts(quotationIds = []) {
     normalizeProductItem(
       item,
       productsById[item.product_id],
+      variantsById[item.variant_id],
       filesByProductId[item.product_id] || [],
       sizesById[item.size_id]?.size_name || null,
     ),

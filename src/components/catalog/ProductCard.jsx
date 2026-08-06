@@ -150,7 +150,7 @@ function SizePickerModal({ productName, availableSizes, onConfirm, onCancel }) {
   const [sizeQuantities, setSizeQuantities] = useState(() => {
     const initial = {};
     availableSizes.forEach((s) => {
-      initial[s.size_id ?? s.size_name] = 0;
+      initial[s.variant_id ?? `${s.size_id}-${s.color || "no-color"}`] = 0;
     });
     return initial;
   });
@@ -171,7 +171,7 @@ function SizePickerModal({ productName, availableSizes, onConfirm, onCancel }) {
     const selections = availableSizes
       .map((size) => ({
         size,
-        quantity: sizeQuantities[size.size_id ?? size.size_name] || 0,
+        quantity: sizeQuantities[size.variant_id ?? `${size.size_id}-${size.color || "no-color"}`] || 0,
       }))
       .filter((s) => s.quantity > 0);
 
@@ -206,7 +206,7 @@ function SizePickerModal({ productName, availableSizes, onConfirm, onCancel }) {
 
         <div className="space-y-2 p-5">
           {availableSizes.map((size) => {
-            const key = size.size_id ?? size.size_name;
+            const key = size.variant_id ?? `${size.size_id}-${size.color || "no-color"}`;
             const qty = sizeQuantities[key] || 0;
 
             return (
@@ -219,7 +219,7 @@ function SizePickerModal({ productName, availableSizes, onConfirm, onCancel }) {
                 }`}
               >
                 <span className="text-sm font-semibold text-white">
-                  {size.size_name}
+                  {size.size_name}{size.color ? ` · ${size.color}` : ""}
                 </span>
 
                 <div className="flex items-center overflow-hidden rounded-lg border border-[#35547E] bg-[#102441]">
@@ -297,7 +297,8 @@ export default function ProductCard({
   const [productImage, setProductImage] = useState(optimizedProductImage);
 
   useEffect(() => {
-    setProductImage(optimizedProductImage);
+    const frameId = window.requestAnimationFrame(() => setProductImage(optimizedProductImage));
+    return () => window.cancelAnimationFrame(frameId);
   }, [optimizedProductImage]);
 
   const isTextileProduct =

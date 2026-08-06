@@ -155,6 +155,7 @@ export default function Quotations() {
   }, [selectedProductionOrder]);
 
   useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
     if (!productionOrderDetail) {
       setProductionOrderForm({
         committedDeliveryDate: "",
@@ -177,6 +178,8 @@ export default function Quotations() {
     });
     setProductionOrderSaveError("");
     setProductionOrderSaveSuccess("");
+    });
+    return () => window.cancelAnimationFrame(frameId);
   }, [productionOrderDetail]);
 
   const companyOptions = useMemo(

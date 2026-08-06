@@ -275,17 +275,21 @@ function normalizeQuotation({
     id: item.quote_product_id,
     quoteProductId: item.quote_product_id,
     productId: item.product_id,
-    sku: item.product?.sku || "Sin SKU",
+    variantId: item.variant_id || null,
+    gtin: item.snapshot_gtin || null,
+    sku: item.snapshot_sku || item.variant?.sku || item.product?.sku || "Sin SKU",
     name: item.product?.product_name || "Producto sin nombre",
-    description: item.product?.description || "",
+    description: item.snapshot_description || item.product?.description || "",
     imageUrl:
       item.product?.image_url ||
       item.product?.main_image_url ||
       item.product?.cover_image_url ||
       getProductImageUrl(item.productFiles || []),
-    sizeName: item.size?.size_name || null,
+    sizeName: item.snapshot_size_name || item.size?.size_name || null,
+    color: item.snapshot_color || null,
     quantity: getNumber(item.quantity, 0),
-    unitPrice: getNumber(item.unit_price, 0),
+    unitPrice: getNumber(item.snapshot_price, getNumber(item.unit_price, 0)),
+    taxRate: getNumber(item.snapshot_tax_rate, 0),
     ivaAmount: getNumber(item.iva_amount, 0),
     subtotal: getNumber(item.subtotal, 0),
     total: getNumber(item.total, 0),
@@ -517,9 +521,21 @@ function normalizeQuotationPayload({ client = {}, items = [], status }) {
       if (!productId) {
         throw new Error("Uno de los productos no tiene identificador.");
       }
+      if (item.catalogType === "textile_products" && !getText(item.variantId)) {
+        throw new Error("Seleccione una talla y color válidos para cada producto textil.");
+      }
 
       return {
         product_id: productId,
+        variant_id: getText(item.variantId) || null,
+        snapshot_sku: getText(item.sku) || null,
+        snapshot_gtin: getText(item.gtin) || null,
+        snapshot_size_id: sizeId,
+        snapshot_size_name: getText(item.sizeName) || null,
+        snapshot_color: getText(item.color) || null,
+        snapshot_description: getText(item.description) || null,
+        snapshot_price: unitPrice,
+        snapshot_tax_rate: getNumber(item.taxRate, 0),
         quantity,
         unit_price: unitPrice,
         iva_amount: ivaAmount,
@@ -1049,7 +1065,7 @@ export async function getQuotations({ ownerUserId } = {}) {
         await supabase
           .from("quote_products")
           .select(
-            "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
+            "quote_product_id, quotation_id, product_id, variant_id, size_id, snapshot_sku, snapshot_gtin, snapshot_size_id, snapshot_size_name, snapshot_color, snapshot_description, snapshot_price, snapshot_tax_rate, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
           )
           .in("quotation_id", quotationIds),
         "No fue posible cargar los productos de las cotizaciones",
@@ -1064,7 +1080,11 @@ export async function getQuotations({ ownerUserId } = {}) {
     ...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean)),
   ];
 
-  const [products, productFiles, sizes] = await Promise.all([
+  const variantIds = [
+    ...new Set(quoteProducts.map((item) => item.variant_id).filter(Boolean)),
+  ];
+
+  const [products, variants, productFiles, sizes] = await Promise.all([
     productIds.length
       ? throwIfError(
           await supabase
@@ -1120,6 +1140,16 @@ export async function getQuotations({ ownerUserId } = {}) {
           "No fue posible cargar las empresas emisoras de las cotizaciones",
         )
       : [],
+
+    variantIds.length
+      ? throwIfError(
+          await supabase
+            .from("textile_product_variants")
+            .select("variant_id, product_id, sku, gtin, size_id, color:color_name, price, tax_rate:iva, stock:stock_quantity, minimum_stock, width, height, length, weight, is_active")
+            .in("variant_id", variantIds),
+          "No fue posible cargar las variantes cotizadas",
+        )
+      : [],
     companyIds.length
       ? throwIfError(
           await supabase
@@ -1139,6 +1169,7 @@ export async function getQuotations({ ownerUserId } = {}) {
   const representativesById = indexById(representatives, "representative_id");
   const sellersById = indexById(sellers, "user_id");
   const productsById = indexById(products, "product_id");
+  const variantsById = indexById(variants, "variant_id");
   const productFilesById = groupById(productFiles, "product_id");
   const sizesById = indexById(sizes, "size_id");
   const quoteProductsByQuotationId = groupById(quoteProducts, "quotation_id");
@@ -1150,8 +1181,9 @@ export async function getQuotations({ ownerUserId } = {}) {
     ).map((item) => ({
       ...item,
       product: productsById[item.product_id],
+      variant: variantsById[item.variant_id] || null,
       productFiles: productFilesById[item.product_id] || [],
-      size: sizesById[item.size_id] || null,
+      size: sizesById[item.snapshot_size_id || item.size_id] || null,
     }));
 
     return normalizeQuotation({

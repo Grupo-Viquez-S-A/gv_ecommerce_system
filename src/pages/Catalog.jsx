@@ -46,7 +46,9 @@ import {
   CATALOG_TYPES,
   createCatalogFilterId,
   getCatalogProducts,
+  getVariantAvailability,
 } from "../services/catalogService.js";
+import { resolveSelectedVariant } from "../utils/variantSelection.js";
 import {
   createBusinessQuotation,
   getPaymentMethods,
@@ -61,6 +63,16 @@ import {
 } from "../utils/inputMasks.js";
 
 const PAGE_SIZE = 8;
+const CART_STORAGE_KEY = "gv-ecommerce:quotation-cart:v2";
+
+function loadPersistedCart() {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(CART_STORAGE_KEY) || "[]");
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
 
 const EMPTY_QUOTATION_CLIENT_FORM = {
   businessId: "",
@@ -193,7 +205,7 @@ export default function Catalog() {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(loadPersistedCart);
   const [cartConfirmation, setCartConfirmation] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [branchLocationLoading, setBranchLocationLoading] = useState(false);
@@ -211,6 +223,10 @@ export default function Catalog() {
   const [clientLookupMessage, setClientLookupMessage] = useState("");
   const [clientBranches, setClientBranches] = useState([]);
   const [showNewBranchForm, setShowNewBranchForm] = useState(false);
+
+  useEffect(() => {
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+  }, [cartItems]);
 
   const isTextileProductsCatalog =
     activeCatalog === CATALOG_TYPES.TEXTILE_PRODUCTS;
@@ -572,6 +588,9 @@ export default function Catalog() {
         ...(product.available_sizes || []).map(
           (size) => size.size_name,
         ),
+        ...(product.variants || []).flatMap(
+          (variant) => [variant.sku, variant.gtin, variant.color],
+        ),
         ...(product.measurements || []).map(
           (measurement) =>
             `${measurement.size_name} ${measurement.dimension_name}`,
@@ -831,6 +850,14 @@ export default function Catalog() {
     }
 
     const safeQuantity = Math.max(1, Number(quantity) || 1);
+    const selectedVariant = product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS
+      ? resolveSelectedVariant(product.variants || [], size || {})
+      : null;
+    if (product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS && !selectedVariant) {
+      setQuotationError("Seleccione una combinación disponible de talla y color.");
+      return;
+    }
+    const variantId = selectedVariant?.variant_id || null;
     const sizeId = size?.size_id ?? null;
     const sizeName = size?.size_name ?? null;
     const optionKey = [
@@ -841,6 +868,7 @@ export default function Catalog() {
       .join("_");
     const cartItemId = [
       productId,
+      variantId || productId,
       sizeId || "no-size",
       optionKey || "standard",
     ].join("_");
@@ -858,8 +886,12 @@ export default function Catalog() {
     const embroideryPrice = hasEmbroidery
       ? Number(product?.embroidery_price) || 0
       : 0;
-    const basePrice = getCartProductPrice(product);
-    const baseIva = getCartProductIva(product);
+    const basePrice = selectedVariant
+      ? Number(selectedVariant.price) || 0
+      : getCartProductPrice(product);
+    const baseIva = selectedVariant
+      ? basePrice * ((Number(selectedVariant.tax_rate) || 0) / 100)
+      : getCartProductIva(product);
     const basePercentage =
       basePrice > 0 && Number.isFinite(basePrice) ? baseIva / basePrice : 0;
     const unitPrice = basePrice + sublimationPrice + embroideryPrice;
@@ -867,6 +899,13 @@ export default function Catalog() {
       baseIva +
       sublimationPrice * basePercentage +
       embroideryPrice * basePercentage;
+
+    const inventoryTrackingEnabled = Boolean(selectedVariant?.inventory_tracking_enabled);
+    const availableStock = Number(selectedVariant?.stock) || 0;
+    if (inventoryTrackingEnabled && safeQuantity > availableStock) {
+      setQuotationError(`La variante ${selectedVariant?.sku || "seleccionada"} sólo dispone de ${availableStock} unidades.`);
+      return;
+    }
 
     setCartItems((currentItems) => {
       const itemExists = currentItems.some(
@@ -878,7 +917,9 @@ export default function Catalog() {
           item.id === cartItemId
             ? {
                 ...item,
-                quantity: item.quantity + safeQuantity,
+                quantity: inventoryTrackingEnabled
+                  ? Math.min(item.quantity + safeQuantity, availableStock)
+                  : item.quantity + safeQuantity,
               }
             : item,
         );
@@ -891,10 +932,16 @@ export default function Catalog() {
           name: itemName,
           sizeName: isUnica ? null : sizeName,
           sizeId: isUnica ? null : sizeId,
-          sku: getCartProductSku(product),
+          color: selectedVariant?.color || null,
+          sku: selectedVariant?.sku || getCartProductSku(product),
+          gtin: selectedVariant?.gtin || null,
           catalogType: getCartProductType(product),
           quantity: safeQuantity,
           productId,
+          variantId,
+          taxRate: Number(selectedVariant?.tax_rate ?? product?.iva_percentage) || 0,
+          inventoryTrackingEnabled,
+          availableStock,
           unitPrice,
           ivaAmount,
           description:
@@ -942,7 +989,9 @@ export default function Catalog() {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === itemId
-          ? {
+          ? item.inventoryTrackingEnabled && safeQuantity > item.availableStock
+            ? item
+            : {
               ...item,
               quantity: safeQuantity,
             }
@@ -1179,6 +1228,20 @@ export default function Catalog() {
           "Selecciona la fecha solicitada para la entrega anticipada.",
         );
         return;
+      }
+
+      const trackedItems = cartItems.filter((item) => item.variantId && item.inventoryTrackingEnabled);
+      if (trackedItems.length > 0) {
+        const availability = await getVariantAvailability(trackedItems.map((item) => item.variantId));
+        const byId = new Map(availability.map((variant) => [variant.variant_id, variant]));
+        const unavailable = trackedItems.find((item) => {
+          const variant = byId.get(item.variantId);
+          return !variant?.is_active || item.quantity > Number(variant.stock || 0);
+        });
+        if (unavailable) {
+          setQuotationError(`La disponibilidad de ${unavailable.sku || "una variante"} cambió. Actualiza el carrito.`);
+          return;
+        }
       }
 
       const quotation = await createBusinessQuotation({
@@ -1440,6 +1503,8 @@ export default function Catalog() {
                               {item.sizeName}
                             </span>
                           )}
+                          {item.color && <p className="text-xs text-[#9BB3D3]">Color: {item.color}</p>}
+                          {item.gtin && <p className="text-xs text-[#9BB3D3]">GTIN: {item.gtin}</p>}
                         </div>
 
                           {item.hasSublimation && (
@@ -2008,6 +2073,8 @@ export default function Catalog() {
                               {item.sizeName}
                             </span>
                           )}
+                          {item.color && <p className="text-xs text-[#9BB3D3]">Color: {item.color}</p>}
+                          {item.gtin && <p className="text-xs text-[#9BB3D3]">GTIN: {item.gtin}</p>}
                         </div>
 
                           {item.hasSublimation && (

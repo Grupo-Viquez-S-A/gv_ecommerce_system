@@ -331,7 +331,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("quote_products")
       .select(
-        "quote_product_id, quotation_id, product_id, size_id, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
+        "quote_product_id, quotation_id, product_id, variant_id, size_id, snapshot_sku, snapshot_gtin, snapshot_size_id, snapshot_size_name, snapshot_color, snapshot_description, snapshot_price, snapshot_tax_rate, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
       )
       .eq("quotation_id", quotation.quotation_id),
     "No fue posible cargar los productos de la orden",
@@ -339,8 +339,9 @@ export async function getSalesOrderDetail(productionOrderId) {
 
   const productIds = [...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean))];
   const sizeIds = [...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean))];
+  const variantIds = [...new Set(quoteProducts.map((item) => item.variant_id).filter(Boolean))];
 
-  const [products, productFiles, sizes, payments, statusHistory] = await Promise.all([
+  const [products, variants, productFiles, sizes, payments, statusHistory] = await Promise.all([
     productIds.length
       ? throwIfError(
           await supabase
@@ -348,6 +349,15 @@ export async function getSalesOrderDetail(productionOrderId) {
             .select("product_id, sku, product_name, description, price, iva, sublimation_price, embroidery_price")
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos",
+        )
+      : [],
+    variantIds.length
+      ? throwIfError(
+          await supabase
+            .from("textile_product_variants")
+            .select("variant_id, sku, gtin, price, tax_rate:iva, stock:stock_quantity, minimum_stock")
+            .in("variant_id", variantIds),
+          "No fue posible cargar las variantes de la orden",
         )
       : [],
     productIds.length
@@ -390,12 +400,14 @@ export async function getSalesOrderDetail(productionOrderId) {
   ]);
 
   const productsById = indexRowsByKey(products, "product_id");
+  const variantsById = indexRowsByKey(variants, "variant_id");
   const filesByProductId = groupRowsByKey(productFiles, "product_id");
   const sizesById = indexRowsByKey(sizes, "size_id");
   const amountPaid = payments.reduce((sum, payment) => sum + getNumber(payment.amount, 0), 0);
 
   const items = quoteProducts.map((item) => {
     const product = productsById[item.product_id];
+    const variant = variantsById[item.variant_id];
     const hasSublimation = item.has_sublimation === true;
     const hasEmbroidery = item.has_embroidery === true;
 
@@ -404,13 +416,17 @@ export async function getSalesOrderDetail(productionOrderId) {
       quoteProductId: item.quote_product_id,
       quotationId: item.quotation_id,
       productId: item.product_id,
+      variantId: item.variant_id || null,
+      gtin: item.snapshot_gtin || null,
       name: product?.product_name || "Producto sin nombre",
-      sku: product?.sku || item.product_id || "Sin codigo",
-      description: product?.description || "",
+      sku: item.snapshot_sku || variant?.sku || product?.sku || item.product_id || "Sin codigo",
+      color: item.snapshot_color || null,
+      description: item.snapshot_description || product?.description || "",
       imageUrl: getProductImageUrl(filesByProductId[item.product_id] || []),
-      sizeName: sizesById[item.size_id]?.size_name || null,
+      sizeName: item.snapshot_size_name || sizesById[item.snapshot_size_id || item.size_id]?.size_name || null,
       quantity: getNumber(item.quantity, 0),
-      unitPrice: getNumber(item.unit_price, 0),
+      unitPrice: getNumber(item.snapshot_price, getNumber(item.unit_price, 0)),
+      taxRate: getNumber(item.snapshot_tax_rate, 0),
       ivaAmount: getNumber(item.iva_amount, 0),
       subtotal: getNumber(item.subtotal, 0),
       total: getNumber(item.total, 0),
