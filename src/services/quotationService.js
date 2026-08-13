@@ -49,21 +49,8 @@ function getNumber(value, fallback = 0) {
   return Number.isFinite(numberValue) ? numberValue : fallback;
 }
 
-function getBoolean(value) {
-  return value === true || value === "true";
-}
-
 function getDatePlusDays(days = QUOTATION_VALIDITY_BUSINESS_DAYS) {
   return addBusinessDaysCRDateString(days);
-}
-
-function getNullableNumber(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
 }
 
 function throwIfError(response, actionMessage) {

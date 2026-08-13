@@ -24,14 +24,6 @@ function formatDate(dateValue) {
   return formatted || "Sin fecha";
 }
 
-function getBranchText(branch) {
-  if (!branch) {
-    return "No disponible";
-  }
-
-  return [branch.province, branch.district].filter(Boolean).join(", ");
-}
-
 function ProductThumb({ item }) {
   if (item.imageUrl) {
     return (

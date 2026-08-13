@@ -15,9 +15,8 @@ import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
-import PetCostumeNotice, {
-  hasPetCategoryProducts,
-} from "../components/catalog/PetCostumeNotice";
+import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
+import { hasPetCategoryProducts } from "../components/catalog/petCategoryUtils";
 
 import ClientCatalogGrid from "../components/clientCatalog/ClientCatalogGrid";
 

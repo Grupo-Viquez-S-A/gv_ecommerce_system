@@ -14,7 +14,8 @@ import {
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
-import PetCostumeNotice, { isPetCategoryProduct } from "./PetCostumeNotice";
+import PetCostumeNotice from "./PetCostumeNotice";
+import { isPetCategoryProduct } from "./petCategoryUtils";
 import { formatCurrency } from "../../utils/formatCurrency.js";
 
 function normalizeText(value) {
