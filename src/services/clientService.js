@@ -105,6 +105,16 @@ function asNullableText(value) {
   return normalizedValue || null;
 }
 
+function asNullableNumber(value) {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const normalizedValue = Number(value);
+
+  return Number.isFinite(normalizedValue) ? normalizedValue : null;
+}
+
 function uniqueValues(values = []) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -283,6 +293,11 @@ function normalizeBranches(branches = []) {
       province: asNullableText(branch.province),
       district: asNullableText(branch.district),
       address: asNullableText(branch.address),
+      latitude: asNullableNumber(branch.latitude),
+      longitude: asNullableNumber(branch.longitude),
+      locationAccuracy: asNullableNumber(
+        branch.locationAccuracy ?? branch.location_accuracy_meters,
+      ),
       isActive: normalizeIsActive(branch.status),
       phones: normalizePhones(branch.phones || []),
       representatives: normalizeRepresentatives(
@@ -943,6 +958,9 @@ function buildBranchPayload({
     province: branch.province,
     district: branch.district,
     address: branch.address,
+    latitude: branch.latitude,
+    longitude: branch.longitude,
+    location_accuracy_meters: branch.locationAccuracy,
     is_active: branch.isActive,
   };
 }
@@ -1274,6 +1292,57 @@ export async function updateBusinessClient(
   };
 }
 
+export async function updateBusinessClientBranchLocations(
+  businessId,
+  branches = [],
+) {
+  if (!businessId) {
+    throw new Error("No se recibió el identificador del cliente.");
+  }
+
+  const existingRelations = await getExistingClientRelations(
+    businessId,
+  );
+
+  const existingBranchesById = indexRowsByKey(
+    existingRelations.branches,
+    "branch_id",
+  );
+
+  const normalizedBranches = normalizeBranches(branches);
+
+  for (const branch of normalizedBranches) {
+    const branchId =
+      branch.branch_id ||
+      branch.branchId ||
+      branch.id ||
+      null;
+
+    if (!branchId || !existingBranchesById[branchId]) {
+      continue;
+    }
+
+    const response = await supabase
+      .from("branches")
+      .update({
+        latitude: branch.latitude,
+        longitude: branch.longitude,
+        location_accuracy_meters: branch.locationAccuracy,
+      })
+      .eq("branch_id", branchId)
+      .eq("business_id", businessId);
+
+    throwIfError(
+      response,
+      "No fue posible actualizar la ubicación de una sucursal",
+    );
+  }
+
+  return {
+    businessId,
+  };
+}
+
 export async function updateBusinessClientStatus(
   businessId,
   isActive,
@@ -1294,5 +1363,48 @@ export async function updateBusinessClientStatus(
   return throwIfError(
     response,
     "No fue posible actualizar el estado del cliente",
+  );
+}
+
+export async function deleteBusinessClient(
+  businessId,
+) {
+  if (!businessId) {
+    throw new Error("No se recibió el identificador del cliente.");
+  }
+
+  const quotationUsageResponse = await supabase
+    .from("quotations")
+    .select("quotation_id", { count: "exact", head: true })
+    .eq("business_id", businessId);
+
+  if (quotationUsageResponse.error) {
+    throw new Error(
+      `No fue posible validar el historial comercial del cliente: ${quotationUsageResponse.error.message}`,
+    );
+  }
+
+  if ((quotationUsageResponse.count || 0) > 0) {
+    throw new Error(
+      "No es posible eliminar este cliente porque tiene cotizaciones asociadas. Puedes desactivarlo si ya no debe usarse.",
+    );
+  }
+
+  const existingRelations = await getExistingClientRelations(
+    businessId,
+  );
+
+  await deleteRepresentativeUsers(existingRelations.representatives);
+
+  const response = await supabase
+    .from("businesses")
+    .delete()
+    .eq("business_id", businessId)
+    .select("business_id")
+    .single();
+
+  return throwIfError(
+    response,
+    "No fue posible eliminar el cliente",
   );
 }

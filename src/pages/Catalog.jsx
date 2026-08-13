@@ -16,7 +16,9 @@ import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
-import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
+import PetCostumeNotice, {
+  hasPetCategoryProducts,
+} from "../components/catalog/PetCostumeNotice";
 import QuotationClientIdentityFields from "../components/catalog/QuotationClientIdentityFields.jsx";
 
 import {
@@ -46,7 +48,6 @@ import {
   CATALOG_TYPES,
   createCatalogFilterId,
   getCatalogProducts,
-  getVariantAvailability,
 } from "../services/catalogService.js";
 import { resolveSelectedVariant } from "../utils/variantSelection.js";
 import {
@@ -101,6 +102,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   earlyDelivery: false,
   earlyDeliveryDate: "",
   methodId: "",
+  advancePercentage: "50",
 };
 
 function getTodayInputDate() {
@@ -151,6 +153,12 @@ function getCartProductIva(product) {
 }
 
 function getCartProductType(product) {
+  return product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS
+    ? CATALOG_TYPES.TEXTILE_PRODUCTS
+    : CATALOG_TYPES.FABRICS;
+}
+
+function getCartProductTypeLabel(product) {
   return product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS
     ? "Producto"
     : "Tela";
@@ -503,35 +511,6 @@ export default function Catalog() {
     );
   }, [products, isTextileProductsCatalog]);
 
-  const collections = useMemo(() => {
-    if (!isTextileProductsCatalog) {
-      return [];
-    }
-
-    const uniqueCollections = new Map();
-
-    products.forEach((product) => {
-      const collection = product.collection;
-
-      if (
-        collection?.collection_id &&
-        !uniqueCollections.has(collection.collection_id)
-      ) {
-        uniqueCollections.set(
-          collection.collection_id,
-          collection,
-        );
-      }
-    });
-
-    return Array.from(uniqueCollections.values()).sort(
-      (first, second) =>
-        first.collection_name.localeCompare(
-          second.collection_name,
-        ),
-    );
-  }, [products, isTextileProductsCatalog]);
-
   const sizes = useMemo(() => {
     if (!isTextileProductsCatalog) {
       return [];
@@ -568,7 +547,6 @@ export default function Catalog() {
         product.description,
         product.category?.category_name,
         product.product_type?.product_type,
-        product.collection?.collection_name,
         product.size,
         product.length,
         product.width,
@@ -632,12 +610,6 @@ export default function Catalog() {
             filters.color,
         );
 
-      const matchesCollection =
-        !isTextileProductsCatalog ||
-        !filters.collectionId ||
-        product.collection?.collection_id ===
-          filters.collectionId;
-
       const matchesSize =
         !isTextileProductsCatalog ||
         !filters.sizeId ||
@@ -651,7 +623,6 @@ export default function Catalog() {
         matchesType &&
         matchesMaterial &&
         matchesColor &&
-        matchesCollection &&
         matchesSize
       );
     });
@@ -681,13 +652,19 @@ export default function Catalog() {
     );
   }, [filteredProducts, safeCurrentPage]);
 
+  const shouldShowPetNotice = useMemo(
+    () =>
+      isTextileProductsCatalog &&
+      hasPetCategoryProducts(filteredProducts),
+    [filteredProducts, isTextileProductsCatalog],
+  );
+
   const hasActiveFilters = Boolean(
     filters.search.trim() ||
       filters.categoryId ||
       filters.typeId ||
       filters.materialId ||
       filters.color ||
-      filters.collectionId ||
       filters.sizeId,
   );
 
@@ -752,6 +729,16 @@ export default function Catalog() {
     0,
   );
   const cartEstimatedTotal = cartSubtotal + cartTaxes;
+  const cartAdvancePercentage = Math.min(
+    100,
+    Math.max(0, Number(quotationClientForm.advancePercentage) || 0),
+  );
+  const cartAdvancePayment =
+    cartEstimatedTotal * (cartAdvancePercentage / 100);
+  const cartPendingBalance = Math.max(
+    0,
+    cartEstimatedTotal - cartAdvancePayment,
+  );
 
   const handleCatalogChange = (nextCatalog) => {
     if (
@@ -843,10 +830,15 @@ export default function Catalog() {
   };
 
   const handleAddToCart = (product, quantity = 1, size = null, options = {}) => {
+    const failToAdd = (message) => {
+      setQuotationError(message);
+      return { ok: false, error: message };
+    };
+
     const productId = getCartProductId(product);
 
     if (!productId) {
-      return;
+      return failToAdd("No fue posible identificar el producto seleccionado.");
     }
 
     const safeQuantity = Math.max(1, Number(quantity) || 1);
@@ -854,8 +846,7 @@ export default function Catalog() {
       ? resolveSelectedVariant(product.variants || [], size || {})
       : null;
     if (product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS && !selectedVariant) {
-      setQuotationError("Seleccione una combinación disponible de talla y color.");
-      return;
+      return failToAdd("Seleccione una talla disponible.");
     }
     const variantId = selectedVariant?.variant_id || null;
     const sizeId = size?.size_id ?? null;
@@ -902,10 +893,6 @@ export default function Catalog() {
 
     const inventoryTrackingEnabled = Boolean(selectedVariant?.inventory_tracking_enabled);
     const availableStock = Number(selectedVariant?.stock) || 0;
-    if (inventoryTrackingEnabled && safeQuantity > availableStock) {
-      setQuotationError(`La variante ${selectedVariant?.sku || "seleccionada"} sólo dispone de ${availableStock} unidades.`);
-      return;
-    }
 
     setCartItems((currentItems) => {
       const itemExists = currentItems.some(
@@ -917,9 +904,7 @@ export default function Catalog() {
           item.id === cartItemId
             ? {
                 ...item,
-                quantity: inventoryTrackingEnabled
-                  ? Math.min(item.quantity + safeQuantity, availableStock)
-                  : item.quantity + safeQuantity,
+                quantity: item.quantity + safeQuantity,
               }
             : item,
         );
@@ -936,6 +921,7 @@ export default function Catalog() {
           sku: selectedVariant?.sku || getCartProductSku(product),
           gtin: selectedVariant?.gtin || null,
           catalogType: getCartProductType(product),
+          catalogTypeLabel: getCartProductTypeLabel(product),
           quantity: safeQuantity,
           productId,
           variantId,
@@ -957,6 +943,7 @@ export default function Catalog() {
       ];
     });
 
+    setQuotationError("");
     setCartConfirmation({
       id: Date.now(),
       name: itemName,
@@ -971,6 +958,12 @@ export default function Catalog() {
       setCartConfirmation(null);
       cartConfirmationTimerRef.current = null;
     }, 3500);
+
+    return {
+      ok: true,
+      itemId: cartItemId,
+      quantity: safeQuantity,
+    };
   };
 
   const handleOpenCart = () => {
@@ -989,9 +982,7 @@ export default function Catalog() {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === itemId
-          ? item.inventoryTrackingEnabled && safeQuantity > item.availableStock
-            ? item
-            : {
+          ? {
               ...item,
               quantity: safeQuantity,
             }
@@ -1230,20 +1221,6 @@ export default function Catalog() {
         return;
       }
 
-      const trackedItems = cartItems.filter((item) => item.variantId && item.inventoryTrackingEnabled);
-      if (trackedItems.length > 0) {
-        const availability = await getVariantAvailability(trackedItems.map((item) => item.variantId));
-        const byId = new Map(availability.map((variant) => [variant.variant_id, variant]));
-        const unavailable = trackedItems.find((item) => {
-          const variant = byId.get(item.variantId);
-          return !variant?.is_active || item.quantity > Number(variant.stock || 0);
-        });
-        if (unavailable) {
-          setQuotationError(`La disponibilidad de ${unavailable.sku || "una variante"} cambió. Actualiza el carrito.`);
-          return;
-        }
-      }
-
       const quotation = await createBusinessQuotation({
         client: clientForm,
         items: cartItems,
@@ -1314,7 +1291,7 @@ export default function Catalog() {
           onChange={handleCatalogChange}
         />
 
-        <PetCostumeNotice />
+        {shouldShowPetNotice && <PetCostumeNotice />}
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
@@ -1375,7 +1352,6 @@ export default function Catalog() {
               productTypes={productTypes}
               materials={materials}
               colors={colors}
-              collections={collections}
               sizes={sizes}
               onFiltersChange={handleFiltersChange}
               onClearFilters={handleClearFilters}
@@ -1491,7 +1467,7 @@ export default function Catalog() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
-                            {item.catalogType}
+                            {item.catalogTypeLabel || item.catalogType}
                           </span>
 
                           <span className="truncate text-xs text-[#86A4CE]">
@@ -1870,6 +1846,35 @@ export default function Catalog() {
                         ) : null}
                       </label>
 
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Porcentaje de adelanto
+                        </span>
+                        <div className="mt-2 relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={quotationClientForm.advancePercentage}
+                            onChange={(event) =>
+                              handleQuotationClientFormChange(
+                                "advancePercentage",
+                                event.target.value,
+                              )
+                            }
+                            className="h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 pr-10 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                            placeholder="50"
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-bold text-[#9BB3D3]">
+                            %
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">
+                          Define el porcentaje del total que se solicitará como adelanto al aprobar la cotización.
+                        </p>
+                      </label>
+
                       <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
                         <label className="flex items-start gap-3">
                           <input
@@ -1920,7 +1925,7 @@ export default function Catalog() {
 
               ) : (
                 <p className="mt-4 rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-4 py-3 text-sm text-slate-500">
-                  Selecciona cantidades en las tarjetas del catálogo para preparar el pedido.
+                  Agrega desde la tarjeta si hay una sola talla o abre el detalle para seleccionar variantes.
                 </p>
               )}
             </section>
@@ -2061,7 +2066,7 @@ export default function Catalog() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
-                            {item.catalogType}
+                            {item.catalogTypeLabel || item.catalogType}
                           </span>
 
                           <span className="max-w-full truncate text-xs text-[#86A4CE]">
@@ -2526,6 +2531,35 @@ export default function Catalog() {
                         ) : null}
                       </label>
 
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Porcentaje de adelanto
+                        </span>
+                        <div className="mt-2 relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={quotationClientForm.advancePercentage}
+                            onChange={(event) =>
+                              handleQuotationClientFormChange(
+                                "advancePercentage",
+                                event.target.value,
+                              )
+                            }
+                            className="h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 pr-10 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                            placeholder="50"
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-bold text-[#9BB3D3]">
+                            %
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">
+                          Define el porcentaje del total que se solicitará como adelanto al aprobar la cotización.
+                        </p>
+                      </label>
+
                       <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
                         <label className="flex items-start gap-3">
                           <input
@@ -2604,6 +2638,20 @@ export default function Catalog() {
                           {formatCartCurrency(cartEstimatedTotal)}
                         </dd>
                       </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-slate-300">
+                          Adelanto ({cartAdvancePercentage}%)
+                        </dt>
+                        <dd className="font-bold text-white">
+                          {formatCartCurrency(cartAdvancePayment)}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-slate-400">Saldo pendiente</dt>
+                        <dd className="font-bold text-white">
+                          {formatCartCurrency(cartPendingBalance)}
+                        </dd>
+                      </div>
                     </dl>
 
                     <div className="mt-6 flex gap-3 rounded-xl border border-[#D7A91D]/35 bg-[#071A31]/70 p-4 text-sm leading-5 text-[#B6C7DD]">
@@ -2640,7 +2688,7 @@ export default function Catalog() {
                   </p>
 
                   <p className="mt-1 max-w-sm text-sm text-slate-500">
-                    Selecciona cantidades en las tarjetas del catálogo para preparar una cotización o pedido.
+                    Agrega desde la tarjeta si hay una sola talla o abre el detalle para seleccionar variantes.
                   </p>
                 </div>
               )}
@@ -2678,6 +2726,7 @@ export default function Catalog() {
         product={selectedProductDetails}
         onClose={() => setSelectedProductDetails(null)}
         onViewTechnicalSheet={handleOpenTechnicalSheet}
+        onAddToCart={canPurchase ? handleAddToCart : undefined}
         showPrice={canPurchase}
       />
 

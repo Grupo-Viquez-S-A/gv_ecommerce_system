@@ -1,4 +1,4 @@
-﻿const SYSTEM_ACCESS_ROLE_CODES = new Set([
+const SYSTEM_ACCESS_ROLE_CODES = new Set([
   "gerente",
   "encargado",
   "manager",
@@ -7,6 +7,14 @@
   "presidente",
   "president",
   "super_admin",
+]);
+
+const CLIENT_DELETE_ROLE_CODES = new Set([
+  "gerente",
+  "encargado",
+  "manager",
+  "presidente",
+  "president",
 ]);
 
 function normalizeRoleValue(value) {
@@ -27,6 +35,16 @@ export function hasSystemAccess(user) {
   return (
     SYSTEM_ACCESS_ROLE_CODES.has(roleCode) ||
     SYSTEM_ACCESS_ROLE_CODES.has(roleName)
+  );
+}
+
+export function hasClientDeletionAccess(user) {
+  const roleCode = normalizeRoleValue(user?.role?.code);
+  const roleName = normalizeRoleValue(user?.role?.name);
+
+  return (
+    CLIENT_DELETE_ROLE_CODES.has(roleCode) ||
+    CLIENT_DELETE_ROLE_CODES.has(roleName)
   );
 }
 

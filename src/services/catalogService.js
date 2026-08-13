@@ -318,50 +318,42 @@ function createTextileProductCatalogItem({
   product,
   categoriesById,
   typesById,
-  collectionsById,
   filesByProduct,
   variantsByProduct,
-  measurementsByVariant,
-  filesByVariant,
   sizesById,
   dimensionsById,
 }) {
   const productFiles = filesByProduct[product.product_id] || [];
-
   const productVariants = (variantsByProduct[product.product_id] || []).filter(
     (variant) => variant.is_active,
   );
   const primaryVariant = productVariants.find((variant) => variant.is_default) ||
-    productVariants.find((variant) => variant.size_id && variant.color_id) ||
+    productVariants.find((variant) => variant.size_id) ||
     productVariants[0];
-  const variants = productVariants.map((variant) => ({
-    ...variant,
-    size: sizesById[variant.size_id] || null,
-    measurements: (measurementsByVariant[variant.variant_id] || []).map((measurement) => {
-    const size = sizesById[variant.size_id];
-    const dimension = dimensionsById[measurement.dimension_id];
-
+  const variants = productVariants.map((variant) => {
+    const dimension = dimensionsById[variant.dimension_id] || null;
+    const measurements = dimension ? [
+      { id: `${variant.variant_id}-height`, variant_id: variant.variant_id, size_id: variant.size_id, size_name: sizesById[variant.size_id]?.size_name || "Talla no definida", dimension_name: "Alto", measurement_value: dimension.heigth, unit: "cm" },
+      { id: `${variant.variant_id}-width`, variant_id: variant.variant_id, size_id: variant.size_id, size_name: sizesById[variant.size_id]?.size_name || "Talla no definida", dimension_name: "Ancho", measurement_value: dimension.width, unit: "cm" },
+      { id: `${variant.variant_id}-length`, variant_id: variant.variant_id, size_id: variant.size_id, size_name: sizesById[variant.size_id]?.size_name || "Talla no definida", dimension_name: "Largo", measurement_value: dimension.lenght, unit: "cm" },
+    ] : [];
     return {
-      id: measurement.measurement_id,
-      variant_id: measurement.variant_id,
-      size_id: variant.size_id,
-      size_name: size?.size_name || "Talla no definida",
-      dimension_id: measurement.dimension_id,
-      dimension_name:
-        dimension?.dimension_name ||
-        dimension?.dimension_code ||
-        "Medida",
-      measurement_value: measurement.measurement_value ?? null,
-      unit: measurement.unit || product.unit || "",
+      ...variant,
+      tax_rate: variant.iva,
+      stock: variant.stock_quantity,
+      available_quantity: Number(variant.stock_quantity || 0) - Number(variant.reserved_quantity || 0),
+      inventory_tracking_enabled: true,
+      size: sizesById[variant.size_id] || null,
+      dimension,
+      measurements,
+      files: [],
     };
-    }),
-    files: normalizeFiles(filesByVariant[variant.variant_id] || []),
-  }));
+  });
+  const primaryCatalogVariant = variants.find((variant) => variant.variant_id === primaryVariant?.variant_id) || null;
   const productMeasurements = variants.flatMap((variant) => variant.measurements);
 
   const category = categoriesById[product.category_id];
   const productType = typesById[product.type_id];
-  const collection = collectionsById[product.collection_id];
 
   const mainImageUrl = getCoverImageUrl(product, productFiles);
   const technicalSheetFile = getTechnicalSheetFile(productFiles);
@@ -387,26 +379,26 @@ function createTextileProductCatalogItem({
     product_id: product.product_id,
     id: product.product_id,
 
-    sku: primaryVariant?.sku || product.sku || "Sin código",
+    sku: primaryVariant?.sku || "Sin código",
     product_name: product.product_name || "Producto sin nombre",
     description: product.description || "",
-    price: normalizePrice(primaryVariant?.price ?? product.price),
+    price: normalizePrice(primaryVariant?.price),
     is_available: Boolean(primaryVariant),
     variant_id: primaryVariant?.variant_id || null,
     gtin: primaryVariant?.gtin || null,
     stock: primaryVariant?.stock ?? 0,
     minimum_stock: primaryVariant?.minimum_stock ?? 0,
-    inventory_tracking_enabled: Boolean(primaryVariant?.inventory_tracking_enabled),
-    has_incomplete_legacy_variant: productVariants.some((variant) => !variant.size_id || !variant.color_id),
+    inventory_tracking_enabled: true,
+    has_incomplete_legacy_variant: productVariants.some((variant) => !variant.size_id),
 
-    size: product.size || "",
-    length: product.length || "",
-    width: product.width || "",
-    height: product.height || "",
-    unit: product.unit || "",
+    size: primaryCatalogVariant?.size?.size_name || "",
+    length: primaryCatalogVariant?.dimension?.lenght || "",
+    width: primaryCatalogVariant?.dimension?.width || "",
+    height: primaryCatalogVariant?.dimension?.heigth || "",
+    unit: "cm",
     iva_percentage: normalizePrice(primaryVariant?.tax_rate ?? product.iva),
     iva_amount:
-      (normalizePrice(primaryVariant?.price ?? product.price) *
+      (normalizePrice(primaryVariant?.price) *
         normalizePrice(primaryVariant?.tax_rate ?? product.iva)) / 100,
     sublimation_price: normalizePrice(product.sublimation_price),
     embroidery_price: normalizePrice(product.embroidery_price),
@@ -436,12 +428,7 @@ function createTextileProductCatalogItem({
         }
       : null,
 
-    collection: collection
-      ? {
-          collection_id: collection.collection_id,
-          collection_name: collection.collection_name,
-        }
-      : null,
+    collection: null,
 
     available_sizes: variants
       .filter((variant) => variant.is_active && variant.size)
@@ -450,24 +437,16 @@ function createTextileProductCatalogItem({
         variant_id: variant.variant_id,
         sku: variant.sku,
         gtin: variant.gtin,
-        color_id: variant.color_id,
-        color: variant.color,
         price: normalizePrice(variant.price),
         tax_rate: normalizePrice(variant.tax_rate),
         stock: variant.stock,
         minimum_stock: variant.minimum_stock,
-        inventory_tracking_enabled: Boolean(variant.inventory_tracking_enabled),
+        inventory_tracking_enabled: true,
       })),
 
     measurements: productMeasurements,
     variants,
-    colors: [...new Map(variants.map((variant) => [variant.color_id, {
-      color_id: variant.color_id,
-      color: variant.color,
-      color_name: variant.color,
-      color_code: variant.color_code,
-      color_hex: variant.color_hex,
-    }])).values()].filter((color) => color.color_id),
+    colors: [],
     compositions: [],
     features,
     managements: [],
@@ -593,7 +572,7 @@ export async function getVariantAvailability(variantIds = []) {
   const ids = [...new Set(variantIds.filter(Boolean))];
   if (ids.length === 0) return [];
   const { data, error } = await supabase
-    .from("textile_product_variants")
+    .from("textiles_inventory")
     .select("variant_id, sku, stock:stock_quantity, reserved_quantity, is_active")
     .in("variant_id", ids);
   if (error) throw new Error(`No fue posible revalidar inventario: ${error.message}`);
@@ -632,56 +611,26 @@ export async function getTextileProductCatalogProducts() {
     textileProducts.map((product) => product.type_id),
   );
 
-  const collectionIds = uniqueValues(
-    textileProducts.map((product) => product.collection_id),
-  );
-
   const variantsResponse = await supabase
-    .from("textile_product_variants")
+    .from("textiles_inventory")
     .select("*")
     .in("product_id", productIds)
     .order("created_at", { ascending: true });
 
   ensureNoErrors([variantsResponse], "No fue posible cargar las variantes");
 
-  const variantRows = (variantsResponse.data || []).map((variant) => ({
-    ...variant,
-    color: variant.color_name || "Sin color",
-    color_id: createCatalogFilterId(variant.color_name || "Sin color"),
-    tax_rate: variant.iva,
-    stock: variant.stock_quantity,
-    available_quantity: Number(variant.stock_quantity || 0) - Number(variant.reserved_quantity || 0),
-  }));
-  const variantIds = variantRows.map((variant) => variant.variant_id);
+  const variantRows = variantsResponse.data || [];
 
   const [
     filesResponse,
-    variantMeasurementsResponse,
-    variantFilesResponse,
     categoriesResponse,
     typesResponse,
-    collectionsResponse,
   ] = await Promise.all([
     supabase
       .from("textile_product_files")
       .select("*")
       .in("product_id", productIds)
       .order("created_at", { ascending: true }),
-
-    variantIds.length > 0
-      ? supabase
-          .from("textile_product_variant_measurements")
-          .select("*")
-          .in("variant_id", variantIds)
-      : Promise.resolve({ data: [], error: null }),
-
-    variantIds.length > 0
-      ? supabase
-          .from("variant_files")
-          .select("*")
-          .in("variant_id", variantIds)
-          .order("created_at", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
 
     categoryIds.length > 0
       ? supabase
@@ -697,37 +646,23 @@ export async function getTextileProductCatalogProducts() {
           .in("type_id", typeIds)
       : Promise.resolve({ data: [], error: null }),
 
-    collectionIds.length > 0
-      ? supabase
-          .from("product_collections")
-          .select("*")
-          .in("collection_id", collectionIds)
-      : Promise.resolve({ data: [], error: null }),
   ]);
 
   ensureNoErrors(
     [
       filesResponse,
-      variantMeasurementsResponse,
-      variantFilesResponse,
       categoriesResponse,
       typesResponse,
-      collectionsResponse,
     ],
     "No fue posible cargar los datos relacionados de los productos",
   );
 
-  const measurementRows = variantMeasurementsResponse.data || [];
-
   const sizeIds = uniqueValues(
-    [
-      ...variantRows.map((variant) => variant.size_id),
-      ...measurementRows.map((measurement) => measurement.size_id),
-    ],
+    variantRows.map((variant) => variant.size_id),
   );
 
   const dimensionIds = uniqueValues(
-    measurementRows.map((measurement) => measurement.dimension_id),
+    variantRows.map((variant) => variant.dimension_id),
   );
 
   const [sizesResponse, dimensionsResponse] = await Promise.all([
@@ -759,16 +694,6 @@ export async function getTextileProductCatalogProducts() {
   );
 
   const variantsByProduct = groupRowsByKey(variantRows, "product_id");
-  const measurementsByVariant = groupRowsByKey(measurementRows, "variant_id");
-  const filesByVariant = groupRowsByKey(
-    (variantFilesResponse.data || []).map((file) => ({
-      ...file,
-      file_id: file.variant_file_id,
-      file_path: file.object_path,
-    })),
-    "variant_id",
-  );
-
   const categoriesById = indexRowsByKey(
     categoriesResponse.data || [],
     "category_id",
@@ -777,11 +702,6 @@ export async function getTextileProductCatalogProducts() {
   const typesById = indexRowsByKey(
     typesResponse.data || [],
     "type_id",
-  );
-
-  const collectionsById = indexRowsByKey(
-    collectionsResponse.data || [],
-    "collection_id",
   );
 
   const sizesById = indexRowsByKey(
@@ -799,11 +719,8 @@ export async function getTextileProductCatalogProducts() {
       product,
       categoriesById,
       typesById,
-      collectionsById,
       filesByProduct,
       variantsByProduct,
-      measurementsByVariant,
-      filesByVariant,
       sizesById,
       dimensionsById,
     }),

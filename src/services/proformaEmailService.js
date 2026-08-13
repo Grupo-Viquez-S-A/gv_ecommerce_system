@@ -2,6 +2,9 @@ import { supabase } from "./primarySupabaseClient.js";
 import { isQuotationApproved } from "../components/quotations/QuotationsViewHelpers.jsx";
 import { createQuotationProforma } from "../utils/proformaPdf.js";
 
+const POLICIES_ATTACHMENT_PATH = `${import.meta.env.BASE_URL}legal/politicas-y-condiciones-generales.pdf`;
+const POLICIES_ATTACHMENT_FILENAME = "POLITICAS-Y-CONDICIONES-GENERALES.pdf";
+
 async function getFunctionErrorMessage(error, fallbackMessage) {
   const response = error?.context;
 
@@ -31,6 +34,24 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary);
 }
 
+async function loadPoliciesAttachment() {
+  const response = await fetch(POLICIES_ATTACHMENT_PATH, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      "No fue posible cargar el archivo de politicas y condiciones para adjuntarlo al correo.",
+    );
+  }
+
+  return {
+    filename: POLICIES_ATTACHMENT_FILENAME,
+    content_type: "application/pdf",
+    content_base64: arrayBufferToBase64(await response.arrayBuffer()),
+  };
+}
+
 export async function sendQuotationProformaEmail(quotation) {
   if (!quotation || !isQuotationApproved(quotation)) {
     throw new Error("La proforma solo puede enviarse cuando la cotizacion este aprobada.");
@@ -43,12 +64,14 @@ export async function sendQuotationProformaEmail(quotation) {
 
   const { doc } = await createQuotationProforma(quotation);
   const pdfBase64 = arrayBufferToBase64(doc.output("arraybuffer"));
+  const policiesAttachment = await loadPoliciesAttachment();
   const { data, error } = await supabase.functions.invoke(
     "send-quotation-proforma",
     {
       body: {
         quotation_id: quotationId,
         pdf_base64: pdfBase64,
+        additional_attachments: [policiesAttachment],
       },
     },
   );

@@ -187,6 +187,7 @@ function PhoneList({
   onRemove,
   emptyMessage,
   primaryRadioName,
+  disabled = false,
 }) {
   return (
     <div className="space-y-3">
@@ -204,6 +205,7 @@ function PhoneList({
               <button
                 type="button"
                 onClick={() => onRemove(index)}
+                disabled={disabled}
                 className="w-7 h-7 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-400 flex items-center justify-center transition-colors"
                 title="Eliminar teléfono"
                 aria-label={`Eliminar teléfono ${index + 1}`}
@@ -225,6 +227,7 @@ function PhoneList({
                   <input
                     type="tel"
                     value={phoneItem.phone}
+                    disabled={disabled}
                     onChange={(event) =>
                       onChange(index, "phone", event.target.value)
                     }
@@ -239,6 +242,7 @@ function PhoneList({
 
                 <select
                   value={phoneItem.type}
+                  disabled={disabled}
                   onChange={(event) =>
                     onChange(index, "type", event.target.value)
                   }
@@ -258,6 +262,7 @@ function PhoneList({
                 type="radio"
                 name={primaryRadioName}
                 checked={phoneItem.isPrimary === true}
+                disabled={disabled}
                 onChange={() => onChange(index, "isPrimary", true)}
                 className="accent-[#C9A227]"
               />
@@ -274,6 +279,7 @@ function PhoneList({
       <button
         type="button"
         onClick={onAdd}
+        disabled={disabled}
         className="w-full flex items-center justify-center gap-2 border border-dashed border-[#C9A227]/50 hover:border-[#C9A227] bg-[#C9A227]/5 hover:bg-[#C9A227]/10 text-[#C9A227] text-xs font-semibold py-2.5 rounded-lg transition-colors"
       >
         <RiAddLine size={15} />
@@ -283,12 +289,21 @@ function PhoneList({
   );
 }
 
-export default function ClientForm({ form, onChange }) {
+export default function ClientForm({
+  form,
+  onChange,
+  mode = "create",
+  allowLocationOnlyEdit = false,
+}) {
   const [companies, setCompanies] = useState([]);
   const [companiesLoading, setCompaniesLoading] = useState(true);
   const [companiesError, setCompaniesError] = useState("");
 
   const currentForm = useMemo(() => normalizeForm(form), [form]);
+  const isLocationOnlyEdit =
+    mode === "edit" && allowLocationOnlyEdit;
+  const fieldsDisabled = isLocationOnlyEdit;
+  const canEditBranchLocation = mode !== "view";
 
   useEffect(() => {
     let isMounted = true;
@@ -435,6 +450,25 @@ export default function ClientForm({ form, onChange }) {
       return {
         ...branch,
         [field]: value,
+      };
+    });
+
+    updateForm({
+      branches: nextBranches,
+    });
+  };
+
+  const updateBranchLocation = (branchIndex, nextLocation = {}) => {
+    const nextBranches = currentForm.branches.map((branch, index) => {
+      if (index !== branchIndex) {
+        return branch;
+      }
+
+      return {
+        ...branch,
+        latitude: nextLocation.latitude ?? "",
+        longitude: nextLocation.longitude ?? "",
+        locationAccuracy: nextLocation.locationAccuracy ?? "",
       };
     });
 
@@ -621,6 +655,12 @@ export default function ClientForm({ form, onChange }) {
 
   return (
     <div className="space-y-7 pb-2">
+      {isLocationOnlyEdit && (
+        <div className="rounded-xl border border-[#C9A227]/25 bg-[#C9A227]/10 px-4 py-3 text-sm text-[#F4E5A8]">
+          Como Agente de ventas, solo puedes actualizar la ubicación exacta de la sucursal desde el mapa.
+        </div>
+      )}
+
       {/* Datos generales */}
       <section>
         <SectionTitle
@@ -636,6 +676,7 @@ export default function ClientForm({ form, onChange }) {
             <input
               type="text"
               value={currentForm.name}
+              disabled={fieldsDisabled}
               onChange={(event) => updateField("name", event.target.value)}
               placeholder="Ej. Hotel Los Laureles"
               className={inputClassName}
@@ -647,10 +688,10 @@ export default function ClientForm({ form, onChange }) {
 
             <select
               value={currentForm.companyId}
+              disabled={companiesLoading || fieldsDisabled}
               onChange={(event) =>
                 updateField("companyId", event.target.value)
               }
-              disabled={companiesLoading}
               className={selectClassName}
             >
               <option value="">
@@ -690,6 +731,7 @@ export default function ClientForm({ form, onChange }) {
 
               <select
                 value={currentForm.identificationType}
+                disabled={fieldsDisabled}
                 onChange={(event) =>
                   updateField("identificationType", event.target.value)
                 }
@@ -706,6 +748,7 @@ export default function ClientForm({ form, onChange }) {
 
               <select
                 value={currentForm.status}
+                disabled={fieldsDisabled}
                 onChange={(event) =>
                   updateField("status", event.target.value)
                 }
@@ -726,6 +769,7 @@ export default function ClientForm({ form, onChange }) {
                 <input
                   type="text"
                   value={currentForm.legalId}
+                  disabled={fieldsDisabled}
                   onChange={(event) =>
                     updateField("legalId", event.target.value)
                   }
@@ -741,6 +785,7 @@ export default function ClientForm({ form, onChange }) {
                 <input
                   type="text"
                   value={currentForm.legalName}
+                  disabled={fieldsDisabled}
                   onChange={(event) =>
                     updateField("legalName", event.target.value)
                   }
@@ -760,6 +805,7 @@ export default function ClientForm({ form, onChange }) {
                 <input
                   type="text"
                   value={currentForm.ownerName}
+                  disabled={fieldsDisabled}
                   onChange={(event) =>
                     updateField("ownerName", event.target.value)
                   }
@@ -775,6 +821,7 @@ export default function ClientForm({ form, onChange }) {
                 <input
                   type="text"
                   value={currentForm.legalId}
+                  disabled={fieldsDisabled}
                   onChange={(event) =>
                     updateField("legalId", event.target.value)
                   }
@@ -792,6 +839,7 @@ export default function ClientForm({ form, onChange }) {
             <input
               type="text"
               value={currentForm.activityCode}
+              disabled={fieldsDisabled}
               onChange={(event) =>
                 updateField("activityCode", event.target.value)
               }
@@ -813,6 +861,7 @@ export default function ClientForm({ form, onChange }) {
               <input
                 type="email"
                 value={currentForm.email}
+                disabled={fieldsDisabled}
                 onChange={(event) =>
                   updateField("email", event.target.value)
                 }
@@ -840,6 +889,7 @@ export default function ClientForm({ form, onChange }) {
           onRemove={removeClientPhone}
           emptyMessage="No hay teléfonos generales registrados."
           primaryRadioName="client-primary-phone"
+          disabled={fieldsDisabled}
         />
       </section>
 
@@ -853,6 +903,7 @@ export default function ClientForm({ form, onChange }) {
             <button
               type="button"
               onClick={addBranch}
+              disabled={fieldsDisabled}
               className="flex items-center gap-1.5 text-xs font-semibold text-[#C9A227] hover:text-[#E0C34A] transition-colors whitespace-nowrap"
             >
               <RiAddLine size={16} />
@@ -882,6 +933,7 @@ export default function ClientForm({ form, onChange }) {
                   <button
                     type="button"
                     onClick={() => removeBranch(branchIndex)}
+                    disabled={fieldsDisabled}
                     className="w-8 h-8 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-400 flex items-center justify-center transition-colors"
                     title="Eliminar sucursal"
                     aria-label={`Eliminar sucursal ${branchIndex + 1}`}
@@ -898,6 +950,7 @@ export default function ClientForm({ form, onChange }) {
                       <input
                         type="text"
                         value={branch.province}
+                        disabled={fieldsDisabled}
                         onChange={(event) =>
                           updateBranch(
                             branchIndex,
@@ -916,6 +969,7 @@ export default function ClientForm({ form, onChange }) {
                       <input
                         type="text"
                         value={branch.district}
+                        disabled={fieldsDisabled}
                         onChange={(event) =>
                           updateBranch(
                             branchIndex,
@@ -934,6 +988,7 @@ export default function ClientForm({ form, onChange }) {
 
                     <textarea
                       value={branch.address}
+                      disabled={fieldsDisabled}
                       onChange={(event) =>
                         updateBranch(
                           branchIndex,
@@ -951,6 +1006,10 @@ export default function ClientForm({ form, onChange }) {
                     latitude={branch.latitude}
                     longitude={branch.longitude}
                     accuracy={branch.locationAccuracy}
+                    editable={canEditBranchLocation}
+                    onChange={(nextLocation) =>
+                      updateBranchLocation(branchIndex, nextLocation)
+                    }
                   />
 
                   <div>
@@ -958,6 +1017,7 @@ export default function ClientForm({ form, onChange }) {
 
                     <select
                       value={branch.status}
+                      disabled={fieldsDisabled}
                       onChange={(event) =>
                         updateBranch(
                           branchIndex,
@@ -1000,6 +1060,7 @@ export default function ClientForm({ form, onChange }) {
                       }
                       emptyMessage="No hay teléfonos registrados para esta sucursal."
                       primaryRadioName={`branch-${branch.draftId}-primary-phone`}
+                      disabled={fieldsDisabled}
                     />
                   </div>
 
@@ -1018,6 +1079,7 @@ export default function ClientForm({ form, onChange }) {
                       <button
                         type="button"
                         onClick={() => addRepresentative(branchIndex)}
+                        disabled={fieldsDisabled}
                         className="flex items-center gap-1.5 text-xs font-semibold text-[#C9A227] hover:text-[#E0C34A] transition-colors whitespace-nowrap"
                       >
                         <RiAddLine size={15} />
@@ -1046,6 +1108,7 @@ export default function ClientForm({ form, onChange }) {
                                       representativeIndex,
                                     )
                                   }
+                                  disabled={fieldsDisabled}
                                   className="w-7 h-7 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-400 flex items-center justify-center transition-colors"
                                   title="Eliminar representante"
                                   aria-label={`Eliminar representante ${
@@ -1071,6 +1134,7 @@ export default function ClientForm({ form, onChange }) {
                                     <input
                                       type="text"
                                       value={representative.name}
+                                      disabled={fieldsDisabled}
                                       onChange={(event) =>
                                         updateRepresentative(
                                           branchIndex,
@@ -1097,6 +1161,7 @@ export default function ClientForm({ form, onChange }) {
                                     <input
                                       type="email"
                                       value={representative.email}
+                                      disabled={fieldsDisabled}
                                       onChange={(event) =>
                                         updateRepresentative(
                                           branchIndex,
@@ -1116,6 +1181,7 @@ export default function ClientForm({ form, onChange }) {
 
                                   <select
                                     value={representative.status}
+                                    disabled={fieldsDisabled}
                                     onChange={(event) =>
                                       updateRepresentative(
                                         branchIndex,
@@ -1155,6 +1221,7 @@ export default function ClientForm({ form, onChange }) {
               <button
                 type="button"
                 onClick={addBranch}
+                disabled={fieldsDisabled}
                 className="mt-3 text-xs font-semibold text-[#C9A227] hover:text-[#E0C34A] transition-colors"
               >
                 Agregar la primera sucursal

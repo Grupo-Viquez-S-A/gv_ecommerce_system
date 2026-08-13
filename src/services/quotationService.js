@@ -3,9 +3,13 @@ import {
   createRepresentativeUser,
   notifyNewQuotation,
 } from "./representativeUserService.js";
-import { addDaysCRDateString, getTodayCRDateString } from "../utils/dateUtils.js";
+import {
+  addBusinessDaysCRDateString,
+  getTodayCRDateString,
+} from "../utils/dateUtils.js";
+import { normalizeQuotationPayload } from "../utils/quotationPayload.js";
 
-const QUOTATION_VALIDITY_DAYS = 2;
+const QUOTATION_VALIDITY_BUSINESS_DAYS = 15;
 
 function getRepresentativeAccessMessage(accessResult) {
   if (!accessResult) return null;
@@ -49,8 +53,8 @@ function getBoolean(value) {
   return value === true || value === "true";
 }
 
-function getDatePlusDays(days = QUOTATION_VALIDITY_DAYS) {
-  return addDaysCRDateString(days);
+function getDatePlusDays(days = QUOTATION_VALIDITY_BUSINESS_DAYS) {
+  return addBusinessDaysCRDateString(days);
 }
 
 function getNullableNumber(value) {
@@ -196,7 +200,7 @@ function getValidityDate(createdAt) {
     return null;
   }
 
-  return addDaysCRDateString(QUOTATION_VALIDITY_DAYS, date);
+  return addBusinessDaysCRDateString(QUOTATION_VALIDITY_BUSINESS_DAYS, date);
 }
 
 function getQuotationTotal(items = []) {
@@ -274,25 +278,27 @@ function normalizeQuotation({
   const items = products.map((item) => ({
     id: item.quote_product_id,
     quoteProductId: item.quote_product_id,
-    productId: item.product_id,
+    productId: item.variant?.product_id || item.product?.product_id || null,
     variantId: item.variant_id || null,
-    gtin: item.snapshot_gtin || null,
-    sku: item.snapshot_sku || item.variant?.sku || item.product?.sku || "Sin SKU",
+    gtin: item.variant?.gtin || null,
+    sku: item.variant?.sku || "Sin SKU",
     name: item.product?.product_name || "Producto sin nombre",
-    description: item.snapshot_description || item.product?.description || "",
+    description: item.product?.description || "",
     imageUrl:
       item.product?.image_url ||
       item.product?.main_image_url ||
       item.product?.cover_image_url ||
       getProductImageUrl(item.productFiles || []),
-    sizeName: item.snapshot_size_name || item.size?.size_name || null,
-    color: item.snapshot_color || null,
+    sizeName: item.size?.size_name || null,
+    color: null,
     quantity: getNumber(item.quantity, 0),
-    unitPrice: getNumber(item.snapshot_price, getNumber(item.unit_price, 0)),
-    taxRate: getNumber(item.snapshot_tax_rate, 0),
+    unitPrice: getNumber(item.unit_price, 0),
+    taxRate: getNumber(item.variant?.tax_rate, getNumber(item.product?.iva, 0)),
     ivaAmount: getNumber(item.iva_amount, 0),
-    subtotal: getNumber(item.subtotal, 0),
-    total: getNumber(item.total, 0),
+    subtotal: getNumber(item.unit_price, 0) * getNumber(item.quantity, 0),
+    total:
+      getNumber(item.unit_price, 0) * getNumber(item.quantity, 0) +
+      getNumber(item.iva_amount, 0),
     hasSublimation: item.has_sublimation === true,
     hasEmbroidery: item.has_embroidery === true,
     sublimationPrice:
@@ -317,6 +323,28 @@ function normalizeQuotation({
   const subtotal = getNumber(quotation.subtotal, null);
   const ivaAmount = getNumber(quotation.iva_amount, null);
   const total = getNumber(quotation.total, null);
+  const embroideryAmount = getNumber(
+    quotation.embroidery_amount,
+    items.reduce(
+      (sum, item) =>
+        sum +
+        (item.hasEmbroidery
+          ? getNumber(item.embroideryUnitPrice, 0) * getNumber(item.quantity, 0)
+          : 0),
+      0,
+    ),
+  );
+  const sublimationAmount = getNumber(
+    quotation.sublimation_amount,
+    items.reduce(
+      (sum, item) =>
+        sum +
+        (item.hasSublimation
+          ? getNumber(item.sublimationUnitPrice, 0) * getNumber(item.quantity, 0)
+          : 0),
+      0,
+    ),
+  );
 
   return {
     id: quotation.quotation_id,
@@ -332,6 +360,8 @@ function normalizeQuotation({
     date: quotation.created_at,
     validity: quotation.valid_until || getValidityDate(quotation.created_at),
     validUntil: quotation.valid_until,
+    committedDeliveryDate: quotation.committed_delivery_date || null,
+    unexpectedDeliveryDate: quotation.unexpected_delivery_date || null,
 
     earlyDelivery: quotation.early_delivery === true,
     earlyDeliveryDate: quotation.early_delivery_date || null,
@@ -343,10 +373,20 @@ function normalizeQuotation({
         ? ivaAmount
         : items.reduce((sum, item) => sum + getNumber(item.ivaAmount, 0), 0),
     total: total !== null ? total : itemsTotal,
+    discountPercentage: getNumber(quotation.discount_percentage, 0),
+    discountAmount: getNumber(quotation.discount_amount, 0),
+    embroideryAmount,
+    sublimationAmount,
     advancePayment:
       getNumber(quotation.advance_payment, null) !== null
         ? getNumber(quotation.advance_payment, 0)
         : (total !== null ? total : itemsTotal) / 2,
+    advancePercentage:
+      getNumber(quotation.advance_percentage, null) !== null
+        ? getNumber(quotation.advance_percentage, 0)
+        : (total !== null ? total : itemsTotal) > 0
+          ? (getNumber(quotation.advance_payment, 0) / (total !== null ? total : itemsTotal)) * 100
+          : 0,
     methodId: quotation.method_id || null,
     paymentMethod: quotation.payment_methods?.method_name || null,
     status: getQuotationStatusLabel(quotation.state || quotation.status),
@@ -372,180 +412,6 @@ function normalizeQuotation({
     representative,
     seller,
     items,
-  };
-}
-
-function normalizeQuotationPayload({ client = {}, items = [], status }) {
-  const companyId = getText(client.companyId);
-  const identificationType =
-    client.identificationType === "personal" ? "personal" : "legal";
-  const businessName = getText(client.businessName);
-  const legalName = getText(client.legalName);
-  const ownerName = getText(client.ownerName);
-  const legalId = getText(client.legalId);
-  const activityCode = getText(client.activityCode);
-  const businessEmail = getText(client.businessEmail);
-  const branchAddress = getText(client.branchAddress);
-  const branchLatitude = getNullableNumber(client.branchLatitude);
-  const branchLongitude = getNullableNumber(client.branchLongitude);
-  const branchLocationAccuracy = getNullableNumber(
-    client.branchLocationAccuracy,
-  );
-  const representativeName = getText(client.representativeName);
-  const representativeEmail = getText(client.representativeEmail)?.toLowerCase();
-
-  if (!companyId) {
-    throw new Error("Selecciona la empresa del grupo.");
-  }
-
-  if (!businessName) {
-    throw new Error("Ingresa el nombre comercial del cliente.");
-  }
-
-  if (!legalId) {
-    throw new Error(
-      identificationType === "personal"
-        ? "Ingresa el número de identificación del dueño."
-        : "Ingresa la cédula jurídica del cliente.",
-    );
-  }
-
-  if (identificationType === "legal" && !legalName) {
-    throw new Error("Ingresa la razon social del cliente.");
-  }
-
-  if (identificationType === "personal" && !ownerName) {
-    throw new Error("Ingresa el nombre y apellidos del dueño.");
-  }
-
-  if (!activityCode) {
-    throw new Error("Ingresa el código de actividad del cliente.");
-  }
-
-  if (!businessEmail) {
-    throw new Error("Ingresa el correo electrónico principal del cliente.");
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail)) {
-    throw new Error("Ingresa un correo electrónico principal válido.");
-  }
-
-  if (!branchAddress) {
-    throw new Error("Ingresa la direccion de la sucursal.");
-  }
-
-  if (!client.branchId && (branchLatitude === null || branchLongitude === null)) {
-    throw new Error(
-      "Obtén la ubicación actual para registrar las coordenadas de la sucursal.",
-    );
-  }
-
-  if (
-    branchLatitude !== null &&
-    (branchLatitude < -90 || branchLatitude > 90)
-  ) {
-    throw new Error("La latitud de la sucursal no es válida.");
-  }
-
-  if (
-    branchLongitude !== null &&
-    (branchLongitude < -180 || branchLongitude > 180)
-  ) {
-    throw new Error("La longitud de la sucursal no es válida.");
-  }
-
-  if (!representativeName) {
-    throw new Error("Ingresa el nombre del representante.");
-  }
-
-  if (!representativeEmail) {
-    throw new Error("Ingresa el correo electronico del representante.");
-  }
-
-  if (
-    representativeEmail.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(representativeEmail)
-  ) {
-    throw new Error("Ingresa un correo electronico valido para el representante.");
-  }
-
-  if (!items.length) {
-    throw new Error("Agrega al menos un producto al carrito.");
-  }
-
-  return {
-    client: {
-      businessId: getText(client.businessId),
-      branchId: getText(client.branchId),
-      representativeId: getText(client.representativeId),
-
-      companyId,
-      identificationType,
-      legalId,
-      legalName: identificationType === "legal" ? legalName : "",
-      ownerName: identificationType === "personal" ? ownerName : "",
-      businessName,
-      activityCode,
-
-      businessEmail,
-      businessPhone: getText(client.businessPhone),
-
-      branchProvince: getText(client.branchProvince),
-      branchDistrict: getText(client.branchDistrict),
-      branchAddress,
-      branchPhone: getText(client.branchPhone),
-      branchLatitude,
-      branchLongitude,
-      branchLocationAccuracy,
-
-      representativeName,
-      representativeEmail,
-      representativeUserId: getText(client.representativeUserId),
-
-      notes: getText(client.notes),
-
-      earlyDelivery: getBoolean(client.earlyDelivery),
-      earlyDeliveryDate: getText(client.earlyDeliveryDate),
-      validUntil: getText(client.validUntil),
-      methodId: getText(client.methodId),
-    },
-
-    items: items.map((item) => {
-      const productId = getText(item.productId || item.id);
-      const quantity = Math.max(1, getNumber(item.quantity, 1));
-      const unitPrice = getNumber(item.unitPrice, 0);
-      const unitIva = getNumber(item.ivaAmount, 0);
-      const ivaAmount = unitIva * quantity;
-      const sizeId = getText(item.sizeId) || null;
-
-      if (!productId) {
-        throw new Error("Uno de los productos no tiene identificador.");
-      }
-      if (item.catalogType === "textile_products" && !getText(item.variantId)) {
-        throw new Error("Seleccione una talla y color válidos para cada producto textil.");
-      }
-
-      return {
-        product_id: productId,
-        variant_id: getText(item.variantId) || null,
-        snapshot_sku: getText(item.sku) || null,
-        snapshot_gtin: getText(item.gtin) || null,
-        snapshot_size_id: sizeId,
-        snapshot_size_name: getText(item.sizeName) || null,
-        snapshot_color: getText(item.color) || null,
-        snapshot_description: getText(item.description) || null,
-        snapshot_price: unitPrice,
-        snapshot_tax_rate: getNumber(item.taxRate, 0),
-        quantity,
-        unit_price: unitPrice,
-        iva_amount: ivaAmount,
-        size_id: sizeId,
-        has_sublimation: getBoolean(item.hasSublimation),
-        has_embroidery: getBoolean(item.hasEmbroidery),
-      };
-    }),
-
-    status: getDbQuotationStatus(status),
   };
 }
 
@@ -968,10 +834,17 @@ export async function getQuotations({ ownerUserId } = {}) {
         early_delivery_date,
         early_delivery_price,
         valid_until,
+        committed_delivery_date,
+        unexpected_delivery_date,
+        embroidery_amount,
+        sublimation_amount,
         iva_amount,
         subtotal,
         total,
         advance_payment,
+        advance_percentage,
+        discount_percentage,
+        discount_amount,
         method_id,
         payment_methods:method_id (
           method_id,
@@ -1065,32 +938,42 @@ export async function getQuotations({ ownerUserId } = {}) {
         await supabase
           .from("quote_products")
           .select(
-            "quote_product_id, quotation_id, product_id, variant_id, size_id, snapshot_sku, snapshot_gtin, snapshot_size_id, snapshot_size_name, snapshot_color, snapshot_description, snapshot_price, snapshot_tax_rate, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
+            "quote_product_id, quotation_id, variant_id, quantity, unit_price, iva_amount, has_sublimation, has_embroidery",
           )
           .in("quotation_id", quotationIds),
         "No fue posible cargar los productos de las cotizaciones",
       ),
     ]);
 
-  const productIds = [
-    ...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean)),
-  ];
-
-  const sizeIds = [
-    ...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean)),
-  ];
-
   const variantIds = [
     ...new Set(quoteProducts.map((item) => item.variant_id).filter(Boolean)),
   ];
 
-  const [products, variants, productFiles, sizes] = await Promise.all([
+  const variants = variantIds.length
+    ? throwIfError(
+        await supabase
+          .from("textiles_inventory")
+          .select("variant_id, product_id, sku, gtin, size_id, price, tax_rate:iva, stock:stock_quantity, minimum_stock, is_active")
+          .in("variant_id", variantIds),
+        "No fue posible cargar las variantes cotizadas",
+      )
+    : [];
+
+  const productIds = [
+    ...new Set(variants.map((item) => item.product_id).filter(Boolean)),
+  ];
+
+  const sizeIds = [
+    ...new Set(variants.map((item) => item.size_id).filter(Boolean)),
+  ];
+
+  const [products, productFiles, sizes] = await Promise.all([
     productIds.length
       ? throwIfError(
           await supabase
             .from("textile_products")
             .select(
-              "product_id, sku, product_name, description, price, iva, sublimation_price, embroidery_price",
+              "product_id, product_name, description, iva, sublimation_price, embroidery_price",
             )
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos cotizados",
@@ -1141,15 +1024,6 @@ export async function getQuotations({ ownerUserId } = {}) {
         )
       : [],
 
-    variantIds.length
-      ? throwIfError(
-          await supabase
-            .from("textile_product_variants")
-            .select("variant_id, product_id, sku, gtin, size_id, color:color_name, price, tax_rate:iva, stock:stock_quantity, minimum_stock, is_active")
-            .in("variant_id", variantIds),
-          "No fue posible cargar las variantes cotizadas",
-        )
-      : [],
     companyIds.length
       ? throwIfError(
           await supabase
@@ -1180,10 +1054,10 @@ export async function getQuotations({ ownerUserId } = {}) {
       quoteProductsByQuotationId[quotation.quotation_id] || []
     ).map((item) => ({
       ...item,
-      product: productsById[item.product_id],
+      product: productsById[variantsById[item.variant_id]?.product_id] || null,
       variant: variantsById[item.variant_id] || null,
-      productFiles: productFilesById[item.product_id] || [],
-      size: sizesById[item.snapshot_size_id || item.size_id] || null,
+      productFiles: productFilesById[variantsById[item.variant_id]?.product_id] || [],
+      size: sizesById[variantsById[item.variant_id]?.size_id] || null,
     }));
 
     return normalizeQuotation({
@@ -1219,7 +1093,9 @@ export async function updateQuotationStatus(quotationId, status) {
 }
 
 export async function createBusinessQuotation(payload) {
-  const normalizedPayload = normalizeQuotationPayload(payload);
+  const normalizedPayload = normalizeQuotationPayload(payload, {
+    getDbQuotationStatus,
+  });
   const { client, items, status } = normalizedPayload;
 
   let businessId = client.businessId || null;
@@ -1397,7 +1273,11 @@ export async function createBusinessQuotation(payload) {
     );
     const ivaAmount = items.reduce((sum, item) => sum + item.iva_amount, 0);
     const total = subtotal + ivaAmount;
-    const advancePayment = total / 2;
+    const advancePercentage = Math.min(
+      100,
+      Math.max(0, getNumber(client.advancePercentage, 50)),
+    );
+    const advancePayment = total * (advancePercentage / 100);
 
     const quotationResponse = await supabase
       .from("quotations")
@@ -1417,6 +1297,7 @@ export async function createBusinessQuotation(payload) {
         iva_amount: ivaAmount,
         total,
         advance_payment: advancePayment,
+        advance_percentage: advancePercentage,
         method_id: client.methodId || null,
       })
       .select(
@@ -1431,6 +1312,7 @@ export async function createBusinessQuotation(payload) {
         iva_amount,
         total,
         advance_payment,
+        advance_percentage,
         method_id
       `,
       )
@@ -1498,6 +1380,7 @@ export async function createBusinessQuotation(payload) {
       earlyDeliveryDate: quotation.early_delivery_date,
       validUntil: quotation.valid_until,
       methodId: quotation.method_id,
+      advancePercentage: getNumber(quotation.advance_percentage, advancePercentage),
       accessError,
       representativeAccessMessage,
     };

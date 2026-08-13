@@ -174,39 +174,6 @@ export type Database = {
         }
         Relationships: []
       }
-      category_product_types: {
-        Row: {
-          category_id: string
-          created_at: string
-          type_id: string
-        }
-        Insert: {
-          category_id: string
-          created_at?: string
-          type_id: string
-        }
-        Update: {
-          category_id?: string
-          created_at?: string
-          type_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_category_product_types_category"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["category_id"]
-          },
-          {
-            foreignKeyName: "fk_category_product_types_type"
-            columns: ["type_id"]
-            isOneToOne: false
-            referencedRelation: "product_types"
-            referencedColumns: ["type_id"]
-          },
-        ]
-      }
       color_variants: {
         Row: {
           color: string | null
@@ -356,27 +323,33 @@ export type Database = {
       dimensions: {
         Row: {
           created_at: string
-          dimension_code: string
           dimension_id: string
           dimension_name: string
           display_order: number
+          heigth: string
+          lenght: string | null
           updated_at: string
+          width: string | null
         }
         Insert: {
           created_at?: string
-          dimension_code: string
           dimension_id?: string
           dimension_name: string
           display_order?: number
+          heigth?: string
+          lenght?: string | null
           updated_at?: string
+          width?: string | null
         }
         Update: {
           created_at?: string
-          dimension_code?: string
           dimension_id?: string
           dimension_name?: string
           display_order?: number
+          heigth?: string
+          lenght?: string | null
           updated_at?: string
+          width?: string | null
         }
         Relationships: []
       }
@@ -1315,41 +1288,6 @@ export type Database = {
           },
         ]
       }
-      product_collections: {
-        Row: {
-          category_id: string
-          collection_id: string
-          collection_name: string
-          created_at: string
-          is_active: boolean
-          updated_at: string
-        }
-        Insert: {
-          category_id: string
-          collection_id?: string
-          collection_name: string
-          created_at?: string
-          is_active?: boolean
-          updated_at?: string
-        }
-        Update: {
-          category_id?: string
-          collection_id?: string
-          collection_name?: string
-          created_at?: string
-          is_active?: boolean
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_product_collections_category"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["category_id"]
-          },
-        ]
-      }
       product_types: {
         Row: {
           created_at: string
@@ -1370,83 +1308,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      product_variant_migration_map: {
-        Row: {
-          approved_gtin: string | null
-          approved_sku: string | null
-          color_name: string
-          created_at: string
-          keep_existing_variant: boolean
-          legacy_sku: string
-          migrated_variant_id: string | null
-          migration_id: string
-          migration_status: string
-          product_id: string
-          size_id: string
-          suggested_sku: string | null
-          updated_at: string
-        }
-        Insert: {
-          approved_gtin?: string | null
-          approved_sku?: string | null
-          color_name?: string
-          created_at?: string
-          keep_existing_variant?: boolean
-          legacy_sku: string
-          migrated_variant_id?: string | null
-          migration_id?: string
-          migration_status?: string
-          product_id: string
-          size_id: string
-          suggested_sku?: string | null
-          updated_at?: string
-        }
-        Update: {
-          approved_gtin?: string | null
-          approved_sku?: string | null
-          color_name?: string
-          created_at?: string
-          keep_existing_variant?: boolean
-          legacy_sku?: string
-          migrated_variant_id?: string | null
-          migration_id?: string
-          migration_status?: string
-          product_id?: string
-          size_id?: string
-          suggested_sku?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_variant_migration_map_migrated_variant_id_fkey"
-            columns: ["migrated_variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_size_id_fkey"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["size_id"]
-          },
-        ]
       }
       production_order_status_history: {
         Row: {
@@ -1888,20 +1749,6 @@ export type Database = {
             referencedColumns: ["product_id"]
           },
           {
-            foreignKeyName: "quote_products_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "quote_products_product_variant_fkey"
-            columns: ["product_id", "variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["product_id", "variant_id"]
-          },
-          {
             foreignKeyName: "quote_products_quotation_id_fkey"
             columns: ["quotation_id"]
             isOneToOne: false
@@ -1914,13 +1761,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sizes"
             referencedColumns: ["size_id"]
-          },
-          {
-            foreignKeyName: "quote_products_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -2078,276 +1918,53 @@ export type Database = {
             referencedRelation: "textile_products"
             referencedColumns: ["product_id"]
           },
-          {
-            foreignKeyName: "fk_textile_product_files_product"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-        ]
-      }
-      textile_product_measurements: {
-        Row: {
-          created_at: string
-          dimension_id: string
-          measurement_id: string
-          measurement_value: number
-          product_id: string
-          size_id: string
-          unit: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          dimension_id: string
-          measurement_id?: string
-          measurement_value: number
-          product_id: string
-          size_id: string
-          unit?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          dimension_id?: string
-          measurement_id?: string
-          measurement_value?: number
-          product_id?: string
-          size_id?: string
-          unit?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_product_measurements_dimension"
-            columns: ["dimension_id"]
-            isOneToOne: false
-            referencedRelation: "dimensions"
-            referencedColumns: ["dimension_id"]
-          },
-          {
-            foreignKeyName: "fk_product_measurements_product"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "fk_product_measurements_product"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "fk_product_measurements_size"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["size_id"]
-          },
-        ]
-      }
-      textile_product_variant_measurements: {
-        Row: {
-          created_at: string
-          dimension_id: string
-          measurement_id: string
-          measurement_value: number
-          unit: string
-          updated_at: string
-          variant_id: string
-        }
-        Insert: {
-          created_at?: string
-          dimension_id: string
-          measurement_id?: string
-          measurement_value: number
-          unit?: string
-          updated_at?: string
-          variant_id: string
-        }
-        Update: {
-          created_at?: string
-          dimension_id?: string
-          measurement_id?: string
-          measurement_value?: number
-          unit?: string
-          updated_at?: string
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "textile_product_variant_measurements_dimension_fkey"
-            columns: ["dimension_id"]
-            isOneToOne: false
-            referencedRelation: "dimensions"
-            referencedColumns: ["dimension_id"]
-          },
-          {
-            foreignKeyName: "textile_product_variant_measurements_variant_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
-          },
-        ]
-      }
-      textile_product_variants: {
-        Row: {
-          color_hex: string | null
-          color_name: string | null
-          created_at: string
-          embroidery_price: number | null
-          gtin: string | null
-          is_active: boolean
-          is_default: boolean
-          iva: number
-          minimum_stock: number
-          price: number
-          product_id: string
-          reserved_quantity: number
-          size_id: string | null
-          sku: string
-          stock_quantity: number
-          sublimation_price: number | null
-          updated_at: string
-          variant_id: string
-        }
-        Insert: {
-          color_hex?: string | null
-          color_name?: string | null
-          created_at?: string
-          embroidery_price?: number | null
-          gtin?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          iva?: number
-          minimum_stock?: number
-          price: number
-          product_id: string
-          reserved_quantity?: number
-          size_id?: string | null
-          sku: string
-          stock_quantity?: number
-          sublimation_price?: number | null
-          updated_at?: string
-          variant_id?: string
-        }
-        Update: {
-          color_hex?: string | null
-          color_name?: string | null
-          created_at?: string
-          embroidery_price?: number | null
-          gtin?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          iva?: number
-          minimum_stock?: number
-          price?: number
-          product_id?: string
-          reserved_quantity?: number
-          size_id?: string | null
-          sku?: string
-          stock_quantity?: number
-          sublimation_price?: number | null
-          updated_at?: string
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "textile_product_variants_product_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "textile_product_variants_product_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "textile_product_variants_size_fkey"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["size_id"]
-          },
         ]
       }
       textile_products: {
         Row: {
           category_id: string
-          collection_id: string | null
           created_at: string
           description: string
           embroidery: boolean
           embroidery_price: number | null
-          height: string | null
           is_active: boolean
           iva: number
-          length: string | null
-          price: number
           product_id: string
           product_name: string
-          size: string | null
-          sku: string
           sublimation: boolean
           sublimation_price: number | null
           type_id: string
-          unit: string | null
           updated_at: string
-          width: string | null
         }
         Insert: {
           category_id: string
-          collection_id?: string | null
           created_at?: string
           description: string
           embroidery?: boolean
           embroidery_price?: number | null
-          height?: string | null
           is_active?: boolean
           iva?: number
-          length?: string | null
-          price: number
           product_id?: string
           product_name: string
-          size?: string | null
-          sku: string
           sublimation?: boolean
           sublimation_price?: number | null
           type_id: string
-          unit?: string | null
           updated_at?: string
-          width?: string | null
         }
         Update: {
           category_id?: string
-          collection_id?: string | null
           created_at?: string
           description?: string
           embroidery?: boolean
           embroidery_price?: number | null
-          height?: string | null
           is_active?: boolean
           iva?: number
-          length?: string | null
-          price?: number
           product_id?: string
           product_name?: string
-          size?: string | null
-          sku?: string
           sublimation?: boolean
           sublimation_price?: number | null
           type_id?: string
-          unit?: string | null
           updated_at?: string
-          width?: string | null
         }
         Relationships: [
           {
@@ -2358,11 +1975,11 @@ export type Database = {
             referencedColumns: ["category_id"]
           },
           {
-            foreignKeyName: "fk_textile_products_collection"
-            columns: ["collection_id"]
+            foreignKeyName: "fk_textile_products_product_type"
+            columns: ["type_id"]
             isOneToOne: false
-            referencedRelation: "product_collections"
-            referencedColumns: ["collection_id"]
+            referencedRelation: "product_types"
+            referencedColumns: ["type_id"]
           },
           {
             foreignKeyName: "fk_textile_products_type"
@@ -2371,12 +1988,81 @@ export type Database = {
             referencedRelation: "product_types"
             referencedColumns: ["type_id"]
           },
+        ]
+      }
+      textiles_inventory: {
+        Row: {
+          created_at: string
+          dimension_id: string | null
+          gtin: string | null
+          is_active: boolean
+          is_default: boolean
+          iva: number | null
+          minimum_stock: number
+          price: number | null
+          product_id: string
+          reserved_quantity: number
+          size_id: string | null
+          sku: string
+          stock_quantity: number
+          updated_at: string
+          variant_id: string
+        }
+        Insert: {
+          created_at?: string
+          dimension_id?: string | null
+          gtin?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          iva?: number | null
+          minimum_stock?: number
+          price?: number | null
+          product_id: string
+          reserved_quantity?: number
+          size_id?: string | null
+          sku: string
+          stock_quantity?: number
+          updated_at?: string
+          variant_id?: string
+        }
+        Update: {
+          created_at?: string
+          dimension_id?: string | null
+          gtin?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          iva?: number | null
+          minimum_stock?: number
+          price?: number | null
+          product_id?: string
+          reserved_quantity?: number
+          size_id?: string | null
+          sku?: string
+          stock_quantity?: number
+          updated_at?: string
+          variant_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "textile_products_category_type_fkey"
-            columns: ["category_id", "type_id"]
+            foreignKeyName: "fk_textiles_inventory_dimension"
+            columns: ["dimension_id"]
             isOneToOne: false
-            referencedRelation: "category_product_types"
-            referencedColumns: ["category_id", "type_id"]
+            referencedRelation: "dimensions"
+            referencedColumns: ["dimension_id"]
+          },
+          {
+            foreignKeyName: "fk_textiles_inventory_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "textile_products"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "fk_textiles_inventory_size"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "sizes"
+            referencedColumns: ["size_id"]
           },
         ]
       }
@@ -2555,117 +2241,9 @@ export type Database = {
           },
         ]
       }
-      variant_files: {
-        Row: {
-          created_at: string
-          display_order: number
-          file_name: string
-          file_size: number | null
-          file_type: string
-          is_active: boolean
-          is_primary: boolean
-          mime_type: string | null
-          object_path: string
-          public_url: string | null
-          updated_at: string
-          variant_file_id: string
-          variant_id: string
-        }
-        Insert: {
-          created_at?: string
-          display_order?: number
-          file_name: string
-          file_size?: number | null
-          file_type: string
-          is_active?: boolean
-          is_primary?: boolean
-          mime_type?: string | null
-          object_path: string
-          public_url?: string | null
-          updated_at?: string
-          variant_file_id?: string
-          variant_id: string
-        }
-        Update: {
-          created_at?: string
-          display_order?: number
-          file_name?: string
-          file_size?: number | null
-          file_type?: string
-          is_active?: boolean
-          is_primary?: boolean
-          mime_type?: string | null
-          object_path?: string
-          public_url?: string | null
-          updated_at?: string
-          variant_file_id?: string
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "variant_files_variant_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
-          },
-        ]
-      }
     }
     Views: {
-      product_variant_migration_review: {
-        Row: {
-          approved_gtin: string | null
-          approved_sku: string | null
-          category_name: string | null
-          color_name: string | null
-          keep_existing_variant: boolean | null
-          legacy_sku: string | null
-          migrated_variant_id: string | null
-          migration_id: string | null
-          migration_status: string | null
-          product_id: string | null
-          product_name: string | null
-          product_type: string | null
-          size_name: string | null
-          suggested_sku: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_variant_migration_map_migrated_variant_id_fkey"
-            columns: ["migrated_variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-        ]
-      }
-      textile_variant_migration_audit: {
-        Row: {
-          has_default_variant: boolean | null
-          legacy_measurement_size_count: number | null
-          legacy_sku: string | null
-          migrated_measurement_count: number | null
-          product_id: string | null
-          product_name: string | null
-          variant_count: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       admin_save_textile_product_v2: {

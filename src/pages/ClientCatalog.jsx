@@ -15,7 +15,9 @@ import Pagination from "../components/catalog/Pagination";
 import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
-import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
+import PetCostumeNotice, {
+  hasPetCategoryProducts,
+} from "../components/catalog/PetCostumeNotice";
 
 import ClientCatalogGrid from "../components/clientCatalog/ClientCatalogGrid";
 
@@ -301,35 +303,6 @@ export default function ClientCatalog({ showPrices = false }) {
     );
   }, [products, isTextileProductsCatalog]);
 
-  const collections = useMemo(() => {
-    if (!isTextileProductsCatalog) {
-      return [];
-    }
-
-    const uniqueCollections = new Map();
-
-    products.forEach((product) => {
-      const collection = product.collection;
-
-      if (
-        collection?.collection_id &&
-        !uniqueCollections.has(collection.collection_id)
-      ) {
-        uniqueCollections.set(
-          collection.collection_id,
-          collection,
-        );
-      }
-    });
-
-    return Array.from(uniqueCollections.values()).sort(
-      (first, second) =>
-        first.collection_name.localeCompare(
-          second.collection_name,
-        ),
-    );
-  }, [products, isTextileProductsCatalog]);
-
   const sizes = useMemo(() => {
     if (!isTextileProductsCatalog) {
       return [];
@@ -366,7 +339,6 @@ export default function ClientCatalog({ showPrices = false }) {
         product.description,
         product.category?.category_name,
         product.product_type?.product_type,
-        product.collection?.collection_name,
         product.size,
         product.length,
         product.width,
@@ -427,12 +399,6 @@ export default function ClientCatalog({ showPrices = false }) {
             filters.color,
         );
 
-      const matchesCollection =
-        !isTextileProductsCatalog ||
-        !filters.collectionId ||
-        product.collection?.collection_id ===
-          filters.collectionId;
-
       const matchesSize =
         !isTextileProductsCatalog ||
         !filters.sizeId ||
@@ -446,7 +412,6 @@ export default function ClientCatalog({ showPrices = false }) {
         matchesType &&
         matchesMaterial &&
         matchesColor &&
-        matchesCollection &&
         matchesSize
       );
     });
@@ -476,13 +441,19 @@ export default function ClientCatalog({ showPrices = false }) {
     );
   }, [filteredProducts, safeCurrentPage]);
 
+  const shouldShowPetNotice = useMemo(
+    () =>
+      isTextileProductsCatalog &&
+      hasPetCategoryProducts(filteredProducts),
+    [filteredProducts, isTextileProductsCatalog],
+  );
+
   const hasActiveFilters = Boolean(
     filters.search.trim() ||
       filters.categoryId ||
       filters.typeId ||
       filters.materialId ||
       filters.color ||
-      filters.collectionId ||
       filters.sizeId,
   );
 
@@ -613,7 +584,7 @@ export default function ClientCatalog({ showPrices = false }) {
           onChange={handleCatalogChange}
         />
 
-        <PetCostumeNotice />
+        {shouldShowPetNotice && <PetCostumeNotice />}
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
@@ -674,7 +645,6 @@ export default function ClientCatalog({ showPrices = false }) {
               productTypes={productTypes}
               materials={materials}
               colors={colors}
-              collections={collections}
               sizes={sizes}
               onFiltersChange={handleFiltersChange}
               onClearFilters={handleClearFilters}

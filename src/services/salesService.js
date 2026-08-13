@@ -85,7 +85,7 @@ export async function getPaidSales() {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, production_order_status, payment_status, balance, committed_delivery_date, unexpected_delivery_date, is_active, created_at, updated_at",
+        "production_order_id, quotation_id, production_order_code, production_order_status, payment_status, balance, is_active, created_at, updated_at",
       )
       .eq("is_active", true)
       .eq("payment_status", "pagado")
@@ -110,7 +110,7 @@ export async function getPaidSales() {
           await supabase
             .from("quotations")
             .select(
-              "quotation_id, quotation_number, business_id, branch_id, representative_id, user_id, subtotal, iva_amount, total, advance_payment, method_id, state, status, created_at",
+              "quotation_id, quotation_number, business_id, branch_id, representative_id, user_id, subtotal, iva_amount, total, advance_payment, method_id, state, status, created_at, committed_delivery_date, unexpected_delivery_date",
             )
             .in("quotation_id", quotationIds),
           "No fue posible cargar las cotizaciones asociadas",
@@ -317,8 +317,8 @@ export async function getPaidSales() {
       productionStatus,
       productionStatusLabel:
         PRODUCTION_STATUS_LABELS[productionStatus] || productionStatus,
-      committedDeliveryDate: order.committed_delivery_date,
-      unexpectedDeliveryDate: order.unexpected_delivery_date,
+      committedDeliveryDate: quotation?.committed_delivery_date || null,
+      unexpectedDeliveryDate: quotation?.unexpected_delivery_date || null,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
     });

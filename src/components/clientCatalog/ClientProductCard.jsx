@@ -1,9 +1,4 @@
-﻿import {
-  ImageOff,
-  Package,
-  Ruler,
-  Tag,
-} from "lucide-react";
+import { ImageOff } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import ColorDots from "../catalog/ColorDots";
@@ -12,7 +7,6 @@ import {
   getOptimizedSupabaseImageUrl,
   isChromiumLikeBrowser,
 } from "../../utils/supabaseImageUrl.js";
-import { formatCurrency } from "../../utils/formatCurrency.js";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -25,12 +19,7 @@ function normalizeText(value) {
 }
 
 function getFileUrl(file) {
-  return (
-    file?.public_url ||
-    file?.url ||
-    file?.file_url ||
-    null
-  );
+  return file?.public_url || file?.url || file?.file_url || null;
 }
 
 function isTechnicalSheetFile(file) {
@@ -71,9 +60,7 @@ function isImageFile(file) {
 }
 
 function getProductImage(product) {
-  const files = Array.isArray(product?.files)
-    ? product.files
-    : [];
+  const files = Array.isArray(product?.files) ? product.files : [];
 
   const directImage =
     product?.main_image_url ||
@@ -101,7 +88,7 @@ function getCategoryName(product) {
     product?.category?.category_name ||
     product?.categories?.category_name ||
     product?.category_name ||
-    "Sin categoría"
+    "Sin categoria"
   );
 }
 
@@ -115,32 +102,27 @@ function getProductTypeName(product) {
   );
 }
 
-function getCollectionName(product) {
-  return (
-    product?.collection?.collection_name ||
-    product?.collection_name ||
-    "Sin colección"
-  );
-}
-
-function getProductPriceWithIva(product) {
-  const price = Number(product?.price) || 0;
-  const rawIvaAmount = product?.iva_amount;
-  const ivaAmount =
-    rawIvaAmount === null ||
-    rawIvaAmount === undefined ||
-    rawIvaAmount === ""
-      ? NaN
-      : Number(rawIvaAmount);
-
-  if (Number.isFinite(ivaAmount)) {
-    return price + ivaAmount;
+function renderSizeItems(availableSizes) {
+  if (availableSizes.length === 0) {
+    return (
+      <p className="text-xs text-[#7F97BE]">
+        Sin tallas registradas
+      </p>
+    );
   }
 
-  const ivaPercentage =
-    Number(product?.iva_percentage ?? product?.iva) || 0;
-
-  return price + price * (ivaPercentage / 100);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {availableSizes.slice(0, 6).map((size, index) => (
+        <span
+          key={size.variant_id || size.size_id || index}
+          className="rounded-lg border border-[#324A70] bg-[#0A1A33] px-3 py-1.5 text-xs font-medium text-[#D7E1F0]"
+        >
+          {size.size_name}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function ClientProductCard({
@@ -152,9 +134,9 @@ export default function ClientProductCard({
   const optimizedProductImage = useMemo(
     () =>
       getOptimizedSupabaseImageUrl(originalProductImage, {
-        width: 900,
-        height: 675,
-        quality: 82,
+        width: 960,
+        height: 720,
+        quality: 84,
       }),
     [originalProductImage],
   );
@@ -172,8 +154,7 @@ export default function ClientProductCard({
       : originalProductImage
     : optimizedProductImage;
 
-  const isTextileProduct =
-    product?.catalog_type === "textile_products";
+  const isTextileProduct = product?.catalog_type === "textile_products";
 
   const productName =
     product?.product_name ||
@@ -181,11 +162,7 @@ export default function ClientProductCard({
     product?.title ||
     "Producto sin nombre";
 
-  const productSku =
-    product?.sku ||
-    product?.SKU ||
-    product?.product_sku ||
-    "SKU no disponible";
+  const productCode = product?.gtin || "Sin código";
 
   const categoryName = getCategoryName(product);
   const productTypeName = getProductTypeName(product);
@@ -193,25 +170,16 @@ export default function ClientProductCard({
   const productDescription =
     product?.description ||
     product?.short_description ||
-    "Este producto no cuenta con una descripción registrada.";
+    "Este producto no cuenta con una descripcion registrada.";
 
-  const colors =
-    product?.colors ||
-    product?.color_variants ||
-    [];
-
+  const colors = product?.colors || product?.color_variants || [];
   const compositions =
     product?.compositions ||
     product?.materials ||
     product?.product_materials ||
     [];
-
   const availableSizes = Array.isArray(product?.available_sizes)
     ? product.available_sizes
-    : [];
-
-  const features = Array.isArray(product?.features)
-    ? product.features
     : [];
 
   const handleOpenProductDetails = () => {
@@ -221,25 +189,25 @@ export default function ClientProductCard({
   return (
     <article
       className="
-        catalog-product-card group relative flex h-full flex-col overflow-hidden rounded-2xl border
-        border-[#29466F] bg-[#102441]
-        shadow-[0_12px_30px_rgba(0,0,0,0.14)]
+        catalog-product-card group flex h-full flex-col overflow-hidden rounded-[22px] border
+        border-[#31486C] bg-[#0B1931]
+        shadow-[0_16px_34px_rgba(0,0,0,0.20)]
         transition duration-200
-        hover:border-[#4B6B96]
-        hover:shadow-[0_16px_36px_rgba(0,0,0,0.24)]
+        hover:-translate-y-1 hover:border-[#4C6A95]
+        hover:shadow-[0_22px_40px_rgba(0,0,0,0.28)]
       "
     >
       <button
         type="button"
         onClick={handleOpenProductDetails}
-        className="catalog-product-media relative z-10 block aspect-[4/3] w-full overflow-hidden bg-[#091A31] text-left"
-        aria-label={`Ver información completa de ${productName}`}
+        className="catalog-product-media relative block aspect-[1.08/1] w-full overflow-hidden bg-[#F4F2ED] text-left"
+        aria-label={`Ver informacion completa de ${productName}`}
       >
         {productImage ? (
           <img
             src={productImage}
             alt={productName}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-center transition duration-300 group-hover:scale-[1.02]"
             loading="lazy"
             decoding="async"
             onError={() => {
@@ -251,155 +219,78 @@ export default function ClientProductCard({
             }}
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-slate-500">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#29466F] bg-[#102441]">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-[#6E7F9A]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[#D5DCE7] bg-white/80">
               <ImageOff className="h-5 w-5" />
             </div>
-
-            <span className="text-xs font-medium">
-              Imagen no disponible
-            </span>
+            <span className="text-xs font-medium">Imagen no disponible</span>
           </div>
         )}
 
-        <div className="absolute left-3 top-3 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-2">
-          <span
-            className="
-              max-w-full truncate rounded-lg border border-white/10
-              bg-[#071426]/90 px-2.5 py-1 text-[10px] font-bold
-              uppercase tracking-[0.12em] text-[#D7A91D]
-            "
-          >
+        <div className="absolute left-4 top-4 flex max-w-[calc(100%-2rem)] flex-wrap gap-2">
+          <span className="rounded-lg bg-[#0A1830] px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-[#E3B329]">
             {categoryName}
           </span>
 
           {productTypeName && (
-            <span
-              className="
-                max-w-full truncate rounded-lg border border-white/10
-                bg-[#071426]/90 px-2.5 py-1 text-[10px] font-semibold
-                text-[#C9D8EC]
-              "
-            >
+            <span className="rounded-lg bg-[#152846] px-3 py-1 text-[11px] font-medium text-[#E1E8F3]">
               {productTypeName}
             </span>
           )}
         </div>
       </button>
 
-      <div className="relative z-10 flex flex-1 flex-col bg-[#102441] p-5">
-        <div className="mb-3">
-          <div className="mb-2 flex items-center gap-1.5 text-xs text-[#86A4CE]">
-            <Tag className="h-3.5 w-3.5 text-[#D7A91D]" />
-            <span className="truncate">{productSku}</span>
-          </div>
+      <div className="flex flex-1 flex-col bg-[#0B1931] px-5 pb-5 pt-4">
+        <button
+          type="button"
+          onClick={handleOpenProductDetails}
+          className="block w-full text-left text-[1.05rem] font-extrabold leading-snug text-white transition hover:text-[#E9BC2D]"
+        >
+          {productName}
+        </button>
 
-          <button
-            type="button"
-            onClick={handleOpenProductDetails}
-            className="block w-full text-left text-lg font-extrabold leading-snug text-white transition hover:text-[#E9BC2D]"
-          >
-            {productName}
-          </button>
+        <p className="mt-2 text-sm font-medium text-[#8EA4C9]">
+          {productCode}
+        </p>
 
-          <p className="mt-2 h-10 overflow-hidden text-sm leading-5 text-slate-400">
-            {productDescription}
+        <p className="mt-4 min-h-[84px] text-[0.95rem] leading-8 text-[#C9D4E5] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] overflow-hidden">
+          {productDescription}
+        </p>
+
+        {showPrice && (
+          <p className="mt-3 text-sm font-semibold text-[#E3B329]">
+            Consulta el precio en el detalle del producto.
           </p>
-
-          {showPrice && isTextileProduct && (
-            <div className="mt-3 flex items-baseline justify-between gap-3 rounded-xl border border-[#D7A91D]/20 bg-[#D7A91D]/10 px-3 py-2.5">
-              <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-                Precio IVAI
-              </span>
-              <span className="text-base font-extrabold text-[#E9BC2D]">
-                {formatCurrency(getProductPriceWithIva(product))}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {isTextileProduct ? (
-          <div className="space-y-4 border-t border-[#29466F] pt-4">
-            <div>
-              <p className="mb-1 text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-                Colección
-              </p>
-
-              <p className="flex items-center gap-2 text-sm font-semibold text-[#C9D8EC]">
-                <Package className="h-4 w-4 text-[#D7A91D]" />
-                {getCollectionName(product)}
-              </p>
-            </div>
-
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-                Tallas disponibles
-              </p>
-
-              {availableSizes.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {availableSizes.slice(0, 4).map((size, index) => (
-                    <span
-                      key={size.size_id || index}
-                      className="rounded-lg border border-[#35547E] bg-[#091A31] px-2.5 py-1 text-xs font-semibold text-[#C9D8EC]"
-                    >
-                      {size.size_name}
-                    </span>
-                  ))}
-
-                  {availableSizes.length > 4 && (
-                    <span className="rounded-lg border border-[#35547E] bg-[#132F58] px-2.5 py-1 text-xs font-bold text-[#D7A91D]">
-                      +{availableSizes.length - 4}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <p className="text-xs text-slate-500">
-                  Sin tallas registradas
-                </p>
-              )}
-            </div>
-
-            {features.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {features.slice(0, 2).map((feature, index) => (
-                  <span
-                    key={feature.id || index}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#35547E] bg-[#091A31] px-2.5 py-1 text-xs font-semibold text-[#C9D8EC]"
-                  >
-                    <Ruler className="h-3 w-3 text-[#D7A91D]" />
-                    {feature.feature}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4 border-t border-[#29466F] pt-4">
-            <CompositionBadges
-              compositions={compositions}
-              maxVisible={2}
-              showTitle={false}
-            />
-
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.13em] text-[#86A4CE]">
-                Colores disponibles
-              </p>
-
-              <ColorDots
-                colors={colors}
-                maxVisible={4}
-                showLabels={false}
-              />
-            </div>
-          </div>
         )}
 
-        <div className="mt-auto pt-4">
-          <p className="text-xs font-semibold text-[#86A4CE]">
-            Haz clic para ver los detalles del producto.
-          </p>
+        <div className="mt-5 border-t border-[#263A5C] pt-5">
+          {isTextileProduct ? (
+            <div>
+              <p className="mb-3 text-sm font-bold text-white">
+                Tallas disponibles
+              </p>
+              {renderSizeItems(availableSizes)}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <CompositionBadges
+                compositions={compositions}
+                maxVisible={2}
+                showTitle={false}
+              />
+
+              <div>
+                <p className="mb-3 text-sm font-bold text-white">
+                  Colores disponibles
+                </p>
+                <ColorDots
+                  colors={colors}
+                  maxVisible={5}
+                  showLabels={false}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </article>

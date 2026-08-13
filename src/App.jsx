@@ -5,6 +5,7 @@ import ResetPassword from "./pages/ResetPassword";
 
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
+import VisitRoutes from "./pages/VisitRoutes";
 import Catalog from "./pages/Catalog";
 import PublicClientCatalog from "./pages/PublicClientCatalog";
 import AdminConfig from "./pages/adminConfig";
@@ -60,6 +61,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <Clients />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/rutas-visita"
+            element={
+              <ProtectedRoute>
+                <VisitRoutes />
               </ProtectedRoute>
             }
           />

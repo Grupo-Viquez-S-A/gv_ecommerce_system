@@ -17,6 +17,7 @@ export default function ClientsTable({
   onView,
   onEdit,
   onDeactivate,
+  onDelete,
   emptyTitle,
   emptyDescription,
 }) {
@@ -102,6 +103,7 @@ export default function ClientsTable({
                         onView={onView}
                         onEdit={onEdit}
                         onDeactivate={onDeactivate}
+                        onDelete={onDelete}
                       />
                     </td>
                   </tr>

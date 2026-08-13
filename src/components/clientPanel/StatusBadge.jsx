@@ -30,17 +30,33 @@
 
 const STATUS_LABELS = {
   pending: "Pendiente",
+  pendiente: "Pendiente",
   review: "En revision",
+  revision: "En revision",
   approved: "Aprobada",
+  aprobada: "Aprobada",
   rejected: "Rechazada",
+  rechazada: "Rechazada",
   expired: "Vencida",
+  vencida: "Vencida",
   converted: "Convertida",
+  convertida: "Convertida",
   process: "En proceso",
   processing: "En proceso",
+  "en proceso": "En proceso",
+  en_proceso: "En proceso",
   progress: "En proceso",
   completed: "Finalizado",
+  finalizada: "Finalizada",
+  finalizado: "Finalizado",
   paid: "Pagado",
+  pagado: "Pagado",
   partial: "Pago parcial",
+  parcial: "Pago parcial",
+  paused: "Pausada",
+  pausada: "Pausada",
+  cancelled: "Cancelada",
+  cancelada: "Cancelada",
 };
 
 function normalizeStatus(status) {
@@ -50,7 +66,16 @@ function normalizeStatus(status) {
 function getStatusLabel(status) {
   const normalizedStatus = normalizeStatus(status);
 
-  return STATUS_LABELS[normalizedStatus] || String(status || "Pendiente").trim();
+  return (
+    STATUS_LABELS[normalizedStatus] ||
+    String(status || "Pendiente")
+      .trim()
+      .replaceAll("_", " ")
+      .split(" ")
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ")
+  );
 }
 
 export default function StatusBadge({ status }) {

@@ -10,6 +10,7 @@ export default function ClientMobileList({
   onView,
   onEdit,
   onDeactivate,
+  onDelete,
   emptyTitle,
   emptyDescription,
 }) {
@@ -71,6 +72,7 @@ export default function ClientMobileList({
                 onView={onView}
                 onEdit={onEdit}
                 onDeactivate={onDeactivate}
+                onDelete={onDelete}
               />
             </div>
           </div>

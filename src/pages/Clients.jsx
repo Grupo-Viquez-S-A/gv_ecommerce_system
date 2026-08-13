@@ -11,8 +11,10 @@ import { AVATAR_COLORS } from "../data/mockClients.js";
 
 import {
   createBusinessClient,
+  deleteBusinessClient,
   getBusinessClients,
   updateBusinessClient,
+  updateBusinessClientBranchLocations,
   updateBusinessClientStatus,
 } from "../services/clientService.js";
 
@@ -28,6 +30,13 @@ import ClientDrawer from "../components/clients/ClientDrawer.jsx";
 import BranchesModal from "../components/clients/BranchesModal.jsx";
 import RepresentativesModal from "../components/clients/RepresentativesModal.jsx";
 import DeactivateClientModal from "../components/clients/DeactivateClientModal.jsx";
+import DeleteClientModal from "../components/clients/DeleteClientModal.jsx";
+import { useAuth } from "../context/AuthContext.js";
+import {
+  hasClientDeletionAccess,
+  hasSystemAccess,
+  isSalesAgent,
+} from "../utils/roles.js";
 
 const ITEMS_PER_PAGE = 6;
 
@@ -112,6 +121,10 @@ function cloneBranch(branch = {}, index = 0) {
     province: branch.province || "",
     district: branch.district || "",
     address: branch.address || "",
+    latitude: branch.latitude ?? "",
+    longitude: branch.longitude ?? "",
+    locationAccuracy:
+      branch.locationAccuracy ?? branch.location_accuracy_meters ?? "",
     status: normalizeStatus(
       branch.status || (branch.is_active === false ? "Inactivo" : "Activo"),
     ),
@@ -333,6 +346,24 @@ function normalizeClientForm(form = {}) {
       province: originalBranch.province?.trim() || "",
       district: originalBranch.district?.trim() || "",
       address: originalBranch.address?.trim() || "",
+      latitude:
+        originalBranch.latitude === "" ||
+        originalBranch.latitude === null ||
+        originalBranch.latitude === undefined
+          ? null
+          : Number(originalBranch.latitude),
+      longitude:
+        originalBranch.longitude === "" ||
+        originalBranch.longitude === null ||
+        originalBranch.longitude === undefined
+          ? null
+          : Number(originalBranch.longitude),
+      locationAccuracy:
+        originalBranch.locationAccuracy === "" ||
+        originalBranch.locationAccuracy === null ||
+        originalBranch.locationAccuracy === undefined
+          ? null
+          : Number(originalBranch.locationAccuracy),
       status: normalizeStatus(originalBranch.status),
       phones: (originalBranch.phones || [])
         .map(cleanPhone)
@@ -348,6 +379,26 @@ function normalizeClientForm(form = {}) {
         message: `Completa provincia, cantón y dirección de la sucursal ${
           index + 1
         }.`,
+      };
+    }
+
+    if (
+      branch.latitude !== null &&
+      !Number.isFinite(branch.latitude)
+    ) {
+      return {
+        valid: false,
+        message: `La latitud de la sucursal ${index + 1} no es válida.`,
+      };
+    }
+
+    if (
+      branch.longitude !== null &&
+      !Number.isFinite(branch.longitude)
+    ) {
+      return {
+        valid: false,
+        message: `La longitud de la sucursal ${index + 1} no es válida.`,
       };
     }
 
@@ -393,6 +444,11 @@ function normalizeClientForm(form = {}) {
 }
 
 export default function Clients() {
+  const { user } = useAuth();
+  const canFullyEditClients = hasSystemAccess(user);
+  const canDeleteClients = hasClientDeletionAccess(user);
+  const canEditClientLocationOnly =
+    !canFullyEditClients && isSalesAgent(user);
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsError, setClientsError] = useState("");
@@ -410,9 +466,11 @@ export default function Clients() {
   const [branchModal, setBranchModal] = useState(null);
   const [repModal, setRepModal] = useState(null);
   const [deactivateModal, setDeactivateModal] = useState(null);
+  const [deleteModal, setDeleteModal] = useState(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isDeletingClient, setIsDeletingClient] = useState(false);
 
   const loadClients = useCallback(async () => {
     try {
@@ -594,9 +652,13 @@ export default function Clients() {
   };
 
   const handleSaveClient = async () => {
-    const normalizedResult = normalizeClientForm(form);
+    const isLocationOnlyEditMode =
+      drawerMode === "edit" && canEditClientLocationOnly;
+    const normalizedResult = isLocationOnlyEditMode
+      ? null
+      : normalizeClientForm(form);
 
-    if (!normalizedResult.valid) {
+    if (normalizedResult && !normalizedResult.valid) {
       window.alert(normalizedResult.message);
       return;
     }
@@ -610,10 +672,21 @@ export default function Clients() {
       }
 
       if (drawerMode === "edit" && editClient) {
-        await updateBusinessClient(
-          editClient.businessId || editClient.id,
-          normalizedResult.value,
-        );
+        if (canFullyEditClients) {
+          await updateBusinessClient(
+            editClient.businessId || editClient.id,
+            normalizedResult.value,
+          );
+        } else if (isLocationOnlyEditMode) {
+          await updateBusinessClientBranchLocations(
+            editClient.businessId || editClient.id,
+            form.branches || [],
+          );
+        } else {
+          throw new Error(
+            "No tienes permisos para editar este cliente.",
+          );
+        }
       }
 
       await loadClients();
@@ -678,6 +751,53 @@ export default function Clients() {
     }
   };
 
+  const handleDeleteClient = async (client) => {
+    if (!client) {
+      return;
+    }
+
+    if (!canDeleteClients) {
+      const message =
+        "Solo los roles Presidente, Gerente y Encargado pueden eliminar clientes.";
+      setClientsError(message);
+      window.alert(message);
+      return;
+    }
+
+    try {
+      setIsDeletingClient(true);
+      setClientsError("");
+
+      await deleteBusinessClient(
+        client.businessId || client.id,
+      );
+
+      await loadClients();
+
+      setDeleteModal(null);
+      setBranchModal(null);
+      setRepModal(null);
+      if (
+        editClient &&
+        (editClient.businessId === client.businessId ||
+          editClient.id === client.id)
+      ) {
+        closeDrawer();
+      }
+    } catch (error) {
+      console.error("Error eliminando cliente:", error);
+
+      const message =
+        error.message ||
+        "No fue posible eliminar el cliente.";
+
+      setClientsError(message);
+      window.alert(message);
+    } finally {
+      setIsDeletingClient(false);
+    }
+  };
+
   return (
     <>
       <div className="p-4 lg:p-6">
@@ -724,6 +844,7 @@ export default function Clients() {
               onView={openClientDetails}
               onEdit={openEditDrawer}
               onDeactivate={setDeactivateModal}
+              onDelete={setDeleteModal}
               emptyTitle={
                 clients.length === 0
                   ? "No hay clientes registrados"
@@ -744,6 +865,7 @@ export default function Clients() {
               onView={openClientDetails}
               onEdit={openEditDrawer}
               onDeactivate={setDeactivateModal}
+              onDelete={setDeleteModal}
               emptyTitle={
                 clients.length === 0
                   ? "No hay clientes registrados"
@@ -777,6 +899,7 @@ export default function Clients() {
         mode={drawerMode}
         form={form}
         client={drawerMode === "view" ? viewClient : editClient}
+        allowLocationOnlyEdit={canEditClientLocationOnly}
         onFormChange={setForm}
         onClose={closeDrawer}
         onSave={handleSaveClient}
@@ -798,6 +921,13 @@ export default function Clients() {
         onClose={() => setDeactivateModal(null)}
         onConfirm={handleToggleClientStatus}
         isProcessing={isUpdatingStatus}
+      />
+
+      <DeleteClientModal
+        client={deleteModal}
+        onClose={() => setDeleteModal(null)}
+        onConfirm={handleDeleteClient}
+        isProcessing={isDeletingClient}
       />
     </>
   );
