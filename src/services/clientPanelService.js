@@ -220,40 +220,28 @@ async function getQuotationProducts(quotationIds = []) {
 }
 
 async function getQuotationRelations(quotation) {
-  const [business, branch, representative] = await Promise.all([
-    quotation.business_id
+  const business = quotation.customer_id || quotation.business_id
       ? throwIfError(
           await supabase
-            .from("businesses")
-            .select("business_id, legal_id, legal_name, business_name, activity_code")
-            .eq("business_id", quotation.business_id)
+            .from("customers")
+            .select("business_id:customer_id, legal_id, legal_name:company_name, business_name:commercial_name, activity_code, province, city, district, address")
+            .eq("customer_id", quotation.customer_id || quotation.business_id)
             .maybeSingle(),
           "No fue posible cargar el cliente",
         )
-      : null,
-    quotation.branch_id
-      ? throwIfError(
-          await supabase
-            .from("branches")
-            .select("branch_id, business_id, province, district, address")
-            .eq("branch_id", quotation.branch_id)
-            .maybeSingle(),
-          "No fue posible cargar la sucursal",
-        )
-      : null,
-    quotation.representative_id
-      ? throwIfError(
-          await supabase
-            .from("representatives")
-            .select("representative_id, business_id, branch_id, name, email")
-            .eq("representative_id", quotation.representative_id)
-            .maybeSingle(),
-          "No fue posible cargar el representante",
-        )
-      : null,
-  ]);
+      : null;
 
-  return { business, branch, representative };
+  const branch = business
+    ? {
+        branch_id: business.business_id,
+        province: business.province || "",
+        city: business.city || "",
+        district: business.district || "",
+        address: business.address || "",
+      }
+    : null;
+
+  return { business, branch, representative: null };
 }
 
 function normalizeQuotationDetail({ quotation, business, branch, representative, items }) {
@@ -387,41 +375,11 @@ export async function getAuthenticatedUserId() {
 
 const APPROVED_QUOTATION_STATES = ["approved", "Aprobada", "aprobada"];
 
-async function getMyRepresentativeIds({ userId, email }) {
-  const ownerFilters = [`user_id.eq.${userId}`];
-
-  if (email) {
-    ownerFilters.push(`email.ilike.${email}`);
-  }
-
-  const representatives = throwIfError(
-    await supabase
-      .from("representatives")
-      .select("representative_id")
-      .or(ownerFilters.join(","))
-      .eq("is_active", true),
-    "No fue posible cargar tu perfil de representante",
-  );
-
-  return representatives.map((representative) => representative.representative_id);
-}
-
-
 export async function acceptMyQuotation(quotationId) {
   const currentUser = await getAuthenticatedUser();
-  const representativeIds = await getMyRepresentativeIds({
-    userId: currentUser.id,
-    email: currentUser.email,
-  });
 
   if (!quotationId) {
     throw new Error("No se encontro la cotizacion seleccionada.");
-  }
-
-  const ownerFilters = [`user_id.eq.${currentUser.id}`];
-
-  if (representativeIds.length) {
-    ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
   }
 
   const quotation = throwIfError(
@@ -429,7 +387,7 @@ export async function acceptMyQuotation(quotationId) {
       .from("quotations")
       .select("quotation_id, state, is_active")
       .eq("quotation_id", quotationId)
-      .or(ownerFilters.join(","))
+      .eq("user_id", currentUser.id)
       .in("state", APPROVED_QUOTATION_STATES)
       .eq("is_active", true)
       .maybeSingle(),
@@ -463,23 +421,13 @@ export async function acceptMyQuotation(quotationId) {
 
 async function fetchOwnedQuotations({ statesFilter = null } = {}) {
   const currentUser = await getAuthenticatedUser();
-  const representativeIds = await getMyRepresentativeIds({
-    userId: currentUser.id,
-    email: currentUser.email,
-  });
-
-  const ownerFilters = [`user_id.eq.${currentUser.id}`];
-
-  if (representativeIds.length) {
-    ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
-  }
 
   let query = supabase
     .from("quotations")
     .select(
-      "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
+      "quotation_id, business_id:customer_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
     )
-    .or(ownerFilters.join(","))
+    .eq("user_id", currentUser.id)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
 
@@ -605,29 +553,19 @@ export async function getMyProductionOrders() {
 
 export async function getMyQuotationDetail(quotationId) {
   const currentUser = await getAuthenticatedUser();
-  const representativeIds = await getMyRepresentativeIds({
-    userId: currentUser.id,
-    email: currentUser.email,
-  });
 
   if (!quotationId) {
     throw new Error("No se encontro la cotizacion seleccionada.");
-  }
-
-  const ownerFilters = [`user_id.eq.${currentUser.id}`];
-
-  if (representativeIds.length) {
-    ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
   }
 
   const quotation = throwIfError(
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id:customer_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", quotationId)
-      .or(ownerFilters.join(","))
+      .eq("user_id", currentUser.id)
       .eq("is_active", true)
       .maybeSingle(),
     "No fue posible cargar el detalle de la cotizacion",
@@ -653,10 +591,6 @@ export async function getMyQuotationDetail(quotationId) {
 
 export async function getMyOrderDetail(productionOrderId) {
   const currentUser = await getAuthenticatedUser();
-  const representativeIds = await getMyRepresentativeIds({
-    userId: currentUser.id,
-    email: currentUser.email,
-  });
 
   if (!productionOrderId) {
     throw new Error("No se encontro el pedido seleccionado.");
@@ -678,20 +612,14 @@ export async function getMyOrderDetail(productionOrderId) {
     throw new Error("No se encontro el pedido seleccionado.");
   }
 
-  const ownerFilters = [`user_id.eq.${currentUser.id}`];
-
-  if (representativeIds.length) {
-    ownerFilters.push(`representative_id.in.(${representativeIds.join(",")})`);
-  }
-
   const quotation = throwIfError(
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id:customer_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", order.quotation_id)
-      .or(ownerFilters.join(","))
+      .eq("user_id", currentUser.id)
       .eq("is_active", true)
       .maybeSingle(),
     "No fue posible validar la cotizacion relacionada",

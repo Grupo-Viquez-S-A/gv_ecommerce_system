@@ -364,8 +364,8 @@ export default function BranchLocationMap({
         className={`w-full ${mapHeightClass}`}
         aria-label={
           editable
-            ? "Mapa interactivo para ubicar la sucursal"
-            : "Mapa de la ubicacion de la sucursal"
+            ? "Mapa interactivo para ubicar el cliente"
+            : "Mapa de la ubicacion del cliente"
         }
       />
 
@@ -403,7 +403,7 @@ export default function BranchLocationMap({
               </>
             ) : (
               <span className="truncate">
-                Aun no se han definido coordenadas para esta sucursal.
+                Aun no se han definido coordenadas para este cliente.
               </span>
             )}
           </div>

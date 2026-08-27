@@ -47,14 +47,15 @@ export function normalizeQuotationPayload(
   const legalId = getText(client.legalId);
   const activityCode = getText(client.activityCode);
   const businessEmail = getText(client.businessEmail);
+  const branchProvince = getText(client.branchProvince);
+  const branchCity = getText(client.branchCity);
+  const branchDistrict = getText(client.branchDistrict);
   const branchAddress = getText(client.branchAddress);
   const branchLatitude = getNullableNumber(client.branchLatitude);
   const branchLongitude = getNullableNumber(client.branchLongitude);
   const branchLocationAccuracy = getNullableNumber(
     client.branchLocationAccuracy,
   );
-  const representativeName = getText(client.representativeName);
-  const representativeEmail = getText(client.representativeEmail)?.toLowerCase();
   const advancePercentage = Math.min(
     100,
     Math.max(0, getNumber(client.advancePercentage, 50)),
@@ -97,36 +98,19 @@ export function normalizeQuotationPayload(
   }
 
   if (!branchAddress) {
-    throw new Error("Ingresa la dirección de la sucursal.");
+    throw new Error("Ingresa la dirección del cliente.");
   }
 
-  if (!client.branchId && (branchLatitude === null || branchLongitude === null)) {
-    throw new Error(
-      "Obtén la ubicación actual para registrar las coordenadas de la sucursal.",
-    );
+  if (!branchProvince || !branchCity || !branchDistrict) {
+    throw new Error("Ingresa provincia, cantón y distrito del cliente.");
   }
 
   if (branchLatitude !== null && (branchLatitude < -90 || branchLatitude > 90)) {
-    throw new Error("La latitud de la sucursal no es válida.");
+    throw new Error("La latitud del cliente no es válida.");
   }
 
   if (branchLongitude !== null && (branchLongitude < -180 || branchLongitude > 180)) {
-    throw new Error("La longitud de la sucursal no es válida.");
-  }
-
-  if (!representativeName) {
-    throw new Error("Ingresa el nombre del representante.");
-  }
-
-  if (!representativeEmail) {
-    throw new Error("Ingresa el correo electrónico del representante.");
-  }
-
-  if (
-    representativeEmail.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(representativeEmail)
-  ) {
-    throw new Error("Ingresa un correo electrónico válido para el representante.");
+    throw new Error("La longitud del cliente no es válida.");
   }
 
   if (!items.length) {
@@ -150,17 +134,18 @@ export function normalizeQuotationPayload(
       businessEmail,
       businessPhone: getText(client.businessPhone),
 
-      branchProvince: getText(client.branchProvince),
-      branchDistrict: getText(client.branchDistrict),
+      branchProvince,
+      branchCity,
+      branchDistrict,
       branchAddress,
       branchPhone: getText(client.branchPhone),
       branchLatitude,
       branchLongitude,
       branchLocationAccuracy,
 
-      representativeName,
-      representativeEmail,
-      representativeUserId: getText(client.representativeUserId),
+      representativeName: null,
+      representativeEmail: null,
+      representativeUserId: null,
 
       notes: getText(client.notes),
 

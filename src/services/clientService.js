@@ -1,5 +1,4 @@
 ﻿import { supabase } from "./primarySupabaseClient.js";
-import { deleteRepresentativeUsers } from "./representativeUserService.js";
 
 const AVATAR_COLORS = [
   "#6366f1",
@@ -13,14 +12,25 @@ const AVATAR_COLORS = [
 ];
 
 const BUSINESS_COLUMNS = `
-  business_id,
+  business_id:customer_id,
   company_id,
   identification_type,
   legal_id,
-  legal_name,
+  legal_name:company_name,
   owner_name,
-  business_name,
+  business_name:commercial_name,
   activity_code,
+  province,
+  city,
+  district,
+  address,
+  latitude,
+  longitude,
+  location_accuracy_meters,
+  customer_code,
+  tax_status,
+  regime,
+  isValidForCredit,
   is_active,
   created_at,
   updated_at
@@ -35,7 +45,7 @@ const COMPANY_COLUMNS = `
 
 const EMAIL_COLUMNS = `
   email_id,
-  business_id,
+  business_id:customer_id,
   email,
   type,
   is_primary,
@@ -44,39 +54,12 @@ const EMAIL_COLUMNS = `
 
 const PHONE_COLUMNS = `
   phone_id,
-  business_id,
+  business_id:customer_id,
   company_id,
-  branch_id,
   phone,
   type,
   is_primary,
   created_at
-`;
-
-const BRANCH_COLUMNS = `
-  branch_id,
-  business_id,
-  province,
-  district,
-  address,
-  latitude,
-  longitude,
-  location_accuracy_meters,
-  is_active,
-  created_at,
-  updated_at
-`;
-
-const REPRESENTATIVE_COLUMNS = `
-  representative_id,
-  business_id,
-  branch_id,
-  user_id,
-  name,
-  email,
-  is_active,
-  created_at,
-  updated_at
 `;
 
 function getInitials(name = "") {
@@ -172,8 +155,8 @@ async function getConfirmedSalesByBusinessAndBranch(businessIds = []) {
 
   const quotationsResponse = await supabase
     .from("quotations")
-    .select("quotation_id, business_id, branch_id, total")
-    .in("business_id", businessIds)
+    .select("quotation_id, business_id:customer_id, total")
+    .in("customer_id", businessIds)
     .eq("is_active", true);
 
   const quotations = throwIfError(
@@ -220,11 +203,6 @@ async function getConfirmedSalesByBusinessAndBranch(businessIds = []) {
           (result.byBusinessId[quotation.business_id] || 0) + amount;
       }
 
-      if (quotation.branch_id) {
-        result.byBranchId[quotation.branch_id] =
-          (result.byBranchId[quotation.branch_id] || 0) + amount;
-      }
-
       return result;
     },
     { byBusinessId: {}, byBranchId: {} },
@@ -240,7 +218,10 @@ function throwIfError(response, actionMessage) {
 
   if (
     databaseError.code === "23505" &&
-    databaseError.message?.includes("businesses_legal_id_key")
+    (
+      databaseError.message?.includes("businesses_legal_id_key") ||
+      databaseError.message?.includes("customers_legal_id_key")
+    )
   ) {
     throw new Error(
       "Ya existe un cliente registrado con esta cédula jurídica.",
@@ -291,6 +272,7 @@ function normalizeBranches(branches = []) {
     .map((branch) => ({
       ...branch,
       province: asNullableText(branch.province),
+      city: asNullableText(branch.city),
       district: asNullableText(branch.district),
       address: asNullableText(branch.address),
       latitude: asNullableNumber(branch.latitude),
@@ -307,6 +289,7 @@ function normalizeBranches(branches = []) {
     .filter((branch) => {
       return (
         branch.province ||
+        branch.city ||
         branch.district ||
         branch.address ||
         branch.phones.length > 0 ||
@@ -334,25 +317,12 @@ function normalizeClientPayload(client = {}) {
   for (let index = 0; index < branches.length; index += 1) {
     const branch = branches[index];
 
-    if (!branch.province || !branch.district || !branch.address) {
+    if (!branch.province || !branch.city || !branch.district || !branch.address) {
       throw new Error(
-        `Completa provincia, cantón y dirección de la sucursal ${
-          index + 1
-        }.`,
+        "Completa provincia, cantón, distrito y dirección del cliente.",
       );
     }
 
-    const representativeWithoutName = branch.representatives.find(
-      (representative) => !representative.name,
-    );
-
-    if (representativeWithoutName) {
-      throw new Error(
-        `Completa el nombre de todos los representantes de la sucursal ${
-          index + 1
-        }.`,
-      );
-    }
   }
 
   return {
@@ -386,65 +356,13 @@ function toClientPhone(phone) {
   };
 }
 
-function createBranchItem(
-  branch,
-  phones = [],
-  representatives = [],
-  salesByBranchId = {},
-) {
-  const branchName =
-    [branch.province, branch.district].filter(Boolean).join(", ") ||
-    "Sucursal";
-
-  const branchPhones = phones
-    .filter((phone) => phone.branch_id === branch.branch_id)
-    .map(toClientPhone);
-
-  const branchRepresentatives = representatives
-    .filter(
-      (representative) =>
-        representative.branch_id === branch.branch_id,
-    )
-    .map((representative) => ({
-      ...representative,
-      id: representative.representative_id,
-      representative_id: representative.representative_id,
-      status: normalizeStatus(representative.is_active),
-    }));
-
-  return {
-    id: branch.branch_id,
-    branchId: branch.branch_id,
-    branch_id: branch.branch_id,
-    name: branchName,
-    province: branch.province || "",
-    district: branch.district || "",
-    address: branch.address || "",
-    latitude: branch.latitude ?? null,
-    longitude: branch.longitude ?? null,
-    locationAccuracy:
-      branch.location_accuracy_meters ?? null,
-    location_accuracy_meters:
-      branch.location_accuracy_meters ?? null,
-    phone: getPrimaryValue(branchPhones, "phone"),
-    phones: branchPhones,
-    sales: formatSalesAmount(salesByBranchId[branch.branch_id]),
-    lastPurchase: "Sin compras",
-    status: normalizeStatus(branch.is_active),
-    representatives: branchRepresentatives,
-  };
-}
-
 function createClientItem({
   business,
   company,
   emails,
   phones,
-  branches,
-  representatives,
   index,
   salesByBusinessId = {},
-  salesByBranchId = {},
 }) {
   const name =
     business.business_name ||
@@ -454,19 +372,36 @@ function createClientItem({
   const clientPhones = phones
     .filter(
       (phone) =>
-        phone.business_id === business.business_id &&
-        !phone.branch_id,
+        phone.business_id === business.business_id,
     )
     .map(toClientPhone);
 
-  const clientBranches = branches.map((branch) =>
-    createBranchItem(
-      branch,
-      phones,
-      representatives,
-      salesByBranchId,
-    ),
-  );
+  const clientBranches = business.address
+    ? [
+        {
+          id: business.business_id,
+          branchId: business.business_id,
+          branch_id: business.business_id,
+          name:
+            [business.province, business.district].filter(Boolean).join(", ") ||
+            "Dirección principal",
+          province: business.province || "",
+          city: business.city || "",
+          district: business.district || "",
+          address: business.address || "",
+          latitude: business.latitude ?? null,
+          longitude: business.longitude ?? null,
+          locationAccuracy: business.location_accuracy_meters ?? null,
+          location_accuracy_meters: business.location_accuracy_meters ?? null,
+          phone: getPrimaryValue(clientPhones, "phone"),
+          phones: clientPhones,
+          sales: formatSalesAmount(0),
+          lastPurchase: "Sin compras",
+          status: normalizeStatus(business.is_active),
+          representatives: [],
+        },
+      ]
+    : [];
 
   return {
     id: business.business_id,
@@ -515,29 +450,17 @@ async function getRelatedRowsByBusinessIds(businessIds = []) {
 
   const [
     emailsResponse,
-    branchesResponse,
-    representativesResponse,
     businessPhonesResponse,
   ] = await Promise.all([
     supabase
       .from("emails")
       .select(EMAIL_COLUMNS)
-      .in("business_id", businessIds),
-
-    supabase
-      .from("branches")
-      .select(BRANCH_COLUMNS)
-      .in("business_id", businessIds),
-
-    supabase
-      .from("representatives")
-      .select(REPRESENTATIVE_COLUMNS)
-      .in("business_id", businessIds),
+      .in("customer_id", businessIds),
 
     supabase
       .from("phones")
       .select(PHONE_COLUMNS)
-      .in("business_id", businessIds),
+      .in("customer_id", businessIds),
   ]);
 
   throwIfError(
@@ -546,57 +469,21 @@ async function getRelatedRowsByBusinessIds(businessIds = []) {
   );
 
   throwIfError(
-    branchesResponse,
-    "No fue posible cargar las sucursales de los clientes",
-  );
-
-  throwIfError(
-    representativesResponse,
-    "No fue posible cargar los representantes de los clientes",
-  );
-
-  throwIfError(
     businessPhonesResponse,
     "No fue posible cargar los teléfonos generales de los clientes",
   );
 
-  const branchIds = (branchesResponse.data || []).map(
-    (branch) => branch.branch_id,
-  );
-
-  const branchPhonesResponse =
-    branchIds.length > 0
-      ? await supabase
-          .from("phones")
-          .select(PHONE_COLUMNS)
-          .in("branch_id", branchIds)
-      : { data: [], error: null };
-
-  throwIfError(
-    branchPhonesResponse,
-    "No fue posible cargar los teléfonos de las sucursales",
-  );
-
-  const phonesById = new Map();
-
-  [
-    ...(businessPhonesResponse.data || []),
-    ...(branchPhonesResponse.data || []),
-  ].forEach((phone) => {
-    phonesById.set(phone.phone_id, phone);
-  });
-
   return {
     emails: emailsResponse.data || [],
-    phones: [...phonesById.values()],
-    branches: branchesResponse.data || [],
-    representatives: representativesResponse.data || [],
+    phones: businessPhonesResponse.data || [],
+    branches: [],
+    representatives: [],
   };
 }
 
 export async function getBusinessClients() {
   const businessesResponse = await supabase
-    .from("businesses")
+    .from("customers")
     .select(BUSINESS_COLUMNS)
     .order("created_at", { ascending: false });
 
@@ -713,7 +600,7 @@ async function syncMainEmail({
 
   if (email) {
     const emailPayload = {
-      business_id: businessId,
+      customer_id: businessId,
       email,
       type: "Principal",
       is_primary: true,
@@ -760,13 +647,11 @@ async function syncMainEmail({
 function buildPhonePayload({
   ownerType,
   businessId = null,
-  branchId = null,
   phone,
 }) {
   return {
-    business_id: ownerType === "business" ? businessId : null,
+    customer_id: ownerType === "business" ? businessId : null,
     company_id: null,
-    branch_id: ownerType === "branch" ? branchId : null,
     phone: phone.phone,
     type: phone.type || "General",
     is_primary: phone.isPrimary === true,
@@ -778,18 +663,10 @@ function isPhoneInOwnerGroup(
   {
     ownerType,
     businessId,
-    branchId,
   },
 ) {
   if (ownerType === "business") {
-    return (
-      phone.business_id === businessId &&
-      !phone.branch_id
-    );
-  }
-
-  if (ownerType === "branch") {
-    return phone.branch_id === branchId;
+    return phone.business_id === businessId;
   }
 
   return false;
@@ -798,7 +675,6 @@ function isPhoneInOwnerGroup(
 async function syncPhoneGroup({
   ownerType,
   businessId = null,
-  branchId = null,
   phones = [],
   existingPhones = [],
 }) {
@@ -806,7 +682,6 @@ async function syncPhoneGroup({
     isPhoneInOwnerGroup(phone, {
       ownerType,
       businessId,
-      branchId,
     }),
   );
 
@@ -827,7 +702,6 @@ async function syncPhoneGroup({
     const phonePayload = buildPhonePayload({
       ownerType,
       businessId,
-      branchId,
       phone,
     });
 
@@ -858,110 +732,29 @@ async function syncPhoneGroup({
   return usedExistingPhoneIds;
 }
 
-function buildRepresentativePayload({
-  businessId,
-  branchId,
-  representative,
-}) {
-  return {
-    business_id: businessId,
-    branch_id: branchId,
-    name: representative.name,
-    email: representative.email,
-    is_active: representative.isActive,
-  };
-}
-
-async function syncRepresentativesForBranch({
-  businessId,
-  branchId,
-  representatives = [],
-  existingRepresentatives = [],
-}) {
-  const existingRepresentativesById = indexRowsByKey(
-    existingRepresentatives,
-    "representative_id",
-  );
-
-  const usedExistingRepresentativeIds = new Set();
-
-  for (const representative of representatives) {
-    const representativeId =
-      representative.representative_id ||
-      representative.representativeId ||
-      representative.id ||
-      null;
-
-    const representativePayload = buildRepresentativePayload({
-      businessId,
-      branchId,
-      representative,
-    });
-
-    if (
-      representativeId &&
-      existingRepresentativesById[representativeId]
-    ) {
-      const response = await supabase
-        .from("representatives")
-        .update(representativePayload)
-        .eq("representative_id", representativeId);
-
-      throwIfError(
-        response,
-        "No fue posible actualizar un representante",
-      );
-
-      usedExistingRepresentativeIds.add(representativeId);
-    } else {
-      const response = await supabase
-        .from("representatives")
-        .insert(representativePayload)
-        .select("representative_id")
-        .single();
-
-      const insertedRepresentative = throwIfError(
-        response,
-        "No fue posible guardar un representante",
-      );
-
-      usedExistingRepresentativeIds.add(
-        insertedRepresentative.representative_id,
-      );
-    }
-  }
-
-  return {
-    representativeIds: usedExistingRepresentativeIds,
-  };
-}
-
 function buildBusinessPayload(client) {
+  const primaryBranch = client.branches[0] || {};
+
   return {
     company_id: client.companyId,
     identification_type: client.identificationType,
     legal_id: client.legalId,
-    legal_name: client.legalName,
+    company_name: client.legalName,
     owner_name: client.ownerName,
-    business_name: client.name,
+    commercial_name: client.name,
     activity_code: client.activityCode,
+    province: primaryBranch.province || "",
+    city: primaryBranch.city || "",
+    district: primaryBranch.district || "",
+    address: primaryBranch.address || null,
+    latitude: primaryBranch.latitude,
+    longitude: primaryBranch.longitude,
+    location_accuracy_meters: primaryBranch.locationAccuracy,
+    regime: client.regime || "general",
+    tax_status: client.taxStatus || null,
+    customer_code: client.customerCode || null,
+    "isValidForCredit": client.isValidForCredit || "pending",
     is_active: client.isActive,
-  };
-}
-
-function buildBranchPayload({
-  businessId,
-  branch,
-}) {
-  return {
-    business_id: businessId,
-    province: branch.province,
-    district: branch.district,
-    address: branch.address,
-    latitude: branch.latitude,
-    longitude: branch.longitude,
-    location_accuracy_meters: branch.locationAccuracy,
-    is_active: branch.isActive,
   };
 }
 
@@ -969,6 +762,8 @@ async function createClientDependencies({
   businessId,
   client,
 }) {
+  const branchPhones = client.branches.flatMap((branch) => branch.phones || []);
+
   await syncMainEmail({
     businessId,
     email: client.email,
@@ -978,43 +773,9 @@ async function createClientDependencies({
   await syncPhoneGroup({
     ownerType: "business",
     businessId,
-    phones: client.clientPhones,
+    phones: [...client.clientPhones, ...branchPhones],
     existingPhones: [],
   });
-
-  for (const branch of client.branches) {
-    const branchResponse = await supabase
-      .from("branches")
-      .insert(
-        buildBranchPayload({
-          businessId,
-          branch,
-        }),
-      )
-      .select("branch_id")
-      .single();
-
-    const createdBranch = throwIfError(
-      branchResponse,
-      "No fue posible guardar una sucursal",
-    );
-
-    const branchId = createdBranch.branch_id;
-
-    await syncPhoneGroup({
-      ownerType: "branch",
-      branchId,
-      phones: branch.phones,
-      existingPhones: [],
-    });
-
-    await syncRepresentativesForBranch({
-      businessId,
-      branchId,
-      representatives: branch.representatives,
-      existingRepresentatives: [],
-    });
-  }
 }
 
 async function rollbackCreatedClient(businessId) {
@@ -1035,26 +796,10 @@ async function rollbackCreatedClient(businessId) {
       existingRelations.emails.map((email) => email.email_id),
     );
 
-    await deleteRepresentativeUsers(existingRelations.representatives);
-
-    await deleteRowsByIds(
-      "representatives",
-      "representative_id",
-      existingRelations.representatives.map(
-        (representative) => representative.representative_id,
-      ),
-    );
-
-    await deleteRowsByIds(
-      "branches",
-      "branch_id",
-      existingRelations.branches.map((branch) => branch.branch_id),
-    );
-
     const response = await supabase
-      .from("businesses")
+      .from("customers")
       .delete()
-      .eq("business_id", businessId);
+      .eq("customer_id", businessId);
 
     throwIfError(
       response,
@@ -1075,9 +820,9 @@ export async function createBusinessClient(clientForm) {
 
   try {
     const businessResponse = await supabase
-      .from("businesses")
+      .from("customers")
       .insert(buildBusinessPayload(client))
-      .select("business_id")
+      .select("customer_id")
       .single();
 
     const createdBusiness = throwIfError(
@@ -1085,7 +830,7 @@ export async function createBusinessClient(clientForm) {
       "No fue posible crear el cliente",
     );
 
-    createdBusinessId = createdBusiness.business_id;
+    createdBusinessId = createdBusiness.customer_id;
 
     await createClientDependencies({
       businessId: createdBusinessId,
@@ -1121,16 +866,11 @@ export async function updateBusinessClient(
     businessId,
   );
 
-  const existingBranchesById = indexRowsByKey(
-    existingRelations.branches,
-    "branch_id",
-  );
-
   const businessResponse = await supabase
-    .from("businesses")
+    .from("customers")
     .update(buildBusinessPayload(client))
-    .eq("business_id", businessId)
-    .select("business_id")
+    .eq("customer_id", businessId)
+    .select("customer_id")
     .single();
 
   throwIfError(
@@ -1145,94 +885,18 @@ export async function updateBusinessClient(
   });
 
   const usedExistingPhoneIds = new Set();
-  const usedExistingRepresentativeIds = new Set();
-  const usedExistingBranchIds = new Set();
+  const branchPhones = client.branches.flatMap((branch) => branch.phones || []);
 
   const usedGlobalPhoneIds = await syncPhoneGroup({
     ownerType: "business",
     businessId,
-    phones: client.clientPhones,
+    phones: [...client.clientPhones, ...branchPhones],
     existingPhones: existingRelations.phones,
   });
 
   usedGlobalPhoneIds.forEach((phoneId) =>
     usedExistingPhoneIds.add(phoneId),
   );
-
-  for (const branch of client.branches) {
-    const sourceBranchId =
-      branch.branch_id ||
-      branch.branchId ||
-      branch.id ||
-      null;
-
-    let persistedBranchId = sourceBranchId;
-
-    if (
-      sourceBranchId &&
-      existingBranchesById[sourceBranchId]
-    ) {
-      const branchResponse = await supabase
-        .from("branches")
-        .update(
-          buildBranchPayload({
-            businessId,
-            branch,
-          }),
-        )
-        .eq("branch_id", sourceBranchId);
-
-      throwIfError(
-        branchResponse,
-        "No fue posible actualizar una sucursal",
-      );
-
-      usedExistingBranchIds.add(sourceBranchId);
-    } else {
-      const branchResponse = await supabase
-        .from("branches")
-        .insert(
-          buildBranchPayload({
-            businessId,
-            branch,
-          }),
-        )
-        .select("branch_id")
-        .single();
-
-      const createdBranch = throwIfError(
-        branchResponse,
-        "No fue posible crear una sucursal",
-      );
-
-      persistedBranchId = createdBranch.branch_id;
-    }
-
-    const usedBranchPhoneIds = await syncPhoneGroup({
-      ownerType: "branch",
-      branchId: persistedBranchId,
-      phones: branch.phones,
-      existingPhones: existingRelations.phones,
-    });
-
-    usedBranchPhoneIds.forEach((phoneId) =>
-      usedExistingPhoneIds.add(phoneId),
-    );
-
-    const syncedRepresentatives =
-      await syncRepresentativesForBranch({
-        businessId,
-        branchId: persistedBranchId,
-        representatives: branch.representatives,
-        existingRepresentatives:
-          existingRelations.representatives,
-      });
-
-    syncedRepresentatives.representativeIds.forEach(
-      (representativeId) =>
-        usedExistingRepresentativeIds.add(representativeId),
-    );
-  }
 
   const phoneIdsToDelete = existingRelations.phones
     .filter(
@@ -1245,46 +909,6 @@ export async function updateBusinessClient(
     "phones",
     "phone_id",
     phoneIdsToDelete,
-  );
-
-  const representativeIdsToDelete =
-    existingRelations.representatives
-      .filter((representative) => {
-        if (!representative.branch_id) {
-          return false;
-        }
-
-        return !usedExistingRepresentativeIds.has(
-          representative.representative_id,
-        );
-      })
-      .map(
-        (representative) => representative.representative_id,
-      );
-
-  await deleteRepresentativeUsers(
-    existingRelations.representatives.filter((representative) =>
-      representativeIdsToDelete.includes(representative.representative_id),
-    ),
-  );
-
-  await deleteRowsByIds(
-    "representatives",
-    "representative_id",
-    representativeIdsToDelete,
-  );
-
-  const branchIdsToDelete = existingRelations.branches
-    .filter(
-      (branch) =>
-        !usedExistingBranchIds.has(branch.branch_id),
-    )
-    .map((branch) => branch.branch_id);
-
-  await deleteRowsByIds(
-    "branches",
-    "branch_id",
-    branchIdsToDelete,
   );
 
   return {
@@ -1300,41 +924,22 @@ export async function updateBusinessClientBranchLocations(
     throw new Error("No se recibió el identificador del cliente.");
   }
 
-  const existingRelations = await getExistingClientRelations(
-    businessId,
-  );
-
-  const existingBranchesById = indexRowsByKey(
-    existingRelations.branches,
-    "branch_id",
-  );
-
   const normalizedBranches = normalizeBranches(branches);
+  const primaryBranch = normalizedBranches[0];
 
-  for (const branch of normalizedBranches) {
-    const branchId =
-      branch.branch_id ||
-      branch.branchId ||
-      branch.id ||
-      null;
-
-    if (!branchId || !existingBranchesById[branchId]) {
-      continue;
-    }
-
+  if (primaryBranch) {
     const response = await supabase
-      .from("branches")
+      .from("customers")
       .update({
-        latitude: branch.latitude,
-        longitude: branch.longitude,
-        location_accuracy_meters: branch.locationAccuracy,
+        latitude: primaryBranch.latitude,
+        longitude: primaryBranch.longitude,
+        location_accuracy_meters: primaryBranch.locationAccuracy,
       })
-      .eq("branch_id", branchId)
-      .eq("business_id", businessId);
+      .eq("customer_id", businessId);
 
     throwIfError(
       response,
-      "No fue posible actualizar la ubicación de una sucursal",
+      "No fue posible actualizar la ubicación del cliente",
     );
   }
 
@@ -1352,12 +957,12 @@ export async function updateBusinessClientStatus(
   }
 
   const response = await supabase
-    .from("businesses")
+    .from("customers")
     .update({
       is_active: isActive === true,
     })
-    .eq("business_id", businessId)
-    .select("business_id, is_active")
+    .eq("customer_id", businessId)
+    .select("customer_id, is_active")
     .single();
 
   return throwIfError(
@@ -1376,7 +981,7 @@ export async function deleteBusinessClient(
   const quotationUsageResponse = await supabase
     .from("quotations")
     .select("quotation_id", { count: "exact", head: true })
-    .eq("business_id", businessId);
+    .eq("customer_id", businessId);
 
   if (quotationUsageResponse.error) {
     throw new Error(
@@ -1390,17 +995,11 @@ export async function deleteBusinessClient(
     );
   }
 
-  const existingRelations = await getExistingClientRelations(
-    businessId,
-  );
-
-  await deleteRepresentativeUsers(existingRelations.representatives);
-
   const response = await supabase
-    .from("businesses")
+    .from("customers")
     .delete()
-    .eq("business_id", businessId)
-    .select("business_id")
+    .eq("customer_id", businessId)
+    .select("customer_id")
     .single();
 
   return throwIfError(

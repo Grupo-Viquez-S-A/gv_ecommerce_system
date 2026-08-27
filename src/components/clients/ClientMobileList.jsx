@@ -5,8 +5,6 @@ import ClientsEmptyState from "./ClientsEmptyState";
 export default function ClientMobileList({
   clients = [],
   onClearFilters,
-  onOpenBranches,
-  onOpenRepresentatives,
   onView,
   onEdit,
   onDeactivate,
@@ -67,8 +65,6 @@ export default function ClientMobileList({
               <ClientActionButtons
                 client={client}
                 compact
-                onOpenBranches={onOpenBranches}
-                onOpenRepresentatives={onOpenRepresentatives}
                 onView={onView}
                 onEdit={onEdit}
                 onDeactivate={onDeactivate}

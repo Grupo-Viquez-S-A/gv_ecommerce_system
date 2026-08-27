@@ -110,7 +110,7 @@ export async function getPaidSales() {
           await supabase
             .from("quotations")
             .select(
-              "quotation_id, quotation_number, business_id, branch_id, representative_id, user_id, subtotal, iva_amount, total, advance_payment, method_id, state, status, created_at, committed_delivery_date, unexpected_delivery_date",
+              "quotation_id, quotation_number, business_id:customer_id, user_id, subtotal, iva_amount, total, advance_payment, method_id, state, status, created_at, committed_delivery_date, unexpected_delivery_date",
             )
             .in("quotation_id", quotationIds),
           "No fue posible cargar las cotizaciones asociadas",
@@ -135,16 +135,6 @@ export async function getPaidSales() {
     ...new Set(quotations.map((quotation) => quotation.business_id).filter(Boolean)),
   ];
 
-  const branchIds = [
-    ...new Set(quotations.map((quotation) => quotation.branch_id).filter(Boolean)),
-  ];
-
-  const representativeIds = [
-    ...new Set(
-      quotations.map((quotation) => quotation.representative_id).filter(Boolean),
-    ),
-  ];
-
   const sellerUserIds = [
     ...new Set(quotations.map((quotation) => quotation.user_id).filter(Boolean)),
   ];
@@ -158,33 +148,15 @@ export async function getPaidSales() {
     ),
   ];
 
-  const [businesses, branches, representatives, sellerProfiles, paymentMethods] =
+  const [businesses, sellerProfiles, paymentMethods] =
     await Promise.all([
       businessIds.length
         ? throwIfError(
             await supabase
-              .from("businesses")
-              .select("business_id, business_name, legal_name, legal_id")
-              .in("business_id", businessIds),
+              .from("customers")
+              .select("business_id:customer_id, business_name:commercial_name, legal_name:company_name, legal_id, province, district")
+              .in("customer_id", businessIds),
             "No fue posible cargar los clientes",
-          )
-        : [],
-      branchIds.length
-        ? throwIfError(
-            await supabase
-              .from("branches")
-              .select("branch_id, province, district, address")
-              .in("branch_id", branchIds),
-            "No fue posible cargar las sucursales",
-          )
-        : [],
-      representativeIds.length
-        ? throwIfError(
-            await supabase
-              .from("representatives")
-              .select("representative_id, name, email")
-              .in("representative_id", representativeIds),
-            "No fue posible cargar los representantes",
           )
         : [],
       sellerUserIds.length
@@ -208,8 +180,6 @@ export async function getPaidSales() {
     ]);
 
   const businessesById = indexRowsByKey(businesses, "business_id");
-  const branchesById = indexRowsByKey(branches, "branch_id");
-  const representativesById = indexRowsByKey(representatives, "representative_id");
   const sellerProfilesById = indexRowsByKey(sellerProfiles, "user_id");
   const paymentMethodsById = indexRowsByKey(paymentMethods, "method_id");
 
@@ -263,9 +233,6 @@ export async function getPaidSales() {
     }
 
     const business = businessesById[quotation.business_id] || null;
-    const branch = branchesById[quotation.branch_id] || null;
-    const representative =
-      representativesById[quotation.representative_id] || null;
     const sellerProfile = sellerProfilesById[quotation.user_id] || null;
 
     const lastPayment = orderPayments[0] || null;
@@ -280,8 +247,8 @@ export async function getPaidSales() {
     const clientName =
       business?.business_name || business?.legal_name || "Cliente sin nombre";
 
-    const branchLabel = branch
-      ? [branch.district, branch.province].filter(Boolean).join(", ")
+    const branchLabel = business
+      ? [business.district, business.province].filter(Boolean).join(", ")
       : null;
 
     const sellerName =
@@ -305,7 +272,7 @@ export async function getPaidSales() {
       legalId: business?.legal_id || null,
       branchLabel,
       representative: sellerName,
-      clientRepresentative: representative?.name || "Sin asignar",
+      clientRepresentative: "Sin representante",
       avatar: getInitials(sellerName),
       saleDate,
       total: totalSale,

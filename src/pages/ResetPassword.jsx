@@ -79,46 +79,6 @@ function ResetPassword() {
         return;
       }
 
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-
-      if (sessionError || !accessToken) {
-        setError(
-          "La contrasena se actualizo, pero se perdio la sesion antes de completar la activacion. Inicia sesion de nuevo.",
-        );
-        return;
-      }
-
-      const { data: activationData, error: activationError } =
-        await supabase.functions.invoke("complete-client-activation", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-      if (activationError || activationData?.ok === false) {
-        let activationMessage = activationData?.error || activationError?.message;
-
-        if (activationError?.context instanceof Response) {
-          try {
-            const responseBody = await activationError.context.clone().json();
-            activationMessage = responseBody?.error || responseBody?.message || activationMessage;
-          } catch {
-            // Conserva el mensaje original cuando la respuesta no contiene JSON.
-          }
-        }
-
-        console.error("Error completando activacion del cliente:", {
-          activationError,
-          activationData,
-        });
-        setError(
-          activationMessage ||
-            "La contrasena se actualizo, pero no fue posible completar la activacion. Intenta de nuevo.",
-        );
-        return;
-      }
-
       setSuccess(true);
       window.sessionStorage.setItem(
         "activationSuccessMessage",

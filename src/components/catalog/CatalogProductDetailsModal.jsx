@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  FileText,
   ImageOff,
   Minus,
   Package,
@@ -17,6 +16,7 @@ import CompositionBadges from "./CompositionBadges";
 import PetCostumeNotice from "./PetCostumeNotice";
 import { isPetCategoryProduct } from "./petCategoryUtils";
 import { formatCurrency } from "../../utils/formatCurrency.js";
+import { getInventorySizeLabel } from "../../utils/inventorySizes.js";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -80,24 +80,6 @@ function formatDimension(value) {
   }
 
   return `${value} cm`;
-}
-
-function getProductPriceWithIva(product) {
-  const price = Number(product?.price) || 0;
-  const rawIvaAmount = product?.iva_amount;
-  const ivaAmount =
-    rawIvaAmount === null ||
-    rawIvaAmount === undefined ||
-    rawIvaAmount === ""
-      ? NaN
-      : Number(rawIvaAmount);
-
-  if (Number.isFinite(ivaAmount)) {
-    return price + ivaAmount;
-  }
-
-  const ivaPercentage = Number(product?.iva_percentage ?? product?.iva) || 0;
-  return price + price * (ivaPercentage / 100);
 }
 
 function getVariantDimensions(variant) {
@@ -172,9 +154,7 @@ function CheckboxCell({ checked, disabled, onChange }) {
 export default function CatalogProductDetailsModal({
   product,
   onClose,
-  onViewTechnicalSheet,
   onAddToCart,
-  showPrice = false,
 }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [addToCartError, setAddToCartError] = useState("");
@@ -234,7 +214,6 @@ export default function CatalogProductDetailsModal({
   const managements = Array.isArray(product.managements) ? product.managements : [];
   const galleryImages = getGalleryImages(product);
   const activeImage = galleryImages[selectedImageIndex] || galleryImages[0] || null;
-  const hasTechnicalSheet = Boolean(product.technical_sheet_url);
 
   const detailVariants = isTextileProduct
     ? (Array.isArray(product.variants) ? product.variants : []).filter(
@@ -310,7 +289,7 @@ export default function CatalogProductDetailsModal({
       const result = onAddToCart(product, quantity, {
         variant_id: variant.variant_id,
         size_id: variant.size_id ?? variant.size?.size_id ?? null,
-        size_name: variant.size?.size_name || variant.size_name || "Talla",
+        size_name: getInventorySizeLabel(variant.size?.size_name || variant.size_name || "Talla"),
       }, {
         hasEmbroidery: Boolean(selection?.embroidery),
         hasSublimation: Boolean(selection?.sublimation),
@@ -484,28 +463,14 @@ export default function CatalogProductDetailsModal({
                   <SummaryCard icon={Ruler} label="Unidad" value={product.unit || "cm"} />
                 </div>
 
-                {showPrice && (
-                  <div className="mt-5 grid gap-4 border-t border-[#2B4469] pt-4 md:grid-cols-3">
-                    <div>
-                      <p className="text-[0.92rem] text-[#8AA1C6]">Precio base (sin IVA)</p>
-                      <p className="mt-1 text-[1.55rem] font-extrabold text-[#E3B329]">
-                        {formatCurrency(product.price || 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[0.92rem] text-[#8AA1C6]">Monto IVA</p>
-                      <p className="mt-1 text-[1.45rem] font-extrabold text-[#B9C9E3]">
-                        {formatCurrency(product.iva_amount || 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[0.92rem] text-[#8AA1C6]">Monto IVAI</p>
-                      <p className="mt-1 text-[1.45rem] font-extrabold text-[#B9C9E3]">
-                        {formatCurrency(getProductPriceWithIva(product))}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                <div className="mt-5 border-t border-[#2B4469] pt-4">
+                  <p className="text-[0.92rem] font-semibold text-[#8AA1C6]">
+                    Descripción del artículo
+                  </p>
+                  <p className="mt-2 text-[0.95rem] leading-7 text-[#D4DCEC]">
+                    {productDescription}
+                  </p>
+                </div>
               </div>
 
               {isTextileProduct ? (
@@ -542,7 +507,7 @@ export default function CatalogProductDetailsModal({
                                 className="border-b border-[#2A4266] last:border-0"
                               >
                                 <td className="px-4 py-3 text-[0.95rem] font-extrabold text-white">
-                                  {variant.size?.size_name || "Talla"}
+                                  {getInventorySizeLabel(variant.size?.size_name || "Talla")}
                                 </td>
                                 <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
                                   {variant.gtin || "-"}
@@ -600,7 +565,7 @@ export default function CatalogProductDetailsModal({
                                   className="border-b border-[#2A4266] last:border-0"
                                 >
                                   <td className="px-4 py-3 text-[0.95rem] font-extrabold text-white">
-                                    {variant.size?.size_name || "Talla"}
+                                    {getInventorySizeLabel(variant.size?.size_name || "Talla")}
                                   </td>
                                   <td className="px-4 py-3">
                                     <QuantityControl
@@ -701,15 +666,6 @@ export default function CatalogProductDetailsModal({
           </button>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => onViewTechnicalSheet?.(product)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-[#36507A] bg-[#102340] px-5 text-[0.95rem] font-bold text-white transition hover:border-[#E3B329] hover:text-[#E3B329]"
-            >
-              <FileText className="h-3.5 w-3.5" />
-              {hasTechnicalSheet ? "Ver ficha tecnica" : "Consultar ficha tecnica"}
-            </button>
-
             {isTextileProduct && onAddToCart && (
               <button
                 type="button"

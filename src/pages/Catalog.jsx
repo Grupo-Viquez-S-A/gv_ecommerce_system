@@ -13,7 +13,6 @@ import { EMPTY_CATALOG_FILTERS } from "../components/catalog/catalogFilterDefaul
 import CatalogGrid from "../components/catalog/CatalogGrid";
 import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
-import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
 import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
@@ -61,6 +60,10 @@ import {
   formatLegalId,
   formatPhoneNumber,
 } from "../utils/inputMasks.js";
+import {
+  getCartItemNameWithSize,
+  getInventorySizeLabel,
+} from "../utils/inventorySizes.js";
 
 const PAGE_SIZE = 8;
 const CART_STORAGE_KEY = "gv-ecommerce:quotation-cart:v2";
@@ -88,6 +91,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   businessEmail: "",
   businessPhone: "",
   branchProvince: "",
+  branchCity: "",
   branchDistrict: "",
   branchAddress: "",
   branchPhone: "",
@@ -189,7 +193,7 @@ export default function Catalog() {
   const cartConfirmationTimerRef = useRef(null);
 
   const [activeCatalog, setActiveCatalog] = useState(
-    CATALOG_TYPES.FABRICS,
+    CATALOG_TYPES.TEXTILE_PRODUCTS,
   );
 
   const [products, setProducts] = useState([]);
@@ -201,11 +205,6 @@ export default function Catalog() {
 
   const [selectedProductDetails, setSelectedProductDetails] =
     useState(null);
-
-  const [
-    selectedTechnicalSheetProduct,
-    setSelectedTechnicalSheetProduct,
-  ] = useState(null);
 
   const [filters, setFilters] = useState(
     EMPTY_CATALOG_FILTERS,
@@ -528,9 +527,10 @@ export default function Catalog() {
       });
     });
 
-    return Array.from(uniqueSizes.values()).sort(
-      (first, second) =>
-        first.size_name.localeCompare(second.size_name),
+    return Array.from(uniqueSizes.values()).sort((first, second) =>
+      getInventorySizeLabel(first.size_name).localeCompare(
+        getInventorySizeLabel(second.size_name),
+      ),
     );
   }, [products, isTextileProductsCatalog]);
 
@@ -563,14 +563,14 @@ export default function Catalog() {
           (management) => management.management,
         ),
         ...(product.available_sizes || []).map(
-          (size) => size.size_name,
+          (size) => getInventorySizeLabel(size.size_name),
         ),
         ...(product.variants || []).flatMap(
           (variant) => [variant.sku, variant.gtin, variant.color],
         ),
         ...(product.measurements || []).map(
           (measurement) =>
-            `${measurement.size_name} ${measurement.dimension_name}`,
+            `${getInventorySizeLabel(measurement.size_name)} ${measurement.dimension_name}`,
         ),
       ]
         .filter(Boolean)
@@ -751,8 +751,6 @@ export default function Catalog() {
     setFilters(EMPTY_CATALOG_FILTERS);
     setCurrentPage(1);
     setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(null);
-
     scrollCatalogToTop();
   };
 
@@ -773,8 +771,6 @@ export default function Catalog() {
 
     setCurrentPage(1);
     setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(null);
-
     scrollCatalogToTop();
   };
 
@@ -865,8 +861,8 @@ export default function Catalog() {
     const baseName = getCartProductName(product);
     const isUnica =
       sizeName && sizeName.toLowerCase() === "única";
-    const itemName =
-      sizeName && !isUnica ? `${baseName} - ${sizeName}` : baseName;
+    const displaySizeName = sizeName ? getInventorySizeLabel(sizeName) : null;
+    const itemName = getCartItemNameWithSize(baseName, sizeName);
 
     const hasSublimation = Boolean(options.hasSublimation);
     const hasEmbroidery = Boolean(options.hasEmbroidery);
@@ -914,7 +910,7 @@ export default function Catalog() {
         {
           id: cartItemId,
           name: itemName,
-          sizeName: isUnica ? null : sizeName,
+          sizeName: isUnica ? null : displaySizeName,
           sizeId: isUnica ? null : sizeId,
           color: selectedVariant?.color || null,
           sku: selectedVariant?.sku || getCartProductSku(product),
@@ -1003,6 +999,7 @@ export default function Catalog() {
   const handleQuotationClientFormChange = (fieldName, value) => {
     const branchAddressChanged = [
       "branchProvince",
+      "branchCity",
       "branchDistrict",
       "branchAddress",
     ].includes(fieldName);
@@ -1104,6 +1101,7 @@ export default function Catalog() {
       ...currentForm,
       branchId: branch.branch_id,
       branchProvince: branch.province,
+      branchCity: branch.city || "",
       branchDistrict: branch.district,
       branchAddress: branch.address,
       branchPhone: branch.branchPhone || "",
@@ -1123,6 +1121,7 @@ export default function Catalog() {
       ...currentForm,
       branchId: "",
       branchProvince: "",
+      branchCity: "",
       branchDistrict: "",
       branchAddress: "",
       branchPhone: "",
@@ -1162,7 +1161,7 @@ export default function Catalog() {
       },
       (error) => {
         const errorMessages = {
-          1: "Permite el acceso a tu ubicación para registrar la sucursal.",
+          1: "Permite el acceso a tu ubicación para registrar el cliente.",
           2: "No fue posible determinar la ubicación actual.",
           3: "La solicitud de ubicación tardó demasiado. Inténtalo nuevamente.",
         };
@@ -1258,15 +1257,6 @@ export default function Catalog() {
 
   const handleQuoteCart = () => {
     handleSaveCartQuotation("pending");
-  };
-
-  const handleOpenTechnicalSheet = (product) => {
-    if (!product) {
-      return;
-    }
-
-    setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(product);
   };
 
   const handleRefreshCatalog = () => {
@@ -1552,7 +1542,7 @@ export default function Catalog() {
                         Datos del cliente
                       </h3>
                       <p className="text-sm text-slate-400">
-                        Registra la empresa cliente, su sucursal y el representante para guardar la cotizacion.
+                        Registra la empresa cliente y su ubicación para guardar la cotización.
                       </p>
                     </div>
 
@@ -1611,10 +1601,10 @@ export default function Catalog() {
                       />
 
                       <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">Sucursal</p>
+                        <p className="text-sm font-extrabold text-white">Ubicación del cliente</p>
                         {clientBranches.length > 0 && (
                           <p className="mt-1 text-xs text-slate-400">
-                            Selecciona una sucursal registrada o agrega una nueva.
+                            Selecciona una ubicación registrada o agrega una nueva.
                           </p>
                         )}
                       </div>
@@ -1643,9 +1633,9 @@ export default function Catalog() {
                                 />
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold text-white">
-                                    {[branch.province, branch.district]
+                                    {[branch.province, branch.city, branch.district]
                                       .filter(Boolean)
-                                      .join(", ") || "Sucursal"}
+                                      .join(", ") || "Ubicación registrada"}
                                   </p>
                                   {branch.address && (
                                     <p className="mt-0.5 truncate text-xs text-slate-400">
@@ -1678,7 +1668,7 @@ export default function Catalog() {
                             />
                             <Plus className="h-5 w-5 text-[#D7A91D]" />
                             <span className="text-sm font-semibold text-[#9BB3D3]">
-                              Nueva sucursal
+                              Nueva ubicación
                             </span>
                           </label>
                         </div>
@@ -1707,10 +1697,10 @@ export default function Catalog() {
                               Cantón
                             </span>
                             <input
-                              value={quotationClientForm.branchDistrict}
+                              value={quotationClientForm.branchCity}
                               onChange={(event) =>
                                 handleQuotationClientFormChange(
-                                  "branchDistrict",
+                                  "branchCity",
                                   event.target.value,
                                 )
                               }
@@ -1720,18 +1710,18 @@ export default function Catalog() {
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Teléfono sucursal
+                              Distrito
                             </span>
                             <input
-                              value={quotationClientForm.branchPhone}
+                              value={quotationClientForm.branchDistrict}
                               onChange={(event) =>
                                 handleQuotationClientFormChange(
-                                  "branchPhone",
+                                  "branchDistrict",
                                   event.target.value,
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. 22223333"
+                              placeholder="Ej. Carmen"
                             />
                           </label>
                           <label>
@@ -1750,51 +1740,96 @@ export default function Catalog() {
                               placeholder="Direccion exacta"
                             />
                           </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Teléfono del cliente
+                            </span>
+                            <input
+                              value={quotationClientForm.branchPhone}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchPhone",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. 22223333"
+                            />
+                          </label>
                         </>
                       )}
 
-                      <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">
-                          Representante
-                        </p>
+                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#091A31] text-[#E9BC2D]">
+                              <MapPin className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-extrabold text-white">
+                                Ubicación del cliente
+                              </p>
+                              <p className="mt-1 text-xs leading-5 text-slate-400">
+                                Obtén las coordenadas precisas desde este dispositivo.
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleUseCurrentLocation}
+                            disabled={branchLocationLoading || quotationSubmitting}
+                            className="inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-[#D7A91D]/45 bg-[#D7A91D]/10 px-4 text-sm font-bold text-[#E9BC2D] transition hover:border-[#D7A91D] hover:bg-[#D7A91D]/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {branchLocationLoading ? (
+                              <RiLoader4Line className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <LocateFixed className="h-4 w-4" />
+                            )}
+                            {branchLocationLoading
+                              ? "Obteniendo ubicación..."
+                              : "Obtener mi ubicación actual"}
+                          </button>
+                        </div>
+
+                        {quotationClientForm.branchLatitude !== "" &&
+                        quotationClientForm.branchLongitude !== "" ? (
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+                                Latitud
+                              </span>
+                              <span className="mt-1 block font-mono text-sm text-white">
+                                {quotationClientForm.branchLatitude}
+                              </span>
+                            </div>
+                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+                                Longitud
+                              </span>
+                              <span className="mt-1 block font-mono text-sm text-white">
+                                {quotationClientForm.branchLongitude}
+                              </span>
+                            </div>
+                            <p className="text-xs text-emerald-200 sm:col-span-2">
+                              Ubicación capturada
+                              {quotationClientForm.branchLocationAccuracy !== ""
+                                ? ` con una precisión aproximada de ${quotationClientForm.branchLocationAccuracy} m.`
+                                : "."}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="mt-4 text-xs text-amber-200">
+                            Aún no se han registrado coordenadas para este cliente.
+                          </p>
+                        )}
+
+                        {branchLocationError && (
+                          <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                            {branchLocationError}
+                          </p>
+                        )}
                       </div>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Nombre
-                        </span>
-                        <input
-                          value={quotationClientForm.representativeName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Nombre del contacto"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo representante *
-                        </span>
-                        <input
-                          type="email"
-                          required
-                          autoComplete="email"
-                          value={quotationClientForm.representativeEmail}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeEmail",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="contacto@cliente.com"
-                        />
-                      </label>
 
                       <label className="md:col-span-2">
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
@@ -2226,10 +2261,10 @@ export default function Catalog() {
                       />
 
                       <div className="md:col-span-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">Sucursal</p>
+                        <p className="text-sm font-extrabold text-white">Ubicación del cliente</p>
                         {clientBranches.length > 0 && (
                           <p className="mt-1 text-xs text-slate-400">
-                            Selecciona una sucursal registrada o agrega una nueva.
+                            Selecciona una ubicación registrada o agrega una nueva.
                           </p>
                         )}
                       </div>
@@ -2258,9 +2293,9 @@ export default function Catalog() {
                                 />
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold text-white">
-                                    {[branch.province, branch.district]
+                                    {[branch.province, branch.city, branch.district]
                                       .filter(Boolean)
-                                      .join(", ") || "Sucursal"}
+                                      .join(", ") || "Ubicación registrada"}
                                   </p>
                                   {branch.address && (
                                     <p className="mt-0.5 truncate text-xs text-slate-400">
@@ -2293,7 +2328,7 @@ export default function Catalog() {
                             />
                             <Plus className="h-5 w-5 text-[#D7A91D]" />
                             <span className="text-sm font-semibold text-[#9BB3D3]">
-                              Nueva sucursal
+                              Nueva ubicación
                             </span>
                           </label>
                         </div>
@@ -2322,6 +2357,22 @@ export default function Catalog() {
                               Cantón
                             </span>
                             <input
+                              value={quotationClientForm.branchCity}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchCity",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. Central"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Distrito
+                            </span>
+                            <input
                               value={quotationClientForm.branchDistrict}
                               onChange={(event) =>
                                 handleQuotationClientFormChange(
@@ -2330,7 +2381,7 @@ export default function Catalog() {
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Central"
+                              placeholder="Ej. Carmen"
                             />
                           </label>
                           <label>
@@ -2351,7 +2402,7 @@ export default function Catalog() {
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Teléfono sucursal
+                              Teléfono del cliente
                             </span>
                             <input
                               value={quotationClientForm.branchPhone}
@@ -2376,7 +2427,7 @@ export default function Catalog() {
                             </div>
                             <div>
                               <p className="text-sm font-extrabold text-white">
-                                Ubicación de la sucursal
+                                Ubicación del cliente
                               </p>
                               <p className="mt-1 text-xs leading-5 text-slate-400">
                                 Obtén las coordenadas precisas desde este dispositivo.
@@ -2397,7 +2448,7 @@ export default function Catalog() {
                             )}
                             {branchLocationLoading
                               ? "Obteniendo ubicación..."
-                              : "Ubicación actual"}
+                              : "Obtener mi ubicación actual"}
                           </button>
                         </div>
 
@@ -2429,7 +2480,7 @@ export default function Catalog() {
                           </div>
                         ) : (
                           <p className="mt-4 text-xs text-amber-200">
-                            Aún no se han registrado coordenadas para esta sucursal.
+                            Aún no se han registrado coordenadas para este cliente.
                           </p>
                         )}
 
@@ -2439,47 +2490,6 @@ export default function Catalog() {
                           </p>
                         )}
                       </div>
-
-                      <div className="md:col-span-2 border-t border-[#29466F] pt-4 text-sm font-extrabold text-white">
-                        Representante
-                      </div>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Nombre
-                        </span>
-                        <input
-                          value={quotationClientForm.representativeName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Nombre del contacto"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo representante *
-                        </span>
-                        <input
-                          type="email"
-                          required
-                          autoComplete="email"
-                          value={quotationClientForm.representativeEmail}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeEmail",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="contacto@cliente.com"
-                        />
-                      </label>
 
                       <label className="md:col-span-2">
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
@@ -2724,16 +2734,7 @@ export default function Catalog() {
       <CatalogProductDetailsModal
         product={selectedProductDetails}
         onClose={() => setSelectedProductDetails(null)}
-        onViewTechnicalSheet={handleOpenTechnicalSheet}
         onAddToCart={canPurchase ? handleAddToCart : undefined}
-        showPrice={canPurchase}
-      />
-
-      <CatalogTechnicalSheetModal
-        product={selectedTechnicalSheetProduct}
-        onClose={() =>
-          setSelectedTechnicalSheetProduct(null)
-        }
       />
 
       {cartConfirmation && (

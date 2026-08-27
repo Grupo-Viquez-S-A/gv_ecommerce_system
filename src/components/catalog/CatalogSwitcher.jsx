@@ -1,12 +1,6 @@
-﻿import { Package, Shirt } from "lucide-react";
+import { Package } from "lucide-react";
 
 const CATALOG_OPTIONS = [
-  {
-    id: "fabrics",
-    label: "Catálogo de telas",
-    description: "Telas, composiciones, colores y tratamientos.",
-    icon: Shirt,
-  },
   {
     id: "textile_products",
     label: "Catálogo de productos",
@@ -31,7 +25,7 @@ export default function CatalogSwitcher({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3">
         {CATALOG_OPTIONS.map((option) => {
           const Icon = option.icon;
           const isActive = activeCatalog === option.id;

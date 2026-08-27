@@ -2,19 +2,16 @@
 import {
   RiAddLine,
   RiBuilding2Fill,
-  RiCloseLine,
   RiDeleteBinLine,
   RiMailLine,
   RiMapPinLine,
   RiPhoneLine,
-  RiUserLine,
 } from "react-icons/ri";
 
 import { supabase } from "../../services/primarySupabaseClient.js";
 import {
   createEmptyBranch,
   createEmptyPhone,
-  createEmptyRepresentative,
 } from "./clientFormDefaults.js";
 import {
   formatLegalId,
@@ -92,6 +89,7 @@ function normalizeBranch(branch = {}, index = 0) {
       branch.id ||
       `branch-${index}`,
     province: branch.province || "",
+    city: branch.city || "",
     district: branch.district || "",
     address: branch.address || "",
     latitude: branch.latitude ?? "",
@@ -143,9 +141,10 @@ function normalizeForm(form = {}) {
     clientPhones: sourceClientPhones.map((phone, index) =>
       normalizePhone(phone, index, "client-phone"),
     ),
-    branches: (form.branches || []).map((branch, index) =>
-      normalizeBranch(branch, index),
-    ),
+    branches:
+      form.branches?.length > 0
+        ? form.branches.map((branch, index) => normalizeBranch(branch, index))
+        : [createEmptyBranch()],
   };
 }
 
@@ -298,12 +297,15 @@ export default function ClientForm({
   const [companies, setCompanies] = useState([]);
   const [companiesLoading, setCompaniesLoading] = useState(true);
   const [companiesError, setCompaniesError] = useState("");
+  const [customerLocationLoading, setCustomerLocationLoading] = useState(false);
+  const [customerLocationError, setCustomerLocationError] = useState("");
 
   const currentForm = useMemo(() => normalizeForm(form), [form]);
   const isLocationOnlyEdit =
     mode === "edit" && allowLocationOnlyEdit;
   const fieldsDisabled = isLocationOnlyEdit;
   const canEditBranchLocation = mode !== "view";
+  const customerLocation = currentForm.branches[0] || createEmptyBranch();
 
   useEffect(() => {
     let isMounted = true;
@@ -477,187 +479,58 @@ export default function ClientForm({
     });
   };
 
-  const addBranch = () => {
-    updateForm({
-      branches: [...currentForm.branches, createEmptyBranch()],
-    });
+  const updateCustomerLocationField = (field, value) => {
+    updateBranch(0, field, value);
   };
 
-  const removeBranch = (branchIndex) => {
-    updateForm({
-      branches: currentForm.branches.filter(
-        (_, index) => index !== branchIndex,
-      ),
-    });
-  };
+  const handleUseCurrentCustomerLocation = () => {
+    if (!navigator.geolocation) {
+      setCustomerLocationError(
+        "Este dispositivo o navegador no permite obtener la ubicación.",
+      );
+      return;
+    }
 
-  const updateBranchPhone = (branchIndex, phoneIndex, field, value) => {
-    const nextBranches = currentForm.branches.map((branch, index) => {
-      if (index !== branchIndex) {
-        return branch;
-      }
+    setCustomerLocationLoading(true);
+    setCustomerLocationError("");
 
-      const nextPhones = branch.phones.map((phoneItem, currentPhoneIndex) => {
-        if (field === "isPrimary" && value === true) {
-          return {
-            ...phoneItem,
-            isPrimary: currentPhoneIndex === phoneIndex,
-          };
-        }
-
-        if (currentPhoneIndex !== phoneIndex) {
-          return phoneItem;
-        }
-
-        return {
-          ...phoneItem,
-          [field]: field === "phone" ? formatPhoneNumber(value) : value,
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        updateBranchLocation(0, {
+          latitude: coords.latitude.toFixed(7),
+          longitude: coords.longitude.toFixed(7),
+          locationAccuracy: Number.isFinite(coords.accuracy)
+            ? coords.accuracy.toFixed(1)
+            : "",
+        });
+        setCustomerLocationLoading(false);
+      },
+      (error) => {
+        const errorMessages = {
+          1: "Permite el acceso a tu ubicación para registrar el cliente.",
+          2: "No fue posible determinar la ubicación actual.",
+          3: "La solicitud de ubicación tardó demasiado. Inténtalo nuevamente.",
         };
-      });
 
-      return {
-        ...branch,
-        phones: nextPhones,
-      };
-    });
-
-    updateForm({
-      branches: nextBranches,
-    });
-  };
-
-  const addBranchPhone = (branchIndex) => {
-    const nextBranches = currentForm.branches.map((branch, index) => {
-      if (index !== branchIndex) {
-        return branch;
-      }
-
-      return {
-        ...branch,
-        phones: [
-          ...branch.phones,
-          createEmptyPhone({
-            type: "Oficina",
-            isPrimary: branch.phones.length === 0,
-          }),
-        ],
-      };
-    });
-
-    updateForm({
-      branches: nextBranches,
-    });
-  };
-
-  const removeBranchPhone = (branchIndex, phoneIndex) => {
-    const nextBranches = currentForm.branches.map((branch, index) => {
-      if (index !== branchIndex) {
-        return branch;
-      }
-
-      const nextPhones = branch.phones.filter(
-        (_, currentPhoneIndex) => currentPhoneIndex !== phoneIndex,
-      );
-
-      const hasPrimaryPhone = nextPhones.some(
-        (phoneItem) => phoneItem.isPrimary,
-      );
-
-      return {
-        ...branch,
-        phones: nextPhones.map((phoneItem, currentPhoneIndex) => ({
-          ...phoneItem,
-          isPrimary:
-            hasPrimaryPhone
-              ? phoneItem.isPrimary
-              : currentPhoneIndex === 0,
-        })),
-      };
-    });
-
-    updateForm({
-      branches: nextBranches,
-    });
-  };
-
-  const updateRepresentative = (
-    branchIndex,
-    representativeIndex,
-    field,
-    value,
-  ) => {
-    const nextBranches = currentForm.branches.map((branch, index) => {
-      if (index !== branchIndex) {
-        return branch;
-      }
-
-      return {
-        ...branch,
-        representatives: branch.representatives.map(
-          (representative, currentRepresentativeIndex) => {
-            if (currentRepresentativeIndex !== representativeIndex) {
-              return representative;
-            }
-
-            return {
-              ...representative,
-              [field]: value,
-            };
-          },
-        ),
-      };
-    });
-
-    updateForm({
-      branches: nextBranches,
-    });
-  };
-
-  const addRepresentative = (branchIndex) => {
-    const nextBranches = currentForm.branches.map((branch, index) => {
-      if (index !== branchIndex) {
-        return branch;
-      }
-
-      return {
-        ...branch,
-        representatives: [
-          ...branch.representatives,
-          createEmptyRepresentative(),
-        ],
-      };
-    });
-
-    updateForm({
-      branches: nextBranches,
-    });
-  };
-
-  const removeRepresentative = (branchIndex, representativeIndex) => {
-    const nextBranches = currentForm.branches.map((branch, index) => {
-      if (index !== branchIndex) {
-        return branch;
-      }
-
-      return {
-        ...branch,
-        representatives: branch.representatives.filter(
-          (_, currentRepresentativeIndex) =>
-            currentRepresentativeIndex !== representativeIndex,
-        ),
-      };
-    });
-
-    updateForm({
-      branches: nextBranches,
-    });
+        setCustomerLocationError(
+          errorMessages[error.code] ||
+            "No fue posible obtener la ubicación actual.",
+        );
+        setCustomerLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 20000,
+      },
+    );
   };
 
   return (
     <div className="space-y-7 pb-2">
       {isLocationOnlyEdit && (
         <div className="rounded-xl border border-[#C9A227]/25 bg-[#C9A227]/10 px-4 py-3 text-sm text-[#F4E5A8]">
-          Como Agente de ventas, solo puedes actualizar la ubicación exacta de la sucursal desde el mapa.
+          Como Agente de ventas, solo puedes actualizar la ubicación exacta del cliente desde el mapa.
         </div>
       )}
 
@@ -879,7 +752,7 @@ export default function ClientForm({
         <SectionTitle
           icon={<RiPhoneLine size={18} />}
           title="Teléfonos generales"
-          description="Estos teléfonos pertenecen al cliente, no a una sucursal."
+          description="Estos teléfonos pertenecen directamente al cliente."
         />
 
         <PhoneList
@@ -893,341 +766,106 @@ export default function ClientForm({
         />
       </section>
 
-      {/* Sucursales */}
+      {/* Ubicación del cliente */}
       <section className="pt-6 border-t border-[#2a3550]">
         <SectionTitle
           icon={<RiMapPinLine size={18} />}
-          title="Sucursales"
-          description="Cada sucursal se identifica por provincia, cantón y dirección."
-          action={
-            <button
-              type="button"
-              onClick={addBranch}
-              disabled={fieldsDisabled}
-              className="flex items-center gap-1.5 text-xs font-semibold text-[#C9A227] hover:text-[#E0C34A] transition-colors whitespace-nowrap"
-            >
-              <RiAddLine size={16} />
-              Agregar
-            </button>
-          }
+          title="Ubicación del cliente"
+          description="Registra la dirección y coordenadas directamente en el cliente."
         />
 
-        <div className="space-y-5">
-          {currentForm.branches.length > 0 ? (
-            currentForm.branches.map((branch, branchIndex) => (
-              <article
-                key={branch.draftId}
-                className="rounded-2xl border border-[#2a3550] bg-[#1c2538] overflow-hidden"
-              >
-                <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-[#2a3550]">
-                  <div>
-                    <h4 className="text-sm font-bold text-white">
-                      Sucursal {branchIndex + 1}
-                    </h4>
+        <div className="space-y-5 rounded-2xl border border-[#2a3550] bg-[#1c2538] p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <FieldLabel required>Provincia</FieldLabel>
 
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Ubicación, teléfonos y representantes.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => removeBranch(branchIndex)}
-                    disabled={fieldsDisabled}
-                    className="w-8 h-8 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-400 flex items-center justify-center transition-colors"
-                    title="Eliminar sucursal"
-                    aria-label={`Eliminar sucursal ${branchIndex + 1}`}
-                  >
-                    <RiDeleteBinLine size={16} />
-                  </button>
-                </div>
-
-                <div className="p-4 space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <FieldLabel required>Provincia</FieldLabel>
-
-                      <input
-                        type="text"
-                        value={branch.province}
-                        disabled={fieldsDisabled}
-                        onChange={(event) =>
-                          updateBranch(
-                            branchIndex,
-                            "province",
-                            event.target.value,
-                          )
-                        }
-                        placeholder="Ej. Alajuela"
-                        className={inputClassName}
-                      />
-                    </div>
-
-                    <div>
-                      <FieldLabel required>Cantón</FieldLabel>
-
-                      <input
-                        type="text"
-                        value={branch.district}
-                        disabled={fieldsDisabled}
-                        onChange={(event) =>
-                          updateBranch(
-                            branchIndex,
-                            "district",
-                            event.target.value,
-                          )
-                        }
-                        placeholder="Ej. Grecia"
-                        className={inputClassName}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <FieldLabel required>Dirección exacta</FieldLabel>
-
-                    <textarea
-                      value={branch.address}
-                      disabled={fieldsDisabled}
-                      onChange={(event) =>
-                        updateBranch(
-                          branchIndex,
-                          "address",
-                          event.target.value,
-                        )
-                      }
-                      placeholder="Ej. Frente al parque central, local color blanco."
-                      rows={3}
-                      className={`${inputClassName} resize-none`}
-                    />
-                  </div>
-
-                  <BranchLocationMap
-                    latitude={branch.latitude}
-                    longitude={branch.longitude}
-                    accuracy={branch.locationAccuracy}
-                    editable={canEditBranchLocation}
-                    onChange={(nextLocation) =>
-                      updateBranchLocation(branchIndex, nextLocation)
-                    }
-                  />
-
-                  <div>
-                    <FieldLabel>Estado de la sucursal</FieldLabel>
-
-                    <select
-                      value={branch.status}
-                      disabled={fieldsDisabled}
-                      onChange={(event) =>
-                        updateBranch(
-                          branchIndex,
-                          "status",
-                          event.target.value,
-                        )
-                      }
-                      className={selectClassName}
-                    >
-                      <option value="Activo">Activo</option>
-                      <option value="Inactivo">Inactivo</option>
-                    </select>
-                  </div>
-
-                  <div className="pt-4 border-t border-[#2a3550]">
-                    <div className="mb-3">
-                      <h5 className="text-xs font-bold text-white uppercase tracking-wider">
-                        Teléfonos de la sucursal
-                      </h5>
-
-                      <p className="text-xs text-gray-500 mt-1">
-                        Se guardarán en la tabla <code>phones</code> usando el{" "}
-                        <code>branch_id</code> de esta sucursal.
-                      </p>
-                    </div>
-
-                    <PhoneList
-                      phones={branch.phones}
-                      onChange={(phoneIndex, field, value) =>
-                        updateBranchPhone(
-                          branchIndex,
-                          phoneIndex,
-                          field,
-                          value,
-                        )
-                      }
-                      onAdd={() => addBranchPhone(branchIndex)}
-                      onRemove={(phoneIndex) =>
-                        removeBranchPhone(branchIndex, phoneIndex)
-                      }
-                      emptyMessage="No hay teléfonos registrados para esta sucursal."
-                      primaryRadioName={`branch-${branch.draftId}-primary-phone`}
-                      disabled={fieldsDisabled}
-                    />
-                  </div>
-
-                  <div className="pt-4 border-t border-[#2a3550]">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <h5 className="text-xs font-bold text-white uppercase tracking-wider">
-                          Representantes
-                        </h5>
-
-                        <p className="text-xs text-gray-500 mt-1">
-                          Contactos asociados a esta sucursal.
-                        </p>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => addRepresentative(branchIndex)}
-                        disabled={fieldsDisabled}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-[#C9A227] hover:text-[#E0C34A] transition-colors whitespace-nowrap"
-                      >
-                        <RiAddLine size={15} />
-                        Agregar
-                      </button>
-                    </div>
-
-                    {branch.representatives.length > 0 ? (
-                      <div className="space-y-3">
-                        {branch.representatives.map(
-                          (representative, representativeIndex) => (
-                            <div
-                              key={representative.draftId}
-                              className="rounded-xl border border-[#2a3550] bg-[#222e44] p-3"
-                            >
-                              <div className="flex items-center justify-between gap-3 mb-3">
-                                <span className="text-xs font-semibold text-gray-300">
-                                  Representante {representativeIndex + 1}
-                                </span>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeRepresentative(
-                                      branchIndex,
-                                      representativeIndex,
-                                    )
-                                  }
-                                  disabled={fieldsDisabled}
-                                  className="w-7 h-7 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-400 flex items-center justify-center transition-colors"
-                                  title="Eliminar representante"
-                                  aria-label={`Eliminar representante ${
-                                    representativeIndex + 1
-                                  }`}
-                                >
-                                  <RiCloseLine size={16} />
-                                </button>
-                              </div>
-
-                              <div className="space-y-3">
-                                <div>
-                                  <FieldLabel required>
-                                    Nombre completo
-                                  </FieldLabel>
-
-                                  <div className="relative">
-                                    <RiUserLine
-                                      size={16}
-                                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                                    />
-
-                                    <input
-                                      type="text"
-                                      value={representative.name}
-                                      disabled={fieldsDisabled}
-                                      onChange={(event) =>
-                                        updateRepresentative(
-                                          branchIndex,
-                                          representativeIndex,
-                                          "name",
-                                          event.target.value,
-                                        )
-                                      }
-                                      placeholder="Nombre del representante"
-                                      className={`${inputClassName} pl-9`}
-                                    />
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <FieldLabel>Correo electrónico</FieldLabel>
-
-                                  <div className="relative">
-                                    <RiMailLine
-                                      size={16}
-                                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                                    />
-
-                                    <input
-                                      type="email"
-                                      value={representative.email}
-                                      disabled={fieldsDisabled}
-                                      onChange={(event) =>
-                                        updateRepresentative(
-                                          branchIndex,
-                                          representativeIndex,
-                                          "email",
-                                          event.target.value,
-                                        )
-                                      }
-                                      placeholder="representante@cliente.com"
-                                      className={`${inputClassName} pl-9`}
-                                    />
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <FieldLabel>Estado</FieldLabel>
-
-                                  <select
-                                    value={representative.status}
-                                    disabled={fieldsDisabled}
-                                    onChange={(event) =>
-                                      updateRepresentative(
-                                        branchIndex,
-                                        representativeIndex,
-                                        "status",
-                                        event.target.value,
-                                      )
-                                    }
-                                    className={selectClassName}
-                                  >
-                                    <option value="Activo">Activo</option>
-                                    <option value="Inactivo">
-                                      Inactivo
-                                    </option>
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-[#2a3550] bg-[#222e44]/50 px-4 py-5 text-center text-xs text-gray-500">
-                        Esta sucursal todavía no tiene representantes.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))
-          ) : (
-            <div className="rounded-xl border border-dashed border-[#2a3550] bg-[#1c2538]/60 px-4 py-8 text-center">
-              <p className="text-sm text-gray-400">
-                Este cliente no tiene sucursales registradas.
-              </p>
-
-              <button
-                type="button"
-                onClick={addBranch}
+              <input
+                type="text"
+                value={customerLocation.province}
                 disabled={fieldsDisabled}
-                className="mt-3 text-xs font-semibold text-[#C9A227] hover:text-[#E0C34A] transition-colors"
-              >
-                Agregar la primera sucursal
-              </button>
+                onChange={(event) =>
+                  updateCustomerLocationField("province", event.target.value)
+                }
+                placeholder="Ej. Alajuela"
+                className={inputClassName}
+              />
             </div>
+
+            <div>
+              <FieldLabel required>Cantón</FieldLabel>
+
+              <input
+                type="text"
+                value={customerLocation.city}
+                disabled={fieldsDisabled}
+                onChange={(event) =>
+                  updateCustomerLocationField("city", event.target.value)
+                }
+                placeholder="Ej. Grecia"
+                className={inputClassName}
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <FieldLabel required>Distrito</FieldLabel>
+
+              <input
+                type="text"
+                value={customerLocation.district}
+                disabled={fieldsDisabled}
+                onChange={(event) =>
+                  updateCustomerLocationField("district", event.target.value)
+                }
+                placeholder="Ej. San Roque"
+                className={inputClassName}
+              />
+            </div>
+          </div>
+
+          <div>
+            <FieldLabel required>Dirección exacta</FieldLabel>
+
+            <textarea
+              value={customerLocation.address}
+              disabled={fieldsDisabled}
+              onChange={(event) =>
+                updateCustomerLocationField("address", event.target.value)
+              }
+              placeholder="Ej. Frente al parque central, local color blanco."
+              rows={3}
+              className={`${inputClassName} resize-none`}
+            />
+          </div>
+
+          {canEditBranchLocation && (
+            <button
+              type="button"
+              onClick={handleUseCurrentCustomerLocation}
+              disabled={customerLocationLoading}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#C9A227]/50 bg-[#C9A227]/10 px-4 py-2.5 text-sm font-semibold text-[#C9A227] transition-colors hover:border-[#C9A227] hover:bg-[#C9A227]/15 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+            >
+              <RiMapPinLine size={16} />
+              {customerLocationLoading
+                ? "Obteniendo ubicación..."
+                : "Obtener mi ubicación actual"}
+            </button>
           )}
+
+          {customerLocationError && (
+            <p className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+              {customerLocationError}
+            </p>
+          )}
+
+          <BranchLocationMap
+            latitude={customerLocation.latitude}
+            longitude={customerLocation.longitude}
+            accuracy={customerLocation.locationAccuracy}
+            editable={canEditBranchLocation}
+            onChange={(nextLocation) =>
+              updateBranchLocation(0, nextLocation)
+            }
+          />
         </div>
       </section>
     </div>

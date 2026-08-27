@@ -1,7 +1,5 @@
 import {
   RiDeleteBinLine,
-  RiStoreFill,
-  RiTeamFill,
   RiEyeFill,
   RiEditFill,
   RiMapPinFill,
@@ -18,8 +16,6 @@ import {
 export default function ClientActionButtons({
   client,
   compact = false,
-  onOpenBranches,
-  onOpenRepresentatives,
   onView,
   onEdit,
   onDeactivate,
@@ -52,26 +48,6 @@ export default function ClientActionButtons({
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      <button
-        type="button"
-        onClick={() => onOpenBranches(client)}
-        className={baseButtonClasses}
-        title="Ver sucursales"
-        aria-label={`Ver sucursales de ${client.name}`}
-      >
-        <RiStoreFill size={iconSize} />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onOpenRepresentatives(client)}
-        className={baseButtonClasses}
-        title="Ver representantes"
-        aria-label={`Ver representantes de ${client.name}`}
-      >
-        <RiTeamFill size={iconSize} />
-      </button>
-
       <button
         type="button"
         onClick={() => onView(client)}

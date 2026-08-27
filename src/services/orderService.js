@@ -178,7 +178,7 @@ export async function getSalesOrders({
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, created_at",
+        "quotation_id, business_id:customer_id, user_id, quotation_number, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, created_at",
       )
       .in("quotation_id", quotationIds),
     "No fue posible cargar las cotizaciones asociadas",
@@ -190,31 +190,18 @@ export async function getSalesOrders({
     ...new Set(quotations.map((quotation) => quotation.business_id).filter(Boolean)),
   ];
 
-  const branchIds = [
-    ...new Set(quotations.map((quotation) => quotation.branch_id).filter(Boolean)),
-  ];
-
   const sellerUserIds = [
     ...new Set(quotations.map((quotation) => quotation.user_id).filter(Boolean)),
   ];
 
-  const [businesses, branches, sellerProfiles] = await Promise.all([
+  const [businesses, sellerProfiles] = await Promise.all([
     businessIds.length
       ? throwIfError(
           await supabase
-            .from("businesses")
-            .select("business_id, business_name, legal_name")
-            .in("business_id", businessIds),
+            .from("customers")
+            .select("business_id:customer_id, business_name:commercial_name, legal_name:company_name, province, district")
+            .in("customer_id", businessIds),
           "No fue posible cargar los clientes",
-        )
-      : [],
-    branchIds.length
-      ? throwIfError(
-          await supabase
-            .from("branches")
-            .select("branch_id, province, district")
-            .in("branch_id", branchIds),
-          "No fue posible cargar las sucursales",
         )
       : [],
     sellerUserIds.length
@@ -229,13 +216,11 @@ export async function getSalesOrders({
   ]);
 
   const businessesById = indexRowsByKey(businesses, "business_id");
-  const branchesById = indexRowsByKey(branches, "branch_id");
   const sellerProfilesById = indexRowsByKey(sellerProfiles, "user_id");
 
   return orders.map((order) => {
     const quotation = quotationsById[order.quotation_id] || null;
     const business = quotation ? businessesById[quotation.business_id] : null;
-    const branch = quotation ? branchesById[quotation.branch_id] : null;
     const sellerProfile = quotation
       ? sellerProfilesById[quotation.user_id]
       : null;
@@ -243,8 +228,8 @@ export async function getSalesOrders({
     const clientName =
       business?.business_name || business?.legal_name || "Cliente sin nombre";
 
-    const branchLabel = branch
-      ? [branch.district, branch.province].filter(Boolean).join(", ")
+    const branchLabel = business
+      ? [business.district, business.province].filter(Boolean).join(", ")
       : null;
 
     const sellerName =
@@ -315,7 +300,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, status, state, notes, is_active, created_at, updated_at, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id:customer_id, user_id, quotation_number, status, state, notes, is_active, created_at, updated_at, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", order.quotation_id)
       .eq("is_active", true)

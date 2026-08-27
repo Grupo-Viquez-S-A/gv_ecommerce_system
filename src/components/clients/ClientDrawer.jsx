@@ -87,7 +87,7 @@ export default function ClientDrawer({
 
             <p className="text-sm text-gray-400 mt-0.5">
               {isLocationOnlyEdit
-                ? "Actualiza únicamente el pin del mapa para esta sucursal."
+                ? "Actualiza únicamente el pin del mapa para este cliente."
                 : content.description}
             </p>
           </div>

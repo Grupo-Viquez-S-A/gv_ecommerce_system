@@ -18,6 +18,7 @@ export function createEmptyBranch(overrides = {}) {
   return {
     draftId: createDraftId("branch"),
     province: "",
+    city: "",
     district: "",
     address: "",
     latitude: "",

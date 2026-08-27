@@ -7,6 +7,7 @@ import {
   getOptimizedSupabaseImageUrl,
   isChromiumLikeBrowser,
 } from "../../utils/supabaseImageUrl.js";
+import { getInventorySizeLabel } from "../../utils/inventorySizes.js";
 
 function normalizeText(value) {
   const rawValue = String(value || "");
@@ -118,7 +119,7 @@ function renderSizeItems(availableSizes) {
           key={size.variant_id || size.size_id || index}
           className="rounded-lg border border-[#324A70] bg-[#0A1A33] px-3 py-1.5 text-xs font-medium text-[#D7E1F0]"
         >
-          {size.size_name}
+          {getInventorySizeLabel(size.size_name)}
         </span>
       ))}
     </div>

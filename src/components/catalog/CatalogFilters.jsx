@@ -5,6 +5,7 @@
 } from "lucide-react";
 
 import { EMPTY_CATALOG_FILTERS } from "./catalogFilterDefaults.js";
+import { getInventorySizeLabel } from "../../utils/inventorySizes.js";
 
 function SelectField({
   id,
@@ -199,7 +200,7 @@ export default function CatalogFilters({
               defaultLabel="Todas"
               options={sizes}
               getOptionValue={(size) => size.size_id}
-              getOptionLabel={(size) => size.size_name}
+              getOptionLabel={(size) => getInventorySizeLabel(size.size_name)}
               onChange={(value) =>
                 handleChange("sizeId", value)
               }

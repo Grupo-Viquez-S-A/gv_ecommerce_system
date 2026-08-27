@@ -728,7 +728,7 @@ export async function getTextileProductCatalogProducts() {
 }
 
 export async function getCatalogProducts(
-  catalogType = CATALOG_TYPES.FABRICS,
+  catalogType = CATALOG_TYPES.TEXTILE_PRODUCTS,
 ) {
   if (catalogType === CATALOG_TYPES.TEXTILE_PRODUCTS) {
     return getTextileProductCatalogProducts();

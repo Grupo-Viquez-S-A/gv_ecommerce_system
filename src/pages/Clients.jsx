@@ -27,8 +27,6 @@ import ClientsTable from "../components/clients/ClientsTable.jsx";
 import ClientMobileList from "../components/clients/ClientMobileList.jsx";
 import ClientsPagination from "../components/clients/ClientsPagination.jsx";
 import ClientDrawer from "../components/clients/ClientDrawer.jsx";
-import BranchesModal from "../components/clients/BranchesModal.jsx";
-import RepresentativesModal from "../components/clients/RepresentativesModal.jsx";
 import DeactivateClientModal from "../components/clients/DeactivateClientModal.jsx";
 import DeleteClientModal from "../components/clients/DeleteClientModal.jsx";
 import { useAuth } from "../context/AuthContext.js";
@@ -119,6 +117,7 @@ function cloneBranch(branch = {}, index = 0) {
       branch.id ||
       `branch-${index}`,
     province: branch.province || "",
+    city: branch.city || "",
     district: branch.district || "",
     address: branch.address || "",
     latitude: branch.latitude ?? "",
@@ -248,6 +247,7 @@ function hasRepresentativeContent(representative = {}) {
 function hasBranchContent(branch = {}) {
   return Boolean(
     branch.province?.trim() ||
+      branch.city?.trim() ||
       branch.district?.trim() ||
       branch.address?.trim() ||
       branch.phones?.some(hasPhoneContent) ||
@@ -344,6 +344,7 @@ function normalizeClientForm(form = {}) {
     const branch = {
       ...originalBranch,
       province: originalBranch.province?.trim() || "",
+      city: originalBranch.city?.trim() || "",
       district: originalBranch.district?.trim() || "",
       address: originalBranch.address?.trim() || "",
       latitude:
@@ -373,12 +374,10 @@ function normalizeClientForm(form = {}) {
         .filter(hasRepresentativeContent),
     };
 
-    if (!branch.province || !branch.district || !branch.address) {
+    if (!branch.province || !branch.city || !branch.district || !branch.address) {
       return {
         valid: false,
-        message: `Completa provincia, cantón y dirección de la sucursal ${
-          index + 1
-        }.`,
+        message: "Completa provincia, cantón, distrito y dirección del cliente.",
       };
     }
 
@@ -388,7 +387,7 @@ function normalizeClientForm(form = {}) {
     ) {
       return {
         valid: false,
-        message: `La latitud de la sucursal ${index + 1} no es válida.`,
+        message: "La latitud del cliente no es válida.",
       };
     }
 
@@ -398,20 +397,7 @@ function normalizeClientForm(form = {}) {
     ) {
       return {
         valid: false,
-        message: `La longitud de la sucursal ${index + 1} no es válida.`,
-      };
-    }
-
-    const representativeWithoutName = branch.representatives.find(
-      (representative) => !representative.name,
-    );
-
-    if (representativeWithoutName) {
-      return {
-        valid: false,
-        message: `Completa el nombre de todos los representantes de la sucursal ${
-          index + 1
-        }.`,
+        message: "La longitud del cliente no es válida.",
       };
     }
 
@@ -463,8 +449,6 @@ export default function Clients() {
   const [viewClient, setViewClient] = useState(null);
   const [form, setForm] = useState(createEmptyClientForm);
 
-  const [branchModal, setBranchModal] = useState(null);
-  const [repModal, setRepModal] = useState(null);
   const [deactivateModal, setDeactivateModal] = useState(null);
   const [deleteModal, setDeleteModal] = useState(null);
 
@@ -648,7 +632,13 @@ export default function Clients() {
   };
 
   const openClientDetails = (client) => {
-    setBranchModal(cloneClient(client));
+    const safeClient = cloneClient(client);
+
+    setDrawerMode("view");
+    setViewClient(safeClient);
+    setEditClient(null);
+    setForm(createEditableForm(safeClient));
+    setDrawerOpen(true);
   };
 
   const handleSaveClient = async () => {
@@ -775,8 +765,6 @@ export default function Clients() {
       await loadClients();
 
       setDeleteModal(null);
-      setBranchModal(null);
-      setRepModal(null);
       if (
         editClient &&
         (editClient.businessId === client.businessId ||
@@ -839,8 +827,6 @@ export default function Clients() {
               endItem={endItem}
               onPageChange={setCurrentPage}
               onClearFilters={clearFilters}
-              onOpenBranches={setBranchModal}
-              onOpenRepresentatives={setRepModal}
               onView={openClientDetails}
               onEdit={openEditDrawer}
               onDeactivate={setDeactivateModal}
@@ -860,8 +846,6 @@ export default function Clients() {
             <ClientMobileList
               clients={paginatedClients}
               onClearFilters={clearFilters}
-              onOpenBranches={setBranchModal}
-              onOpenRepresentatives={setRepModal}
               onView={openClientDetails}
               onEdit={openEditDrawer}
               onDeactivate={setDeactivateModal}
@@ -904,16 +888,6 @@ export default function Clients() {
         onClose={closeDrawer}
         onSave={handleSaveClient}
         isSaving={isSaving}
-      />
-
-      <BranchesModal
-        client={branchModal}
-        onClose={() => setBranchModal(null)}
-      />
-
-      <RepresentativesModal
-        client={repModal}
-        onClose={() => setRepModal(null)}
       />
 
       <DeactivateClientModal

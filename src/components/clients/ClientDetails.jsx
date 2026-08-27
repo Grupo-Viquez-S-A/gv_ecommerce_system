@@ -3,6 +3,7 @@
   RiBuilding2Fill,
   RiFileList3Fill,
   RiMailFill,
+  RiMapPinFill,
   RiPhoneFill,
   RiPriceTag3Fill,
   RiShoppingBag3Fill,
@@ -51,6 +52,12 @@ export default function ClientDetails({ client }) {
     "";
 
   const status = client.status || "Activo";
+  const location = client.branches?.[0] || {};
+  const addressParts = [
+    location.province,
+    location.city,
+    location.district,
+  ].filter(Boolean);
 
   return (
     <div className="space-y-7">
@@ -165,6 +172,25 @@ export default function ClientDetails({ client }) {
             icon={<RiFileList3Fill size={15} />}
             label="Cotizaciones"
             value={String(client.totalQuotes ?? 0)}
+          />
+        </div>
+      </section>
+
+      {/* Ubicación */}
+      <section>
+        <SectionTitle>Ubicación del cliente</SectionTitle>
+
+        <div>
+          <DetailRow
+            icon={<RiMapPinFill size={15} />}
+            label="Provincia, cantón y distrito"
+            value={addressParts.join(", ")}
+          />
+
+          <DetailRow
+            icon={<RiMapPinFill size={15} />}
+            label="Dirección exacta"
+            value={location.address}
           />
         </div>
       </section>
