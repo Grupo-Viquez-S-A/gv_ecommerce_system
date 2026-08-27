@@ -1,37 +1,11 @@
 import { supabase } from "./primarySupabaseClient.js";
 import {
-  createRepresentativeUser,
-  notifyNewQuotation,
-} from "./representativeUserService.js";
-import { addDaysCRDateString, getTodayCRDateString } from "../utils/dateUtils.js";
+  addBusinessDaysCRDateString,
+  getTodayCRDateString,
+} from "../utils/dateUtils.js";
+import { normalizeQuotationPayload } from "../utils/quotationPayload.js";
 
-const QUOTATION_VALIDITY_DAYS = 2;
-
-function getRepresentativeAccessMessage(accessResult) {
-  if (!accessResult) return null;
-
-  if (accessResult.account_state === "new") {
-    if (accessResult.email_notification?.sent) {
-      return "Cotizacion creada. Se envio por correo el acceso temporal del representante.";
-    }
-
-    return "Cotizacion creada, pero no se pudo enviar el correo de acceso. El representante debera restablecer su contrasena.";
-  }
-
-  if (accessResult.account_state === "pending") {
-    if (accessResult.email_notification?.sent) {
-      return "Cotizacion creada. Se envio por correo un nuevo acceso temporal al representante.";
-    }
-
-    return "Cotizacion creada, pero no se pudo enviar el nuevo correo de acceso. El representante debera restablecer su contrasena.";
-  }
-
-  if (accessResult.account_state === "active") {
-    return "Cotizacion creada correctamente. El representante ya posee acceso al sistema.";
-  }
-
-  return null;
-}
+const QUOTATION_VALIDITY_BUSINESS_DAYS = 15;
 
 function getText(value) {
   const normalizedValue = String(value || "").trim();
@@ -45,21 +19,8 @@ function getNumber(value, fallback = 0) {
   return Number.isFinite(numberValue) ? numberValue : fallback;
 }
 
-function getBoolean(value) {
-  return value === true || value === "true";
-}
-
-function getDatePlusDays(days = QUOTATION_VALIDITY_DAYS) {
-  return addDaysCRDateString(days);
-}
-
-function getNullableNumber(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
+function getDatePlusDays(days = QUOTATION_VALIDITY_BUSINESS_DAYS) {
+  return addBusinessDaysCRDateString(days);
 }
 
 function throwIfError(response, actionMessage) {
@@ -196,7 +157,7 @@ function getValidityDate(createdAt) {
     return null;
   }
 
-  return addDaysCRDateString(QUOTATION_VALIDITY_DAYS, date);
+  return addBusinessDaysCRDateString(QUOTATION_VALIDITY_BUSINESS_DAYS, date);
 }
 
 function getQuotationTotal(items = []) {
@@ -274,25 +235,27 @@ function normalizeQuotation({
   const items = products.map((item) => ({
     id: item.quote_product_id,
     quoteProductId: item.quote_product_id,
-    productId: item.product_id,
+    productId: item.variant?.product_id || item.product?.product_id || null,
     variantId: item.variant_id || null,
-    gtin: item.snapshot_gtin || null,
-    sku: item.snapshot_sku || item.variant?.sku || item.product?.sku || "Sin SKU",
+    gtin: item.variant?.gtin || null,
+    sku: item.variant?.sku || "Sin SKU",
     name: item.product?.product_name || "Producto sin nombre",
-    description: item.snapshot_description || item.product?.description || "",
+    description: item.product?.description || "",
     imageUrl:
       item.product?.image_url ||
       item.product?.main_image_url ||
       item.product?.cover_image_url ||
       getProductImageUrl(item.productFiles || []),
-    sizeName: item.snapshot_size_name || item.size?.size_name || null,
-    color: item.snapshot_color || null,
+    sizeName: item.size?.size_name || null,
+    color: null,
     quantity: getNumber(item.quantity, 0),
-    unitPrice: getNumber(item.snapshot_price, getNumber(item.unit_price, 0)),
-    taxRate: getNumber(item.snapshot_tax_rate, 0),
+    unitPrice: getNumber(item.unit_price, 0),
+    taxRate: getNumber(item.variant?.tax_rate, getNumber(item.product?.iva, 0)),
     ivaAmount: getNumber(item.iva_amount, 0),
-    subtotal: getNumber(item.subtotal, 0),
-    total: getNumber(item.total, 0),
+    subtotal: getNumber(item.unit_price, 0) * getNumber(item.quantity, 0),
+    total:
+      getNumber(item.unit_price, 0) * getNumber(item.quantity, 0) +
+      getNumber(item.iva_amount, 0),
     hasSublimation: item.has_sublimation === true,
     hasEmbroidery: item.has_embroidery === true,
     sublimationPrice:
@@ -317,6 +280,28 @@ function normalizeQuotation({
   const subtotal = getNumber(quotation.subtotal, null);
   const ivaAmount = getNumber(quotation.iva_amount, null);
   const total = getNumber(quotation.total, null);
+  const embroideryAmount = getNumber(
+    quotation.embroidery_amount,
+    items.reduce(
+      (sum, item) =>
+        sum +
+        (item.hasEmbroidery
+          ? getNumber(item.embroideryUnitPrice, 0) * getNumber(item.quantity, 0)
+          : 0),
+      0,
+    ),
+  );
+  const sublimationAmount = getNumber(
+    quotation.sublimation_amount,
+    items.reduce(
+      (sum, item) =>
+        sum +
+        (item.hasSublimation
+          ? getNumber(item.sublimationUnitPrice, 0) * getNumber(item.quantity, 0)
+          : 0),
+      0,
+    ),
+  );
 
   return {
     id: quotation.quotation_id,
@@ -332,6 +317,8 @@ function normalizeQuotation({
     date: quotation.created_at,
     validity: quotation.valid_until || getValidityDate(quotation.created_at),
     validUntil: quotation.valid_until,
+    committedDeliveryDate: quotation.committed_delivery_date || null,
+    unexpectedDeliveryDate: quotation.unexpected_delivery_date || null,
 
     earlyDelivery: quotation.early_delivery === true,
     earlyDeliveryDate: quotation.early_delivery_date || null,
@@ -343,10 +330,20 @@ function normalizeQuotation({
         ? ivaAmount
         : items.reduce((sum, item) => sum + getNumber(item.ivaAmount, 0), 0),
     total: total !== null ? total : itemsTotal,
+    discountPercentage: getNumber(quotation.discount_percentage, 0),
+    discountAmount: getNumber(quotation.discount_amount, 0),
+    embroideryAmount,
+    sublimationAmount,
     advancePayment:
       getNumber(quotation.advance_payment, null) !== null
         ? getNumber(quotation.advance_payment, 0)
         : (total !== null ? total : itemsTotal) / 2,
+    advancePercentage:
+      getNumber(quotation.advance_percentage, null) !== null
+        ? getNumber(quotation.advance_percentage, 0)
+        : (total !== null ? total : itemsTotal) > 0
+          ? (getNumber(quotation.advance_payment, 0) / (total !== null ? total : itemsTotal)) * 100
+          : 0,
     methodId: quotation.method_id || null,
     paymentMethod: quotation.payment_methods?.method_name || null,
     status: getQuotationStatusLabel(quotation.state || quotation.status),
@@ -375,180 +372,6 @@ function normalizeQuotation({
   };
 }
 
-function normalizeQuotationPayload({ client = {}, items = [], status }) {
-  const companyId = getText(client.companyId);
-  const identificationType =
-    client.identificationType === "personal" ? "personal" : "legal";
-  const businessName = getText(client.businessName);
-  const legalName = getText(client.legalName);
-  const ownerName = getText(client.ownerName);
-  const legalId = getText(client.legalId);
-  const activityCode = getText(client.activityCode);
-  const businessEmail = getText(client.businessEmail);
-  const branchAddress = getText(client.branchAddress);
-  const branchLatitude = getNullableNumber(client.branchLatitude);
-  const branchLongitude = getNullableNumber(client.branchLongitude);
-  const branchLocationAccuracy = getNullableNumber(
-    client.branchLocationAccuracy,
-  );
-  const representativeName = getText(client.representativeName);
-  const representativeEmail = getText(client.representativeEmail)?.toLowerCase();
-
-  if (!companyId) {
-    throw new Error("Selecciona la empresa del grupo.");
-  }
-
-  if (!businessName) {
-    throw new Error("Ingresa el nombre comercial del cliente.");
-  }
-
-  if (!legalId) {
-    throw new Error(
-      identificationType === "personal"
-        ? "Ingresa el número de identificación del dueño."
-        : "Ingresa la cédula jurídica del cliente.",
-    );
-  }
-
-  if (identificationType === "legal" && !legalName) {
-    throw new Error("Ingresa la razon social del cliente.");
-  }
-
-  if (identificationType === "personal" && !ownerName) {
-    throw new Error("Ingresa el nombre y apellidos del dueño.");
-  }
-
-  if (!activityCode) {
-    throw new Error("Ingresa el código de actividad del cliente.");
-  }
-
-  if (!businessEmail) {
-    throw new Error("Ingresa el correo electrónico principal del cliente.");
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(businessEmail)) {
-    throw new Error("Ingresa un correo electrónico principal válido.");
-  }
-
-  if (!branchAddress) {
-    throw new Error("Ingresa la direccion de la sucursal.");
-  }
-
-  if (!client.branchId && (branchLatitude === null || branchLongitude === null)) {
-    throw new Error(
-      "Obtén la ubicación actual para registrar las coordenadas de la sucursal.",
-    );
-  }
-
-  if (
-    branchLatitude !== null &&
-    (branchLatitude < -90 || branchLatitude > 90)
-  ) {
-    throw new Error("La latitud de la sucursal no es válida.");
-  }
-
-  if (
-    branchLongitude !== null &&
-    (branchLongitude < -180 || branchLongitude > 180)
-  ) {
-    throw new Error("La longitud de la sucursal no es válida.");
-  }
-
-  if (!representativeName) {
-    throw new Error("Ingresa el nombre del representante.");
-  }
-
-  if (!representativeEmail) {
-    throw new Error("Ingresa el correo electronico del representante.");
-  }
-
-  if (
-    representativeEmail.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(representativeEmail)
-  ) {
-    throw new Error("Ingresa un correo electronico valido para el representante.");
-  }
-
-  if (!items.length) {
-    throw new Error("Agrega al menos un producto al carrito.");
-  }
-
-  return {
-    client: {
-      businessId: getText(client.businessId),
-      branchId: getText(client.branchId),
-      representativeId: getText(client.representativeId),
-
-      companyId,
-      identificationType,
-      legalId,
-      legalName: identificationType === "legal" ? legalName : "",
-      ownerName: identificationType === "personal" ? ownerName : "",
-      businessName,
-      activityCode,
-
-      businessEmail,
-      businessPhone: getText(client.businessPhone),
-
-      branchProvince: getText(client.branchProvince),
-      branchDistrict: getText(client.branchDistrict),
-      branchAddress,
-      branchPhone: getText(client.branchPhone),
-      branchLatitude,
-      branchLongitude,
-      branchLocationAccuracy,
-
-      representativeName,
-      representativeEmail,
-      representativeUserId: getText(client.representativeUserId),
-
-      notes: getText(client.notes),
-
-      earlyDelivery: getBoolean(client.earlyDelivery),
-      earlyDeliveryDate: getText(client.earlyDeliveryDate),
-      validUntil: getText(client.validUntil),
-      methodId: getText(client.methodId),
-    },
-
-    items: items.map((item) => {
-      const productId = getText(item.productId || item.id);
-      const quantity = Math.max(1, getNumber(item.quantity, 1));
-      const unitPrice = getNumber(item.unitPrice, 0);
-      const unitIva = getNumber(item.ivaAmount, 0);
-      const ivaAmount = unitIva * quantity;
-      const sizeId = getText(item.sizeId) || null;
-
-      if (!productId) {
-        throw new Error("Uno de los productos no tiene identificador.");
-      }
-      if (item.catalogType === "textile_products" && !getText(item.variantId)) {
-        throw new Error("Seleccione una talla y color válidos para cada producto textil.");
-      }
-
-      return {
-        product_id: productId,
-        variant_id: getText(item.variantId) || null,
-        snapshot_sku: getText(item.sku) || null,
-        snapshot_gtin: getText(item.gtin) || null,
-        snapshot_size_id: sizeId,
-        snapshot_size_name: getText(item.sizeName) || null,
-        snapshot_color: getText(item.color) || null,
-        snapshot_description: getText(item.description) || null,
-        snapshot_price: unitPrice,
-        snapshot_tax_rate: getNumber(item.taxRate, 0),
-        quantity,
-        unit_price: unitPrice,
-        iva_amount: ivaAmount,
-        size_id: sizeId,
-        has_sublimation: getBoolean(item.hasSublimation),
-        has_embroidery: getBoolean(item.hasEmbroidery),
-      };
-    }),
-
-    status: getDbQuotationStatus(status),
-  };
-}
-
 async function insertPhone(phonePayload, createdPhoneIds) {
   if (!phonePayload.phone) {
     return;
@@ -565,57 +388,9 @@ async function insertPhone(phonePayload, createdPhoneIds) {
   createdPhoneIds.push(phone.phone_id);
 }
 
-async function syncQuotationBranchPhone({
-  branchId,
-  phone,
-  createdPhoneIds,
-}) {
-  const normalizedPhone = getText(phone);
-
-  if (!branchId || !normalizedPhone) {
-    return;
-  }
-
-  const existingPhones = throwIfError(
-    await supabase
-      .from("phones")
-      .select("phone_id, is_primary, created_at")
-      .eq("branch_id", branchId)
-      .order("is_primary", { ascending: false })
-      .order("created_at", { ascending: true })
-      .limit(1),
-    "No fue posible verificar el teléfono de la sucursal",
-  );
-
-  const existingPhone = existingPhones?.[0] || null;
-  const phonePayload = {
-    business_id: null,
-    company_id: null,
-    branch_id: branchId,
-    phone: normalizedPhone,
-    type: "Oficina",
-    is_primary: true,
-  };
-
-  if (existingPhone) {
-    throwIfError(
-      await supabase
-        .from("phones")
-        .update(phonePayload)
-        .eq("phone_id", existingPhone.phone_id),
-      "No fue posible actualizar el teléfono de la sucursal",
-    );
-    return;
-  }
-
-  await insertPhone(phonePayload, createdPhoneIds);
-}
-
 async function rollbackQuotation({
   quotationId,
   businessId,
-  branchId,
-  representativeId,
   phoneIds,
 }) {
   try {
@@ -635,24 +410,13 @@ async function rollbackQuotation({
       await supabase.from("phones").delete().in("phone_id", phoneIds);
     }
 
-    if (representativeId) {
-      await supabase
-        .from("representatives")
-        .delete()
-        .eq("representative_id", representativeId);
-    }
-
-    if (branchId) {
-      await supabase.from("branches").delete().eq("branch_id", branchId);
-    }
-
     if (businessId) {
-      await supabase.from("emails").delete().eq("business_id", businessId);
+      await supabase.from("emails").delete().eq("customer_id", businessId);
 
       await supabase
-        .from("businesses")
+        .from("customers")
         .delete()
-        .eq("business_id", businessId);
+        .eq("customer_id", businessId);
     }
   } catch (rollbackError) {
     console.error(
@@ -790,159 +554,70 @@ export async function getQuotationClientByLegalId(legalId) {
     return null;
   }
 
-  const business = throwIfError(
+  const customer = throwIfError(
     await supabase
-      .from("businesses")
+      .from("customers")
       .select(
-        "business_id, company_id, identification_type, legal_id, legal_name, owner_name, business_name, activity_code, is_active",
+        "customer_id, company_id, identification_type, legal_id, company_name, owner_name, commercial_name, activity_code, province, city, district, address, latitude, longitude, location_accuracy_meters, is_active",
       )
       .eq("legal_id", normalizedLegalId)
       .maybeSingle(),
     "No fue posible buscar el cliente por identificación",
   );
 
-  if (!business) {
+  if (!customer) {
     return null;
   }
 
-  const [emails, businessPhones, branches] = await Promise.all([
+  const [emails, customerPhones] = await Promise.all([
     throwIfError(
       await supabase
         .from("emails")
-        .select("email_id, business_id, email, type, is_primary, created_at")
-        .eq("business_id", business.business_id),
+        .select("email_id, customer_id, email, type, is_primary, created_at")
+        .eq("customer_id", customer.customer_id),
       "No fue posible cargar los correos del cliente",
     ),
 
     throwIfError(
       await supabase
         .from("phones")
-        .select(
-          "phone_id, business_id, branch_id, phone, type, is_primary, created_at",
-        )
-        .eq("business_id", business.business_id)
-        .is("branch_id", null),
+        .select("phone_id, customer_id, phone, type, is_primary, created_at")
+        .eq("customer_id", customer.customer_id),
       "No fue posible cargar los telefonos del cliente",
     ),
-
-    throwIfError(
-      await supabase
-        .from("branches")
-        .select(
-          "branch_id, business_id, province, district, address, latitude, longitude, location_accuracy_meters, is_active, created_at",
-        )
-        .eq("business_id", business.business_id)
-        .order("created_at", { ascending: true }),
-      "No fue posible cargar las sucursales del cliente",
-    ),
   ]);
-
-  const activeBranch =
-    branches.find((branch) => branch.is_active !== false) || branches[0] || null;
-
-  const branchIds = branches.map((b) => b.branch_id).filter(Boolean);
-
-  const [allBranchPhones, allRepresentatives] = await Promise.all([
-    branchIds.length > 0
-      ? throwIfError(
-          await supabase
-            .from("phones")
-            .select("phone_id, branch_id, phone, type, is_primary, created_at")
-            .in("branch_id", branchIds),
-          "No fue posible cargar los telefonos de las sucursales",
-        )
-      : [],
-
-    throwIfError(
-      await supabase
-        .from("representatives")
-        .select(
-          "representative_id, business_id, branch_id, user_id, name, email, is_active, created_at",
-        )
-        .eq("business_id", business.business_id)
-        .order("created_at", { ascending: true }),
-      "No fue posible cargar los representantes del cliente",
-    ),
-  ]);
-
-  const getPhoneForBranch = (branchId) =>
-    getPrimaryValue(
-      allBranchPhones.filter((p) => p.branch_id === branchId),
-      "phone",
-    );
-
-  const getRepForBranch = (branchId) =>
-    allRepresentatives.find(
-      (r) => r.branch_id === branchId && r.is_active !== false,
-    ) ||
-    allRepresentatives.find((r) => r.branch_id === branchId) ||
-    null;
-
-  const activeBranchPhone = activeBranch?.branch_id
-    ? getPhoneForBranch(activeBranch.branch_id)
-    : "";
-
-  const activeRepresentative =
-    (activeBranch?.branch_id
-      ? getRepForBranch(activeBranch.branch_id)
-      : null) ||
-    allRepresentatives.find((r) => r.is_active !== false) ||
-    allRepresentatives[0] ||
-    null;
-
-  const allBranches = branches.map((branch) => {
-    const rep = getRepForBranch(branch.branch_id);
-    return {
-      branch_id: branch.branch_id,
-      province: branch.province || "",
-      district: branch.district || "",
-      address: branch.address || "",
-      latitude: branch.latitude,
-      longitude: branch.longitude,
-      location_accuracy_meters: branch.location_accuracy_meters,
-      is_active: branch.is_active !== false,
-      branchPhone: getPhoneForBranch(branch.branch_id),
-      representative: rep
-        ? {
-            representative_id: rep.representative_id,
-            name: rep.name || "",
-            email: rep.email || "",
-            user_id: rep.user_id || null,
-          }
-        : null,
-    };
-  });
 
   return {
-    businessId: business.business_id,
-    branchId: activeBranch?.branch_id || "",
-    representativeId: activeRepresentative?.representative_id || "",
+    businessId: customer.customer_id,
+    branchId: "",
+    representativeId: "",
 
-    companyId: business.company_id || "",
+    companyId: customer.company_id || "",
     identificationType:
-      business.identification_type === "personal" ? "personal" : "legal",
-    legalId: business.legal_id || normalizedLegalId,
-    legalName: business.legal_name || "",
-    ownerName: business.owner_name || "",
-    businessName: business.business_name || business.legal_name || "",
-    activityCode: business.activity_code || "",
+      customer.identification_type === "personal" ? "personal" : "legal",
+    legalId: customer.legal_id || normalizedLegalId,
+    legalName: customer.company_name || "",
+    ownerName: customer.owner_name || "",
+    businessName: customer.commercial_name || customer.company_name || "",
+    activityCode: customer.activity_code || "",
 
     businessEmail: getPrimaryValue(emails, "email"),
-    businessPhone: getPrimaryValue(businessPhones, "phone"),
+    businessPhone: getPrimaryValue(customerPhones, "phone"),
 
-    branchProvince: activeBranch?.province || "",
-    branchDistrict: activeBranch?.district || "",
-    branchAddress: activeBranch?.address || "",
-    branchPhone: activeBranchPhone,
-    branchLatitude: activeBranch?.latitude ?? "",
-    branchLongitude: activeBranch?.longitude ?? "",
-    branchLocationAccuracy: activeBranch?.location_accuracy_meters ?? "",
+    branchProvince: customer.province || "",
+    branchCity: customer.city || "",
+    branchDistrict: customer.district || "",
+    branchAddress: customer.address || "",
+    branchPhone: getPrimaryValue(customerPhones, "phone"),
+    branchLatitude: customer.latitude ?? "",
+    branchLongitude: customer.longitude ?? "",
+    branchLocationAccuracy: customer.location_accuracy_meters ?? "",
 
-    representativeName: activeRepresentative?.name || "",
-    representativeEmail: activeRepresentative?.email || "",
-    representativeUserId: activeRepresentative?.user_id || null,
+    representativeName: "",
+    representativeEmail: "",
+    representativeUserId: null,
 
-    allBranches,
+    allBranches: [],
   };
 }
 
@@ -953,9 +628,7 @@ export async function getQuotations({ ownerUserId } = {}) {
       `
         quotation_id,
         company_id,
-        business_id,
-        branch_id,
-        representative_id,
+        customer_id,
         quotation_number,
         status,
         state,
@@ -968,10 +641,17 @@ export async function getQuotations({ ownerUserId } = {}) {
         early_delivery_date,
         early_delivery_price,
         valid_until,
+        committed_delivery_date,
+        unexpected_delivery_date,
+        embroidery_amount,
+        sublimation_amount,
         iva_amount,
         subtotal,
         total,
         advance_payment,
+        advance_percentage,
+        discount_percentage,
+        discount_amount,
         method_id,
         payment_methods:method_id (
           method_id,
@@ -995,18 +675,8 @@ export async function getQuotations({ ownerUserId } = {}) {
     return [];
   }
 
-  const businessIds = [
-    ...new Set(quotations.map((item) => item.business_id).filter(Boolean)),
-  ];
-
-  const branchIds = [
-    ...new Set(quotations.map((item) => item.branch_id).filter(Boolean)),
-  ];
-
-  const representativeIds = [
-    ...new Set(
-      quotations.map((item) => item.representative_id).filter(Boolean),
-    ),
+  const customerIds = [
+    ...new Set(quotations.map((item) => item.customer_id).filter(Boolean)),
   ];
 
   const sellerIds = [
@@ -1015,39 +685,17 @@ export async function getQuotations({ ownerUserId } = {}) {
 
   const quotationIds = quotations.map((item) => item.quotation_id);
 
-  const [businesses, branches, representatives, sellers, quoteProducts] =
+  const [customers, sellers, quoteProducts] =
     await Promise.all([
-      businessIds.length
+      customerIds.length
         ? throwIfError(
             await supabase
-              .from("businesses")
+              .from("customers")
               .select(
-                "business_id, company_id, legal_id, legal_name, business_name, activity_code, is_active",
+                "customer_id, company_id, legal_id, company_name, commercial_name, activity_code, province, city, district, address, latitude, longitude, location_accuracy_meters, is_active",
               )
-              .in("business_id", businessIds),
+              .in("customer_id", customerIds),
             "No fue posible cargar los clientes de las cotizaciones",
-          )
-        : [],
-
-      branchIds.length
-        ? throwIfError(
-            await supabase
-              .from("branches")
-              .select("branch_id, business_id, province, district, address, latitude, longitude, location_accuracy_meters, is_active")
-              .in("branch_id", branchIds),
-            "No fue posible cargar las sucursales de las cotizaciones",
-          )
-        : [],
-
-      representativeIds.length
-        ? throwIfError(
-            await supabase
-              .from("representatives")
-              .select(
-                "representative_id, business_id, branch_id, user_id, name, email, is_active",
-              )
-              .in("representative_id", representativeIds),
-            "No fue posible cargar los representantes de las cotizaciones",
           )
         : [],
 
@@ -1065,32 +713,42 @@ export async function getQuotations({ ownerUserId } = {}) {
         await supabase
           .from("quote_products")
           .select(
-            "quote_product_id, quotation_id, product_id, variant_id, size_id, snapshot_sku, snapshot_gtin, snapshot_size_id, snapshot_size_name, snapshot_color, snapshot_description, snapshot_price, snapshot_tax_rate, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
+            "quote_product_id, quotation_id, variant_id, quantity, unit_price, iva_amount, has_sublimation, has_embroidery",
           )
           .in("quotation_id", quotationIds),
         "No fue posible cargar los productos de las cotizaciones",
       ),
     ]);
 
-  const productIds = [
-    ...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean)),
-  ];
-
-  const sizeIds = [
-    ...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean)),
-  ];
-
   const variantIds = [
     ...new Set(quoteProducts.map((item) => item.variant_id).filter(Boolean)),
   ];
 
-  const [products, variants, productFiles, sizes] = await Promise.all([
+  const variants = variantIds.length
+    ? throwIfError(
+        await supabase
+          .from("textiles_inventory")
+          .select("variant_id, product_id, sku, gtin, size_id, price, tax_rate:iva, stock:stock_quantity, minimum_stock, is_active")
+          .in("variant_id", variantIds),
+        "No fue posible cargar las variantes cotizadas",
+      )
+    : [];
+
+  const productIds = [
+    ...new Set(variants.map((item) => item.product_id).filter(Boolean)),
+  ];
+
+  const sizeIds = [
+    ...new Set(variants.map((item) => item.size_id).filter(Boolean)),
+  ];
+
+  const [products, productFiles, sizes] = await Promise.all([
     productIds.length
       ? throwIfError(
           await supabase
             .from("textile_products")
             .select(
-              "product_id, sku, product_name, description, price, iva, sublimation_price, embroidery_price",
+              "product_id, product_name, description, iva, sublimation_price, embroidery_price",
             )
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos cotizados",
@@ -1119,12 +777,12 @@ export async function getQuotations({ ownerUserId } = {}) {
       : [],
   ]);
 
-  const businessesById = indexById(businesses, "business_id");
+  const customersById = indexById(customers, "customer_id");
   const companyIds = [
     ...new Set(
       [
         ...quotations.map((item) => item.company_id),
-        ...businesses.map((item) => item.company_id),
+        ...customers.map((item) => item.company_id),
       ].filter(Boolean),
     ),
   ];
@@ -1141,15 +799,6 @@ export async function getQuotations({ ownerUserId } = {}) {
         )
       : [],
 
-    variantIds.length
-      ? throwIfError(
-          await supabase
-            .from("textile_product_variants")
-            .select("variant_id, product_id, sku, gtin, size_id, color:color_name, price, tax_rate:iva, stock:stock_quantity, minimum_stock, is_active")
-            .in("variant_id", variantIds),
-          "No fue posible cargar las variantes cotizadas",
-        )
-      : [],
     companyIds.length
       ? throwIfError(
           await supabase
@@ -1165,8 +814,6 @@ export async function getQuotations({ ownerUserId } = {}) {
     company.phones = phonesByCompanyId[company.company_id] || [];
   });
   const companiesById = indexById(companies, "company_id");
-  const branchesById = indexById(branches, "branch_id");
-  const representativesById = indexById(representatives, "representative_id");
   const sellersById = indexById(sellers, "user_id");
   const productsById = indexById(products, "product_id");
   const variantsById = indexById(variants, "variant_id");
@@ -1175,24 +822,41 @@ export async function getQuotations({ ownerUserId } = {}) {
   const quoteProductsByQuotationId = groupById(quoteProducts, "quotation_id");
 
   return quotations.map((quotation) => {
-    const business = businessesById[quotation.business_id];
+    const customer = customersById[quotation.customer_id];
     const quotationProducts = (
       quoteProductsByQuotationId[quotation.quotation_id] || []
     ).map((item) => ({
       ...item,
-      product: productsById[item.product_id],
+      product: productsById[variantsById[item.variant_id]?.product_id] || null,
       variant: variantsById[item.variant_id] || null,
-      productFiles: productFilesById[item.product_id] || [],
-      size: sizesById[item.snapshot_size_id || item.size_id] || null,
+      productFiles: productFilesById[variantsById[item.variant_id]?.product_id] || [],
+      size: sizesById[variantsById[item.variant_id]?.size_id] || null,
     }));
 
     return normalizeQuotation({
       quotation,
-      business,
+      business: customer
+        ? {
+            ...customer,
+            business_id: customer.customer_id,
+            legal_name: customer.company_name,
+            business_name: customer.commercial_name,
+          }
+        : null,
       groupCompany:
-        companiesById[quotation.company_id] || companiesById[business?.company_id],
-      branch: branchesById[quotation.branch_id],
-      representative: representativesById[quotation.representative_id],
+        companiesById[quotation.company_id] || companiesById[customer?.company_id],
+      branch: customer
+        ? {
+            province: customer.province || "",
+            city: customer.city || "",
+            district: customer.district || "",
+            address: customer.address || "",
+            latitude: customer.latitude,
+            longitude: customer.longitude,
+            location_accuracy_meters: customer.location_accuracy_meters,
+          }
+        : null,
+      representative: null,
       seller: sellersById[quotation.user_id],
       products: quotationProducts,
     });
@@ -1219,17 +883,15 @@ export async function updateQuotationStatus(quotationId, status) {
 }
 
 export async function createBusinessQuotation(payload) {
-  const normalizedPayload = normalizeQuotationPayload(payload);
+  const normalizedPayload = normalizeQuotationPayload(payload, {
+    getDbQuotationStatus,
+  });
   const { client, items, status } = normalizedPayload;
 
   let businessId = client.businessId || null;
-  let branchId = client.branchId || null;
-  let representativeId = client.representativeId || null;
 
   let quotationId = null;
   let createdBusinessId = null;
-  let createdBranchId = null;
-  let createdRepresentativeId = null;
 
   if (client.earlyDelivery && !client.earlyDeliveryDate) {
     throw new Error("Selecciona la fecha solicitada para la entrega anticipada.");
@@ -1247,40 +909,46 @@ export async function createBusinessQuotation(payload) {
 
       if (existingClient?.businessId) {
         businessId = existingClient.businessId;
-        branchId = branchId || existingClient.branchId || null;
-        representativeId =
-          representativeId || existingClient.representativeId || null;
       }
     }
 
     if (!businessId) {
       const businessResponse = await supabase
-        .from("businesses")
+        .from("customers")
         .insert({
           company_id: client.companyId,
           identification_type: client.identificationType,
           legal_id: client.legalId,
-          legal_name: client.legalName,
+          company_name: client.legalName,
           owner_name: client.ownerName,
-          business_name: client.businessName,
+          commercial_name: client.businessName,
           activity_code: client.activityCode,
+          regime: "general",
+          province: client.branchProvince || "",
+          city: client.branchCity || "",
+          district: client.branchDistrict || "",
+          address: client.branchAddress,
+          latitude: client.branchLatitude,
+          longitude: client.branchLongitude,
+          location_accuracy_meters: client.branchLocationAccuracy,
+          "isValidForCredit": "pending",
           is_active: true,
         })
-        .select("business_id")
+        .select("customer_id")
         .single();
 
-      const business = throwIfError(
+      const customer = throwIfError(
         businessResponse,
         "No fue posible crear el cliente",
       );
 
-      businessId = business.business_id;
+      businessId = customer.customer_id;
       createdBusinessId = businessId;
 
       if (client.businessEmail) {
         throwIfError(
           await supabase.from("emails").insert({
-            business_id: businessId,
+            customer_id: businessId,
             email: client.businessEmail,
             type: "Principal",
             is_primary: true,
@@ -1291,10 +959,8 @@ export async function createBusinessQuotation(payload) {
 
       await insertPhone(
         {
-          business_id: businessId,
+          customer_id: businessId,
           company_id: null,
-          branch_id: null,
-          representative_id: null,
           phone: client.businessPhone,
           type: "Principal",
           is_primary: true,
@@ -1304,91 +970,27 @@ export async function createBusinessQuotation(payload) {
     } else {
       throwIfError(
         await supabase
-          .from("businesses")
+          .from("customers")
           .update({
             company_id: client.companyId,
             identification_type: client.identificationType,
-            legal_name: client.legalName,
+            company_name: client.legalName,
             owner_name: client.ownerName,
-            business_name: client.businessName,
+            commercial_name: client.businessName,
             activity_code: client.activityCode,
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("business_id", businessId),
-        "No fue posible actualizar la empresa del grupo del cliente",
-      );
-    }
-
-    if (!branchId) {
-      const branchResponse = await supabase
-        .from("branches")
-        .insert({
-          business_id: businessId,
-          province: client.branchProvince,
-          district: client.branchDistrict,
-          address: client.branchAddress,
-          latitude: client.branchLatitude,
-          longitude: client.branchLongitude,
-          location_accuracy_meters: client.branchLocationAccuracy,
-          is_active: true,
-        })
-        .select("branch_id")
-        .single();
-
-      const branch = throwIfError(
-        branchResponse,
-        "No fue posible guardar la sucursal",
-      );
-
-      branchId = branch.branch_id;
-      createdBranchId = branchId;
-    } else if (
-      client.branchLatitude !== null &&
-      client.branchLongitude !== null
-    ) {
-      throwIfError(
-        await supabase
-          .from("branches")
-          .update({
+            province: client.branchProvince || "",
+            city: client.branchCity || "",
+            district: client.branchDistrict || "",
+            address: client.branchAddress,
             latitude: client.branchLatitude,
             longitude: client.branchLongitude,
             location_accuracy_meters: client.branchLocationAccuracy,
+            is_active: true,
             updated_at: new Date().toISOString(),
           })
-          .eq("branch_id", branchId),
-        "No fue posible actualizar la ubicación de la sucursal",
+          .eq("customer_id", businessId),
+        "No fue posible actualizar la empresa del grupo del cliente",
       );
-    }
-
-    await syncQuotationBranchPhone({
-      branchId,
-      phone: client.branchPhone,
-      createdPhoneIds,
-    });
-
-    if (!representativeId) {
-      const representativeResponse = await supabase
-        .from("representatives")
-        .insert({
-          business_id: businessId,
-          branch_id: branchId,
-          user_id: null,
-          name: client.representativeName,
-          email: client.representativeEmail,
-          is_active: true,
-        })
-        .select("representative_id")
-        .single();
-
-      const representative = throwIfError(
-        representativeResponse,
-        "No fue posible guardar el representante",
-      );
-
-      representativeId = representative.representative_id;
-      createdRepresentativeId = representativeId;
-      client.representativeUserId = null;
     }
 
     const subtotal = items.reduce(
@@ -1397,15 +999,17 @@ export async function createBusinessQuotation(payload) {
     );
     const ivaAmount = items.reduce((sum, item) => sum + item.iva_amount, 0);
     const total = subtotal + ivaAmount;
-    const advancePayment = total / 2;
+    const advancePercentage = Math.min(
+      100,
+      Math.max(0, getNumber(client.advancePercentage, 50)),
+    );
+    const advancePayment = total * (advancePercentage / 100);
 
     const quotationResponse = await supabase
       .from("quotations")
       .insert({
         company_id: client.companyId,
-        business_id: businessId,
-        branch_id: branchId,
-        representative_id: representativeId,
+        customer_id: businessId,
         quotation_number: createQuotationNumber("COT"),
         state: status,
         notes: client.notes,
@@ -1417,6 +1021,7 @@ export async function createBusinessQuotation(payload) {
         iva_amount: ivaAmount,
         total,
         advance_payment: advancePayment,
+        advance_percentage: advancePercentage,
         method_id: client.methodId || null,
       })
       .select(
@@ -1431,6 +1036,7 @@ export async function createBusinessQuotation(payload) {
         iva_amount,
         total,
         advance_payment,
+        advance_percentage,
         method_id
       `,
       )
@@ -1453,60 +1059,24 @@ export async function createBusinessQuotation(payload) {
       "No fue posible guardar los productos cotizados",
     );
 
-    let accessError = null;
-    let representativeAccessMessage = null;
-
-    if (representativeId && client.representativeEmail) {
-      try {
-        const accessResult = await createRepresentativeUser({
-          representative_id: representativeId,
-          business_id: businessId,
-          branch_id: branchId,
-          company_id: client.companyId,
-          name: client.representativeName,
-          email: client.representativeEmail,
-          quotation_id: quotationId,
-          quotation_number: quotation.quotation_number,
-        });
-
-        representativeAccessMessage = getRepresentativeAccessMessage(accessResult);
-
-        if (accessResult?.account_state === "active") {
-          try {
-            await notifyNewQuotation({ quotationId, representativeId });
-          } catch (notificationError) {
-            console.error(
-              "No fue posible enviar la notificacion de nueva cotizacion:",
-              notificationError,
-            );
-          }
-        }
-      } catch (error) {
-        console.error("No fue posible crear el acceso del representante:", error);
-        accessError =
-          "La cotizacion fue creada correctamente, pero no se pudo crear el acceso del representante.";
-      }
-    }
-
     return {
       businessId,
-      branchId,
-      representativeId,
+      branchId: "",
+      representativeId: "",
       quotationId,
       quotationNumber: quotation.quotation_number,
       earlyDelivery: quotation.early_delivery,
       earlyDeliveryDate: quotation.early_delivery_date,
       validUntil: quotation.valid_until,
       methodId: quotation.method_id,
-      accessError,
-      representativeAccessMessage,
+      advancePercentage: getNumber(quotation.advance_percentage, advancePercentage),
+      accessError: null,
+      representativeAccessMessage: null,
     };
   } catch (error) {
     await rollbackQuotation({
       quotationId,
       businessId: createdBusinessId,
-      branchId: createdBranchId,
-      representativeId: createdRepresentativeId,
       phoneIds: createdPhoneIds,
     });
 

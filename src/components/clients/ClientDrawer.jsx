@@ -34,6 +34,7 @@ export default function ClientDrawer({
   mode = "create",
   form,
   client,
+  allowLocationOnlyEdit = false,
   onFormChange,
   onClose,
   onSave,
@@ -42,6 +43,8 @@ export default function ClientDrawer({
   const content = drawerContent[mode] || drawerContent.create;
   const HeaderIcon = content.icon;
   const isViewMode = mode === "view";
+  const isLocationOnlyEdit =
+    mode === "edit" && allowLocationOnlyEdit;
 
   const handleSave = () => {
     if (isViewMode || isSaving || !onSave) {
@@ -79,11 +82,13 @@ export default function ClientDrawer({
               className="text-lg font-bold text-white flex items-center gap-2"
             >
               <HeaderIcon size={20} className="text-[#C9A227]" />
-              {content.title}
+              {isLocationOnlyEdit ? "Actualizar ubicación" : content.title}
             </h2>
 
             <p className="text-sm text-gray-400 mt-0.5">
-              {content.description}
+              {isLocationOnlyEdit
+                ? "Actualiza únicamente el pin del mapa para este cliente."
+                : content.description}
             </p>
           </div>
 
@@ -102,7 +107,12 @@ export default function ClientDrawer({
           {isViewMode ? (
             <ClientDetails client={client} />
           ) : (
-            <ClientForm form={form} onChange={onFormChange} />
+            <ClientForm
+              form={form}
+              onChange={onFormChange}
+              mode={mode}
+              allowLocationOnlyEdit={allowLocationOnlyEdit}
+            />
           )}
         </div>
 
@@ -122,9 +132,13 @@ export default function ClientDrawer({
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? "Guardando..." : content.saveLabel}
+            className="flex-1 bg-[#C9A227] hover:bg-[#B8921F] text-white text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+              {isSaving
+                ? "Guardando..."
+                : isLocationOnlyEdit
+                  ? "Guardar ubicación"
+                  : content.saveLabel}
             </button>
           )}
         </div>

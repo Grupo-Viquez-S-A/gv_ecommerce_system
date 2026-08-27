@@ -10,6 +10,7 @@ import {
   RiStoreFill,
   RiFileListFill,
   RiShoppingBagFill,
+  RiMapPinLine,
   RiCustomerService2Fill,
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";
@@ -233,6 +234,13 @@ function DashSideBar({
             icon={<RiGroupFill size={18} />}
             label="Clientes"
             to="/clientes"
+            collapsed={sidebarCollapsed}
+          />
+
+          <NavItem
+            icon={<RiMapPinLine size={18} />}
+            label="Rutas de visita"
+            to="/rutas-visita"
             collapsed={sidebarCollapsed}
           />
 
@@ -487,6 +495,13 @@ function DashSideBar({
               icon={<RiGroupFill size={18} />}
               label="Clientes"
               to="/clientes"
+              collapsed={false}
+            />
+
+            <NavItem
+              icon={<RiMapPinLine size={18} />}
+              label="Rutas de visita"
+              to="/rutas-visita"
               collapsed={false}
             />
 

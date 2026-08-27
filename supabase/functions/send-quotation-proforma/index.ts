@@ -243,7 +243,7 @@ Deno.serve(async (request) => {
     const { data: quotation, error: quotationError } = await supabaseAdmin
       .from("quotations")
       .select(
-        "quotation_id, quotation_number, company_id, business_id, branch_id, representative_id, user_id, state, status, is_active",
+        "quotation_id, quotation_number, company_id, customer_id, user_id, state, status, is_active",
       )
       .eq("quotation_id", quotationId)
       .maybeSingle();
@@ -262,38 +262,34 @@ Deno.serve(async (request) => {
         409,
       );
     }
-    if (!quotation.representative_id) {
-      return errorResponse(request, "La cotizacion no tiene representante asociado.", 409);
-    }
-
-    const [representativeResult, businessResult] = await Promise.all([
+    const [customerResult, emailResult] = await Promise.all([
       supabaseAdmin
-        .from("representatives")
-        .select("representative_id, business_id, branch_id, name, email, is_active")
-        .eq("representative_id", quotation.representative_id)
+        .from("customers")
+        .select("customer_id, company_id, commercial_name, company_name")
+        .eq("customer_id", quotation.customer_id)
         .maybeSingle(),
       supabaseAdmin
-        .from("businesses")
-        .select("business_id, company_id, business_name, legal_name")
-        .eq("business_id", quotation.business_id)
-        .maybeSingle(),
+        .from("emails")
+        .select("email")
+        .eq("customer_id", quotation.customer_id)
+        .order("is_primary", { ascending: false })
+        .limit(1),
     ]);
 
-    if (representativeResult.error || businessResult.error) {
+    if (customerResult.error || emailResult.error) {
       console.error("Quotation recipient lookup failed:", {
-        representative: representativeResult.error,
-        business: businessResult.error,
+        customer: customerResult.error,
+        email: emailResult.error,
       });
       return errorResponse(request, "No fue posible cargar el destinatario.", 500);
     }
 
-    const representative = representativeResult.data;
-    const business = businessResult.data;
-    if (!business) {
+    const customer = customerResult.data;
+    if (!customer) {
       return errorResponse(request, "No se encontro el cliente de la cotizacion.", 404);
     }
 
-    const companyId = quotation.company_id || business.company_id;
+    const companyId = quotation.company_id || customer.company_id;
     if (!companyId) {
       return errorResponse(request, "La cotizacion no tiene una empresa emisora valida.", 409);
     }
@@ -315,31 +311,16 @@ Deno.serve(async (request) => {
       return errorResponse(request, "Solo puedes enviar proformas de tus propias cotizaciones.", 403);
     }
 
-    if (
-      !representative ||
-      representative.is_active === false ||
-      representative.business_id !== quotation.business_id ||
-      (representative.branch_id &&
-        quotation.branch_id &&
-        representative.branch_id !== quotation.branch_id)
-    ) {
-      return errorResponse(
-        request,
-        "El representante no corresponde a la sucursal de la cotizacion.",
-        409,
-      );
-    }
-
-    const recipientEmail = String(representative.email || "").trim();
+    const recipientEmail = String(emailResult.data?.[0]?.email || "").trim();
     if (!isValidEmail(recipientEmail)) {
       return errorResponse(
         request,
-        "El representante de la sucursal no tiene un correo valido registrado.",
+        "El cliente no tiene un correo valido registrado.",
         409,
       );
     }
 
-    const businessName = business.business_name || business.legal_name || "el cliente";
+    const businessName = customer.commercial_name || customer.company_name || "el cliente";
     const quotationNumber = quotation.quotation_number || "Cotizacion";
     const filename = getAttachmentFilename(quotationNumber);
     const subject = `Proforma aprobada - ${quotationNumber}`;
@@ -349,12 +330,12 @@ Deno.serve(async (request) => {
       to: recipientEmail,
       subject,
       text: buildEmailText({
-        representativeName: representative.name || "",
+        representativeName: businessName,
         businessName,
         quotationNumber,
       }),
       html: buildEmailHtml({
-        representativeName: representative.name || "",
+        representativeName: businessName,
         businessName,
         quotationNumber,
       }),

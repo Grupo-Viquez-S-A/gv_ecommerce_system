@@ -12,10 +12,10 @@ import CatalogFilters from "../components/catalog/CatalogFilters";
 import { EMPTY_CATALOG_FILTERS } from "../components/catalog/catalogFilterDefaults.js";
 import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
-import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
 import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
+import { hasPetCategoryProducts } from "../components/catalog/petCategoryUtils";
 
 import ClientCatalogGrid from "../components/clientCatalog/ClientCatalogGrid";
 
@@ -30,6 +30,7 @@ import {
   createCatalogFilterId,
   getCatalogProducts,
 } from "../services/catalogService.js";
+import { getInventorySizeLabel } from "../utils/inventorySizes.js";
 
 const PAGE_SIZE = 8;
 
@@ -38,7 +39,7 @@ export default function ClientCatalog({ showPrices = false }) {
   const catalogRequestRef = useRef(0);
 
   const [activeCatalog, setActiveCatalog] = useState(
-    CATALOG_TYPES.FABRICS,
+    CATALOG_TYPES.TEXTILE_PRODUCTS,
   );
 
   const [products, setProducts] = useState([]);
@@ -50,11 +51,6 @@ export default function ClientCatalog({ showPrices = false }) {
 
   const [selectedProductDetails, setSelectedProductDetails] =
     useState(null);
-
-  const [
-    selectedTechnicalSheetProduct,
-    setSelectedTechnicalSheetProduct,
-  ] = useState(null);
 
   const [filters, setFilters] = useState(
     EMPTY_CATALOG_FILTERS,
@@ -301,35 +297,6 @@ export default function ClientCatalog({ showPrices = false }) {
     );
   }, [products, isTextileProductsCatalog]);
 
-  const collections = useMemo(() => {
-    if (!isTextileProductsCatalog) {
-      return [];
-    }
-
-    const uniqueCollections = new Map();
-
-    products.forEach((product) => {
-      const collection = product.collection;
-
-      if (
-        collection?.collection_id &&
-        !uniqueCollections.has(collection.collection_id)
-      ) {
-        uniqueCollections.set(
-          collection.collection_id,
-          collection,
-        );
-      }
-    });
-
-    return Array.from(uniqueCollections.values()).sort(
-      (first, second) =>
-        first.collection_name.localeCompare(
-          second.collection_name,
-        ),
-    );
-  }, [products, isTextileProductsCatalog]);
-
   const sizes = useMemo(() => {
     if (!isTextileProductsCatalog) {
       return [];
@@ -348,9 +315,10 @@ export default function ClientCatalog({ showPrices = false }) {
       });
     });
 
-    return Array.from(uniqueSizes.values()).sort(
-      (first, second) =>
-        first.size_name.localeCompare(second.size_name),
+    return Array.from(uniqueSizes.values()).sort((first, second) =>
+      getInventorySizeLabel(first.size_name).localeCompare(
+        getInventorySizeLabel(second.size_name),
+      ),
     );
   }, [products, isTextileProductsCatalog]);
 
@@ -366,7 +334,6 @@ export default function ClientCatalog({ showPrices = false }) {
         product.description,
         product.category?.category_name,
         product.product_type?.product_type,
-        product.collection?.collection_name,
         product.size,
         product.length,
         product.width,
@@ -384,11 +351,11 @@ export default function ClientCatalog({ showPrices = false }) {
           (management) => management.management,
         ),
         ...(product.available_sizes || []).map(
-          (size) => size.size_name,
+          (size) => getInventorySizeLabel(size.size_name),
         ),
         ...(product.measurements || []).map(
           (measurement) =>
-            `${measurement.size_name} ${measurement.dimension_name}`,
+            `${getInventorySizeLabel(measurement.size_name)} ${measurement.dimension_name}`,
         ),
       ]
         .filter(Boolean)
@@ -427,12 +394,6 @@ export default function ClientCatalog({ showPrices = false }) {
             filters.color,
         );
 
-      const matchesCollection =
-        !isTextileProductsCatalog ||
-        !filters.collectionId ||
-        product.collection?.collection_id ===
-          filters.collectionId;
-
       const matchesSize =
         !isTextileProductsCatalog ||
         !filters.sizeId ||
@@ -446,7 +407,6 @@ export default function ClientCatalog({ showPrices = false }) {
         matchesType &&
         matchesMaterial &&
         matchesColor &&
-        matchesCollection &&
         matchesSize
       );
     });
@@ -476,13 +436,19 @@ export default function ClientCatalog({ showPrices = false }) {
     );
   }, [filteredProducts, safeCurrentPage]);
 
+  const shouldShowPetNotice = useMemo(
+    () =>
+      isTextileProductsCatalog &&
+      hasPetCategoryProducts(filteredProducts),
+    [filteredProducts, isTextileProductsCatalog],
+  );
+
   const hasActiveFilters = Boolean(
     filters.search.trim() ||
       filters.categoryId ||
       filters.typeId ||
       filters.materialId ||
       filters.color ||
-      filters.collectionId ||
       filters.sizeId,
   );
 
@@ -506,8 +472,6 @@ export default function ClientCatalog({ showPrices = false }) {
     setFilters(EMPTY_CATALOG_FILTERS);
     setCurrentPage(1);
     setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(null);
-
     scrollCatalogToTop();
   };
 
@@ -528,8 +492,6 @@ export default function ClientCatalog({ showPrices = false }) {
 
     setCurrentPage(1);
     setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(null);
-
     scrollCatalogToTop();
   };
 
@@ -583,15 +545,6 @@ export default function ClientCatalog({ showPrices = false }) {
     setSelectedProductDetails(product);
   };
 
-  const handleOpenTechnicalSheet = (product) => {
-    if (!product) {
-      return;
-    }
-
-    setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(product);
-  };
-
   const handleRefreshCatalog = () => {
     loadCatalog();
   };
@@ -613,7 +566,7 @@ export default function ClientCatalog({ showPrices = false }) {
           onChange={handleCatalogChange}
         />
 
-        <PetCostumeNotice />
+        {shouldShowPetNotice && <PetCostumeNotice />}
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
@@ -674,7 +627,6 @@ export default function ClientCatalog({ showPrices = false }) {
               productTypes={productTypes}
               materials={materials}
               colors={colors}
-              collections={collections}
               sizes={sizes}
               onFiltersChange={handleFiltersChange}
               onClearFilters={handleClearFilters}
@@ -797,16 +749,7 @@ export default function ClientCatalog({ showPrices = false }) {
 
       <CatalogProductDetailsModal
         product={selectedProductDetails}
-        showPrice={showPrices}
         onClose={() => setSelectedProductDetails(null)}
-        onViewTechnicalSheet={handleOpenTechnicalSheet}
-      />
-
-      <CatalogTechnicalSheetModal
-        product={selectedTechnicalSheetProduct}
-        onClose={() =>
-          setSelectedTechnicalSheetProduct(null)
-        }
       />
     </>
   );

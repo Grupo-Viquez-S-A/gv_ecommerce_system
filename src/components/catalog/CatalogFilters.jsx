@@ -5,6 +5,7 @@
 } from "lucide-react";
 
 import { EMPTY_CATALOG_FILTERS } from "./catalogFilterDefaults.js";
+import { getInventorySizeLabel } from "../../utils/inventorySizes.js";
 
 function SelectField({
   id,
@@ -58,7 +59,6 @@ export default function CatalogFilters({
   productTypes = [],
   materials = [],
   colors = [],
-  collections = [],
   sizes = [],
   onFiltersChange,
   onClearFilters,
@@ -72,7 +72,6 @@ export default function CatalogFilters({
       filters.typeId ||
       filters.materialId ||
       filters.color ||
-      filters.collectionId ||
       filters.sizeId,
   );
 
@@ -195,30 +194,13 @@ export default function CatalogFilters({
         {isTextileProductsCatalog ? (
           <>
             <SelectField
-              id="catalog-collection"
-              label="Colección"
-              value={filters.collectionId}
-              defaultLabel="Todas"
-              options={collections}
-              getOptionValue={(collection) =>
-                collection.collection_id
-              }
-              getOptionLabel={(collection) =>
-                collection.collection_name
-              }
-              onChange={(value) =>
-                handleChange("collectionId", value)
-              }
-            />
-
-            <SelectField
               id="catalog-size"
               label="Talla o medida"
               value={filters.sizeId}
               defaultLabel="Todas"
               options={sizes}
               getOptionValue={(size) => size.size_id}
-              getOptionLabel={(size) => size.size_name}
+              getOptionLabel={(size) => getInventorySizeLabel(size.size_name)}
               onChange={(value) =>
                 handleChange("sizeId", value)
               }

@@ -12,11 +12,10 @@ export default function ClientsTable({
   endItem = 0,
   onPageChange,
   onClearFilters,
-  onOpenBranches,
-  onOpenRepresentatives,
   onView,
   onEdit,
   onDeactivate,
+  onDelete,
   emptyTitle,
   emptyDescription,
 }) {
@@ -97,11 +96,10 @@ export default function ClientsTable({
                     <td className="px-5 py-3">
                       <ClientActionButtons
                         client={client}
-                        onOpenBranches={onOpenBranches}
-                        onOpenRepresentatives={onOpenRepresentatives}
                         onView={onView}
                         onEdit={onEdit}
                         onDeactivate={onDeactivate}
+                        onDelete={onDelete}
                       />
                     </td>
                   </tr>

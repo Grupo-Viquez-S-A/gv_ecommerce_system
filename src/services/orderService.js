@@ -152,7 +152,7 @@ export async function getSalesOrders({
   let ordersQuery = supabase
     .from("production_orders")
     .select(
-      "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
+      "production_order_id, quotation_id, production_order_code, production_order_status, payment_status, next_payment_date, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
     )
     .eq("is_active", true)
     .order("created_at", { ascending: false });
@@ -178,7 +178,7 @@ export async function getSalesOrders({
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, total, early_delivery, early_delivery_date, created_at",
+        "quotation_id, business_id:customer_id, user_id, quotation_number, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, created_at",
       )
       .in("quotation_id", quotationIds),
     "No fue posible cargar las cotizaciones asociadas",
@@ -190,31 +190,18 @@ export async function getSalesOrders({
     ...new Set(quotations.map((quotation) => quotation.business_id).filter(Boolean)),
   ];
 
-  const branchIds = [
-    ...new Set(quotations.map((quotation) => quotation.branch_id).filter(Boolean)),
-  ];
-
   const sellerUserIds = [
     ...new Set(quotations.map((quotation) => quotation.user_id).filter(Boolean)),
   ];
 
-  const [businesses, branches, sellerProfiles] = await Promise.all([
+  const [businesses, sellerProfiles] = await Promise.all([
     businessIds.length
       ? throwIfError(
           await supabase
-            .from("businesses")
-            .select("business_id, business_name, legal_name")
-            .in("business_id", businessIds),
+            .from("customers")
+            .select("business_id:customer_id, business_name:commercial_name, legal_name:company_name, province, district")
+            .in("customer_id", businessIds),
           "No fue posible cargar los clientes",
-        )
-      : [],
-    branchIds.length
-      ? throwIfError(
-          await supabase
-            .from("branches")
-            .select("branch_id, province, district")
-            .in("branch_id", branchIds),
-          "No fue posible cargar las sucursales",
         )
       : [],
     sellerUserIds.length
@@ -229,13 +216,11 @@ export async function getSalesOrders({
   ]);
 
   const businessesById = indexRowsByKey(businesses, "business_id");
-  const branchesById = indexRowsByKey(branches, "branch_id");
   const sellerProfilesById = indexRowsByKey(sellerProfiles, "user_id");
 
   return orders.map((order) => {
     const quotation = quotationsById[order.quotation_id] || null;
     const business = quotation ? businessesById[quotation.business_id] : null;
-    const branch = quotation ? branchesById[quotation.branch_id] : null;
     const sellerProfile = quotation
       ? sellerProfilesById[quotation.user_id]
       : null;
@@ -243,8 +228,8 @@ export async function getSalesOrders({
     const clientName =
       business?.business_name || business?.legal_name || "Cliente sin nombre";
 
-    const branchLabel = branch
-      ? [branch.district, branch.province].filter(Boolean).join(", ")
+    const branchLabel = business
+      ? [business.district, business.province].filter(Boolean).join(", ")
       : null;
 
     const sellerName =
@@ -276,8 +261,8 @@ export async function getSalesOrders({
       productionStatus,
       productionStatusLabel:
         PRODUCTION_STATUS_LABELS[productionStatus] || productionStatus,
-      committedDeliveryDate: order.committed_delivery_date,
-      unexpectedDeliveryDate: order.unexpected_delivery_date,
+      committedDeliveryDate: quotation?.committed_delivery_date || null,
+      unexpectedDeliveryDate: quotation?.unexpected_delivery_date || null,
       nextPaymentDate: order.next_payment_date,
       overdueDays: getNumber(order.overdue_days, 0),
       penaltyAmount: getNumber(order.penalty_amount, 0),
@@ -299,7 +284,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("production_orders")
       .select(
-        "production_order_id, quotation_id, production_order_code, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, status_change_note, status_changed_at, status_changed_by, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
+        "production_order_id, quotation_id, production_order_code, production_order_status, payment_status, next_payment_date, status_change_note, status_changed_at, status_changed_by, is_active, created_at, updated_at, balance, overdue_days, penalty_amount, penalty_percentage, paid_at",
       )
       .eq("production_order_id", productionOrderId)
       .eq("is_active", true)
@@ -315,7 +300,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id, branch_id, representative_id, user_id, quotation_number, status, state, notes, is_active, created_at, updated_at, total, early_delivery, early_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id:customer_id, user_id, quotation_number, status, state, notes, is_active, created_at, updated_at, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, payment_methods:method_id ( method_id, method_name )",
       )
       .eq("quotation_id", order.quotation_id)
       .eq("is_active", true)
@@ -331,33 +316,37 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("quote_products")
       .select(
-        "quote_product_id, quotation_id, product_id, variant_id, size_id, snapshot_sku, snapshot_gtin, snapshot_size_id, snapshot_size_name, snapshot_color, snapshot_description, snapshot_price, snapshot_tax_rate, quantity, unit_price, iva_amount, subtotal, total, has_sublimation, has_embroidery",
+        "quote_product_id, quotation_id, variant_id, quantity, unit_price, iva_amount, has_sublimation, has_embroidery",
       )
       .eq("quotation_id", quotation.quotation_id),
     "No fue posible cargar los productos de la orden",
   );
 
-  const productIds = [...new Set(quoteProducts.map((item) => item.product_id).filter(Boolean))];
-  const sizeIds = [...new Set(quoteProducts.map((item) => item.size_id).filter(Boolean))];
   const variantIds = [...new Set(quoteProducts.map((item) => item.variant_id).filter(Boolean))];
 
-  const [products, variants, productFiles, sizes, payments, statusHistory] = await Promise.all([
+  const variants = variantIds.length
+      ? throwIfError(
+          await supabase
+            .from("textiles_inventory")
+            .select(
+              "variant_id, product_id, sku, gtin, size_id, price, tax_rate:iva, stock:stock_quantity, minimum_stock",
+            )
+            .in("variant_id", variantIds),
+          "No fue posible cargar las variantes de la orden",
+        )
+      : [];
+
+  const productIds = [...new Set(variants.map((item) => item.product_id).filter(Boolean))];
+  const sizeIds = [...new Set(variants.map((item) => item.size_id).filter(Boolean))];
+
+  const [products, productFiles, sizes, payments, statusHistory] = await Promise.all([
     productIds.length
       ? throwIfError(
           await supabase
             .from("textile_products")
-            .select("product_id, sku, product_name, description, price, iva, sublimation_price, embroidery_price")
+            .select("product_id, product_name, description, iva, sublimation_price, embroidery_price")
             .in("product_id", productIds),
           "No fue posible cargar el catalogo de productos",
-        )
-      : [],
-    variantIds.length
-      ? throwIfError(
-          await supabase
-            .from("textile_product_variants")
-            .select("variant_id, sku, gtin, price, tax_rate:iva, stock:stock_quantity, minimum_stock")
-            .in("variant_id", variantIds),
-          "No fue posible cargar las variantes de la orden",
         )
       : [],
     productIds.length
@@ -404,36 +393,41 @@ export async function getSalesOrderDetail(productionOrderId) {
   const filesByProductId = groupRowsByKey(productFiles, "product_id");
   const sizesById = indexRowsByKey(sizes, "size_id");
   const amountPaid = payments.reduce((sum, payment) => sum + getNumber(payment.amount, 0), 0);
+  const quotationEmbroideryAmount = getNumber(quotation.embroidery_amount, 0);
+  const quotationSublimationAmount = getNumber(quotation.sublimation_amount, 0);
 
   const items = quoteProducts.map((item) => {
-    const product = productsById[item.product_id];
-    const variant = variantsById[item.variant_id];
+    const variant = variantsById[item.variant_id] || null;
+    const product = variant ? productsById[variant.product_id] : null;
     const hasSublimation = item.has_sublimation === true;
     const hasEmbroidery = item.has_embroidery === true;
+    const unitPrice = getNumber(item.unit_price, 0);
+    const quantity = getNumber(item.quantity, 0);
+    const ivaAmount = getNumber(item.iva_amount, 0);
 
     return {
       id: item.quote_product_id,
       quoteProductId: item.quote_product_id,
       quotationId: item.quotation_id,
-      productId: item.product_id,
+      productId: variant?.product_id || product?.product_id || null,
       variantId: item.variant_id || null,
-      gtin: item.snapshot_gtin || null,
+      gtin: variant?.gtin || null,
       name: product?.product_name || "Producto sin nombre",
-      sku: item.snapshot_sku || variant?.sku || product?.sku || item.product_id || "Sin codigo",
-      color: item.snapshot_color || null,
-      description: item.snapshot_description || product?.description || "",
-      imageUrl: getProductImageUrl(filesByProductId[item.product_id] || []),
-      sizeName: item.snapshot_size_name || sizesById[item.snapshot_size_id || item.size_id]?.size_name || null,
-      quantity: getNumber(item.quantity, 0),
-      unitPrice: getNumber(item.snapshot_price, getNumber(item.unit_price, 0)),
-      taxRate: getNumber(item.snapshot_tax_rate, 0),
-      ivaAmount: getNumber(item.iva_amount, 0),
-      subtotal: getNumber(item.subtotal, 0),
-      total: getNumber(item.total, 0),
+      sku: variant?.sku || product?.sku || variant?.product_id || "Sin codigo",
+      color: null,
+      description: product?.description || "",
+      imageUrl: getProductImageUrl(filesByProductId[variant?.product_id] || []),
+      sizeName: sizesById[variant?.size_id]?.size_name || null,
+      quantity,
+      unitPrice,
+      taxRate: getNumber(variant?.tax_rate, getNumber(product?.iva, 0)),
+      ivaAmount,
+      subtotal: unitPrice * quantity,
+      total: unitPrice * quantity + ivaAmount,
       hasSublimation,
       hasEmbroidery,
-      sublimationPrice: hasSublimation ? getNumber(product?.sublimation_price, 0) : 0,
-      embroideryPrice: hasEmbroidery ? getNumber(product?.embroidery_price, 0) : 0,
+      sublimationPrice: hasSublimation ? quotationSublimationAmount : 0,
+      embroideryPrice: hasEmbroidery ? quotationEmbroideryAmount : 0,
     };
   });
 
@@ -448,8 +442,8 @@ export async function getSalesOrderDetail(productionOrderId) {
     paymentMethod: quotation.payment_methods?.method_name || "No definido",
     earlyDelivery: quotation.early_delivery === true,
     earlyDeliveryDate: quotation.early_delivery_date || null,
-    committedDeliveryDate: order.committed_delivery_date,
-    unexpectedDeliveryDate: order.unexpected_delivery_date,
+    committedDeliveryDate: quotation.committed_delivery_date || null,
+    unexpectedDeliveryDate: quotation.unexpected_delivery_date || null,
     nextPaymentDate: order.next_payment_date,
     statusChangeNote: order.status_change_note || "",
     statusChangedAt: order.status_changed_at,
@@ -463,6 +457,8 @@ export async function getSalesOrderDetail(productionOrderId) {
     createdAt: order.created_at,
     updatedAt: order.updated_at,
     total: getNumber(quotation.total, 0),
+    embroideryAmount: quotationEmbroideryAmount,
+    sublimationAmount: quotationSublimationAmount,
     itemsCount: items.length,
     notes: quotation.notes || "",
     statusHistory: (statusHistory || []).map((entry) => ({
@@ -521,13 +517,17 @@ export async function updateProductionOrderDetails(productionOrderId, values = {
   }
 
   const updates = {};
+  const quotationUpdates = {};
+  let requiresQuotationUpdate = false;
 
   if (Object.prototype.hasOwnProperty.call(values, "committedDeliveryDate")) {
-    updates.committed_delivery_date = normalizeDateInput(values.committedDeliveryDate);
+    quotationUpdates.committed_delivery_date = normalizeDateInput(values.committedDeliveryDate);
+    requiresQuotationUpdate = true;
   }
 
   if (Object.prototype.hasOwnProperty.call(values, "unexpectedDeliveryDate")) {
-    updates.unexpected_delivery_date = normalizeDateInput(values.unexpectedDeliveryDate);
+    quotationUpdates.unexpected_delivery_date = normalizeDateInput(values.unexpectedDeliveryDate);
+    requiresQuotationUpdate = true;
   }
 
   if (Object.prototype.hasOwnProperty.call(values, "nextPaymentDate")) {
@@ -566,23 +566,56 @@ export async function updateProductionOrderDetails(productionOrderId, values = {
     updates.penalty_percentage = Math.round(numericPercentage * 100) / 100;
   }
 
-  if (!Object.keys(updates).length) {
+  if (!Object.keys(updates).length && !requiresQuotationUpdate) {
     throw new Error("No hay cambios para guardar.");
   }
 
   updates.updated_at = new Date().toISOString();
 
+  const shouldUpdateProductionOrder =
+    Object.keys(updates).some((key) => key !== "updated_at") || !requiresQuotationUpdate;
+
   const updatedOrder = throwIfError(
-    await supabase
-      .from("production_orders")
-      .update(updates)
-      .eq("production_order_id", productionOrderId)
-      .select(
-        "production_order_id, committed_delivery_date, unexpected_delivery_date, production_order_status, payment_status, next_payment_date, status_change_note, status_changed_at, updated_at, penalty_percentage",
-      )
-      .maybeSingle(),
-    "No fue posible actualizar la orden de produccion",
+    await (shouldUpdateProductionOrder
+      ? supabase
+          .from("production_orders")
+          .update(updates)
+          .eq("production_order_id", productionOrderId)
+          .select(
+            "production_order_id, quotation_id, production_order_status, payment_status, next_payment_date, status_change_note, status_changed_at, updated_at, penalty_percentage",
+          )
+          .maybeSingle()
+      : supabase
+          .from("production_orders")
+          .select(
+            "production_order_id, quotation_id, production_order_status, payment_status, next_payment_date, status_change_note, status_changed_at, updated_at, penalty_percentage",
+          )
+          .eq("production_order_id", productionOrderId)
+          .maybeSingle()),
+    shouldUpdateProductionOrder
+      ? "No fue posible actualizar la orden de produccion"
+      : "No fue posible cargar la orden de produccion",
   );
+
+  let updatedQuotation = null;
+
+  if (requiresQuotationUpdate) {
+    if (!updatedOrder?.quotation_id) {
+      throw new Error("No se encontro la cotizacion asociada a la orden de produccion.");
+    }
+
+    quotationUpdates.updated_at = new Date().toISOString();
+
+    updatedQuotation = throwIfError(
+      await supabase
+        .from("quotations")
+        .update(quotationUpdates)
+        .eq("quotation_id", updatedOrder.quotation_id)
+        .select("quotation_id, committed_delivery_date, unexpected_delivery_date")
+        .maybeSingle(),
+      "No fue posible actualizar las fechas de entrega de la cotizacion",
+    );
+  }
 
   const productionStatus = String(
     updatedOrder.production_order_status || "pendiente",
@@ -591,8 +624,8 @@ export async function updateProductionOrderDetails(productionOrderId, values = {
 
   return {
     productionOrderId: updatedOrder.production_order_id,
-    committedDeliveryDate: updatedOrder.committed_delivery_date,
-    unexpectedDeliveryDate: updatedOrder.unexpected_delivery_date,
+    committedDeliveryDate: updatedQuotation?.committed_delivery_date ?? null,
+    unexpectedDeliveryDate: updatedQuotation?.unexpected_delivery_date ?? null,
     nextPaymentDate: updatedOrder.next_payment_date,
     statusChangeNote: updatedOrder.status_change_note || "",
     statusChangedAt: updatedOrder.status_changed_at,

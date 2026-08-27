@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -10,7 +10,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -44,106 +69,6 @@ export type Database = {
         }
         Relationships: []
       }
-      branches: {
-        Row: {
-          address: string
-          branch_id: string
-          business_id: string
-          created_at: string
-          district: string | null
-          is_active: boolean
-          latitude: number | null
-          location_accuracy_meters: number | null
-          longitude: number | null
-          province: string | null
-          updated_at: string
-        }
-        Insert: {
-          address: string
-          branch_id?: string
-          business_id: string
-          created_at?: string
-          district?: string | null
-          is_active?: boolean
-          latitude?: number | null
-          location_accuracy_meters?: number | null
-          longitude?: number | null
-          province?: string | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string
-          branch_id?: string
-          business_id?: string
-          created_at?: string
-          district?: string | null
-          is_active?: boolean
-          latitude?: number | null
-          location_accuracy_meters?: number | null
-          longitude?: number | null
-          province?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branches_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["business_id"]
-          },
-        ]
-      }
-      businesses: {
-        Row: {
-          activity_code: string | null
-          business_id: string
-          business_name: string | null
-          company_id: string
-          created_at: string
-          identification_type: string
-          is_active: boolean
-          legal_id: string
-          legal_name: string | null
-          owner_name: string | null
-          updated_at: string
-        }
-        Insert: {
-          activity_code?: string | null
-          business_id?: string
-          business_name?: string | null
-          company_id: string
-          created_at?: string
-          identification_type?: string
-          is_active?: boolean
-          legal_id: string
-          legal_name?: string | null
-          owner_name?: string | null
-          updated_at?: string
-        }
-        Update: {
-          activity_code?: string | null
-          business_id?: string
-          business_name?: string | null
-          company_id?: string
-          created_at?: string
-          identification_type?: string
-          is_active?: boolean
-          legal_id?: string
-          legal_name?: string | null
-          owner_name?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "businesses_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["company_id"]
-          },
-        ]
-      }
       categories: {
         Row: {
           catalog_slug: string | null
@@ -173,71 +98,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      category_product_types: {
-        Row: {
-          category_id: string
-          created_at: string
-          type_id: string
-        }
-        Insert: {
-          category_id: string
-          created_at?: string
-          type_id: string
-        }
-        Update: {
-          category_id?: string
-          created_at?: string
-          type_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_category_product_types_category"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["category_id"]
-          },
-          {
-            foreignKeyName: "fk_category_product_types_type"
-            columns: ["type_id"]
-            isOneToOne: false
-            referencedRelation: "product_types"
-            referencedColumns: ["type_id"]
-          },
-        ]
-      }
-      color_variants: {
-        Row: {
-          color: string | null
-          fabric_id: string
-          hex_color: string | null
-          id: string
-          quantity: number | null
-        }
-        Insert: {
-          color?: string | null
-          fabric_id: string
-          hex_color?: string | null
-          id?: string
-          quantity?: number | null
-        }
-        Update: {
-          color?: string | null
-          fabric_id?: string
-          hex_color?: string | null
-          id?: string
-          quantity?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "color_variants_fabric_id_fkey"
-            columns: ["fabric_id"]
-            isOneToOne: false
-            referencedRelation: "fabrics"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       companies: {
         Row: {
@@ -274,6 +134,89 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      customers: {
+        Row: {
+          activity_code: string | null
+          address: string | null
+          city: string
+          commercial_name: string | null
+          company_id: string
+          company_name: string | null
+          created_at: string
+          customer_code: string | null
+          customer_id: string
+          district: string
+          identification_type: string
+          is_active: boolean
+          isValidForCredit: string
+          latitude: number | null
+          legal_id: string
+          location_accuracy_meters: number | null
+          longitude: number | null
+          owner_name: string | null
+          province: string
+          regime: string
+          tax_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_code?: string | null
+          address?: string | null
+          city: string
+          commercial_name?: string | null
+          company_id: string
+          company_name?: string | null
+          created_at?: string
+          customer_code?: string | null
+          customer_id?: string
+          district: string
+          identification_type?: string
+          is_active?: boolean
+          isValidForCredit: string
+          latitude?: number | null
+          legal_id: string
+          location_accuracy_meters?: number | null
+          longitude?: number | null
+          owner_name?: string | null
+          province: string
+          regime: string
+          tax_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_code?: string | null
+          address?: string | null
+          city?: string
+          commercial_name?: string | null
+          company_id?: string
+          company_name?: string | null
+          created_at?: string
+          customer_code?: string | null
+          customer_id?: string
+          district?: string
+          identification_type?: string
+          is_active?: boolean
+          isValidForCredit?: string
+          latitude?: number | null
+          legal_id?: string
+          location_accuracy_meters?: number | null
+          longitude?: number | null
+          owner_name?: string | null
+          province?: string
+          regime?: string
+          tax_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
+          },
+        ]
       }
       department_modules: {
         Row: {
@@ -356,50 +299,56 @@ export type Database = {
       dimensions: {
         Row: {
           created_at: string
-          dimension_code: string
           dimension_id: string
           dimension_name: string
           display_order: number
+          heigth: string
+          lenght: string | null
           updated_at: string
+          width: string | null
         }
         Insert: {
           created_at?: string
-          dimension_code: string
           dimension_id?: string
           dimension_name: string
           display_order?: number
+          heigth?: string
+          lenght?: string | null
           updated_at?: string
+          width?: string | null
         }
         Update: {
           created_at?: string
-          dimension_code?: string
           dimension_id?: string
           dimension_name?: string
           display_order?: number
+          heigth?: string
+          lenght?: string | null
           updated_at?: string
+          width?: string | null
         }
         Relationships: []
       }
       emails: {
         Row: {
-          business_id: string
           created_at: string
+          customer_id: string
           email: string
           email_id: string
           is_primary: boolean
           type: string | null
         }
         Insert: {
-          business_id: string
           created_at?: string
+          customer_id: string
           email: string
           email_id?: string
           is_primary?: boolean
           type?: string | null
         }
         Update: {
-          business_id?: string
           created_at?: string
+          customer_id?: string
           email?: string
           email_id?: string
           is_primary?: boolean
@@ -407,126 +356,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "emails_business_id_fkey"
-            columns: ["business_id"]
+            foreignKeyName: "emails_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["business_id"]
-          },
-        ]
-      }
-      fabric_files: {
-        Row: {
-          created_at: string | null
-          fabric_id: string
-          file_name: string | null
-          file_path: string | null
-          file_size: number | null
-          file_type: string | null
-          id: string
-          mime_type: string | null
-          public_url: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          fabric_id: string
-          file_name?: string | null
-          file_path?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          id?: string
-          mime_type?: string | null
-          public_url?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          fabric_id?: string
-          file_name?: string | null
-          file_path?: string | null
-          file_size?: number | null
-          file_type?: string | null
-          id?: string
-          mime_type?: string | null
-          public_url?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fabric_files_fabric_id_fkey"
-            columns: ["fabric_id"]
-            isOneToOne: false
-            referencedRelation: "fabrics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      fabrics: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          fabric_code: string | null
-          fabric_name: string | null
-          id: string
-          image_url: string | null
-          price: number | null
-          provider: string | null
-          type: string | null
-          weave_type: string | null
-          weight: string | null
-          width: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          fabric_code?: string | null
-          fabric_name?: string | null
-          id?: string
-          image_url?: string | null
-          price?: number | null
-          provider?: string | null
-          type?: string | null
-          weave_type?: string | null
-          weight?: string | null
-          width?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          fabric_code?: string | null
-          fabric_name?: string | null
-          id?: string
-          image_url?: string | null
-          price?: number | null
-          provider?: string | null
-          type?: string | null
-          weave_type?: string | null
-          weight?: string | null
-          width?: string | null
-        }
-        Relationships: []
-      }
-      features: {
-        Row: {
-          fabric_id: string
-          feature: string | null
-          id: string
-        }
-        Insert: {
-          fabric_id: string
-          feature?: string | null
-          id?: string
-        }
-        Update: {
-          fabric_id?: string
-          feature?: string | null
-          id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "features_fabric_id_fkey"
-            columns: ["fabric_id"]
-            isOneToOne: false
-            referencedRelation: "fabrics"
-            referencedColumns: ["id"]
+            referencedRelation: "customers"
+            referencedColumns: ["customer_id"]
           },
         ]
       }
@@ -785,14 +619,13 @@ export type Database = {
       it_tickets: {
         Row: {
           assigned_to_user_id: string | null
-          branch_id: string | null
-          business_id: string | null
           cancellation_reason: string | null
           category_id: string
           closed_at: string | null
           company_id: string
           created_at: string
           created_by: string | null
+          customer_id: string | null
           description: string
           first_response_at: string | null
           impact: string
@@ -800,7 +633,6 @@ export type Database = {
           last_message_at: string
           origin_application: string
           priority: string
-          representative_id: string | null
           requester_user_id: string | null
           resolution_due_at: string | null
           resolution_notes: string | null
@@ -818,14 +650,13 @@ export type Database = {
         }
         Insert: {
           assigned_to_user_id?: string | null
-          branch_id?: string | null
-          business_id?: string | null
           cancellation_reason?: string | null
           category_id: string
           closed_at?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           description: string
           first_response_at?: string | null
           impact?: string
@@ -833,7 +664,6 @@ export type Database = {
           last_message_at?: string
           origin_application?: string
           priority: string
-          representative_id?: string | null
           requester_user_id?: string | null
           resolution_due_at?: string | null
           resolution_notes?: string | null
@@ -851,14 +681,13 @@ export type Database = {
         }
         Update: {
           assigned_to_user_id?: string | null
-          branch_id?: string | null
-          business_id?: string | null
           cancellation_reason?: string | null
           category_id?: string
           closed_at?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
+          customer_id?: string | null
           description?: string
           first_response_at?: string | null
           impact?: string
@@ -866,7 +695,6 @@ export type Database = {
           last_message_at?: string
           origin_application?: string
           priority?: string
-          representative_id?: string | null
           requester_user_id?: string | null
           resolution_due_at?: string | null
           resolution_notes?: string | null
@@ -891,20 +719,6 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
-            foreignKeyName: "it_tickets_branch_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "it_tickets_business_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["business_id"]
-          },
-          {
             foreignKeyName: "it_tickets_category_fkey"
             columns: ["category_id"]
             isOneToOne: false
@@ -926,18 +740,18 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "it_tickets_customer_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["customer_id"]
+          },
+          {
             foreignKeyName: "it_tickets_department_fkey"
             columns: ["responsible_department_id"]
             isOneToOne: false
             referencedRelation: "departments"
             referencedColumns: ["department_id"]
-          },
-          {
-            foreignKeyName: "it_tickets_representative_fkey"
-            columns: ["representative_id"]
-            isOneToOne: false
-            referencedRelation: "representatives"
-            referencedColumns: ["representative_id"]
           },
           {
             foreignKeyName: "it_tickets_requester_fkey"
@@ -997,61 +811,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      managements: {
-        Row: {
-          fabric_id: string
-          id: string
-          management: string | null
-        }
-        Insert: {
-          fabric_id: string
-          id?: string
-          management?: string | null
-        }
-        Update: {
-          fabric_id?: string
-          id?: string
-          management?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "managements_fabric_id_fkey"
-            columns: ["fabric_id"]
-            isOneToOne: false
-            referencedRelation: "fabrics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      materials: {
-        Row: {
-          fabric_id: string
-          id: string
-          material: string | null
-          percentage: number | null
-        }
-        Insert: {
-          fabric_id: string
-          id?: string
-          material?: string | null
-          percentage?: number | null
-        }
-        Update: {
-          fabric_id?: string
-          id?: string
-          material?: string | null
-          percentage?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "materials_fabric_id_fkey"
-            columns: ["fabric_id"]
-            isOneToOne: false
-            referencedRelation: "fabrics"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -1252,53 +1011,33 @@ export type Database = {
       }
       phones: {
         Row: {
-          branch_id: string | null
-          business_id: string | null
           company_id: string | null
           created_at: string
+          customer_id: string | null
           is_primary: boolean
           phone: string
           phone_id: string
-          representative_id: string | null
           type: string | null
         }
         Insert: {
-          branch_id?: string | null
-          business_id?: string | null
           company_id?: string | null
           created_at?: string
+          customer_id?: string | null
           is_primary?: boolean
           phone: string
           phone_id?: string
-          representative_id?: string | null
           type?: string | null
         }
         Update: {
-          branch_id?: string | null
-          business_id?: string | null
           company_id?: string | null
           created_at?: string
+          customer_id?: string | null
           is_primary?: boolean
           phone?: string
           phone_id?: string
-          representative_id?: string | null
           type?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "phones_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "phones_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["business_id"]
-          },
           {
             foreignKeyName: "phones_company_id_fkey"
             columns: ["company_id"]
@@ -1307,46 +1046,11 @@ export type Database = {
             referencedColumns: ["company_id"]
           },
           {
-            foreignKeyName: "phones_representative_id_fkey"
-            columns: ["representative_id"]
+            foreignKeyName: "phones_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: "representatives"
-            referencedColumns: ["representative_id"]
-          },
-        ]
-      }
-      product_collections: {
-        Row: {
-          category_id: string
-          collection_id: string
-          collection_name: string
-          created_at: string
-          is_active: boolean
-          updated_at: string
-        }
-        Insert: {
-          category_id: string
-          collection_id?: string
-          collection_name: string
-          created_at?: string
-          is_active?: boolean
-          updated_at?: string
-        }
-        Update: {
-          category_id?: string
-          collection_id?: string
-          collection_name?: string
-          created_at?: string
-          is_active?: boolean
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_product_collections_category"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["category_id"]
+            referencedRelation: "customers"
+            referencedColumns: ["customer_id"]
           },
         ]
       }
@@ -1370,83 +1074,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      product_variant_migration_map: {
-        Row: {
-          approved_gtin: string | null
-          approved_sku: string | null
-          color_name: string
-          created_at: string
-          keep_existing_variant: boolean
-          legacy_sku: string
-          migrated_variant_id: string | null
-          migration_id: string
-          migration_status: string
-          product_id: string
-          size_id: string
-          suggested_sku: string | null
-          updated_at: string
-        }
-        Insert: {
-          approved_gtin?: string | null
-          approved_sku?: string | null
-          color_name?: string
-          created_at?: string
-          keep_existing_variant?: boolean
-          legacy_sku: string
-          migrated_variant_id?: string | null
-          migration_id?: string
-          migration_status?: string
-          product_id: string
-          size_id: string
-          suggested_sku?: string | null
-          updated_at?: string
-        }
-        Update: {
-          approved_gtin?: string | null
-          approved_sku?: string | null
-          color_name?: string
-          created_at?: string
-          keep_existing_variant?: boolean
-          legacy_sku?: string
-          migrated_variant_id?: string | null
-          migration_id?: string
-          migration_status?: string
-          product_id?: string
-          size_id?: string
-          suggested_sku?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_variant_migration_map_migrated_variant_id_fkey"
-            columns: ["migrated_variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "product_variant_migration_map_size_id_fkey"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["size_id"]
-          },
-        ]
       }
       production_order_status_history: {
         Row: {
@@ -1496,7 +1123,6 @@ export type Database = {
       production_orders: {
         Row: {
           balance: number
-          committed_delivery_date: string | null
           created_at: string
           is_active: boolean
           next_payment_date: string | null
@@ -1512,12 +1138,10 @@ export type Database = {
           status_change_note: string | null
           status_changed_at: string | null
           status_changed_by: string | null
-          unexpected_delivery_date: string | null
           updated_at: string
         }
         Insert: {
           balance?: number
-          committed_delivery_date?: string | null
           created_at?: string
           is_active?: boolean
           next_payment_date?: string | null
@@ -1533,12 +1157,10 @@ export type Database = {
           status_change_note?: string | null
           status_changed_at?: string | null
           status_changed_by?: string | null
-          unexpected_delivery_date?: string | null
           updated_at?: string
         }
         Update: {
           balance?: number
-          committed_delivery_date?: string | null
           created_at?: string
           is_active?: boolean
           next_payment_date?: string | null
@@ -1554,7 +1176,6 @@ export type Database = {
           status_change_note?: string | null
           status_changed_at?: string | null
           status_changed_by?: string | null
-          unexpected_delivery_date?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1658,94 +1279,431 @@ export type Database = {
         }
         Relationships: []
       }
+      project_additional_collaborators: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          project_collaborator_id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          project_collaborator_id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          project_collaborator_id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_additional_collaborators_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_additional_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_details_v"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_additional_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_overview_v"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_additional_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_additional_collaborators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      project_planned_advance_responsibles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          project_planned_advance_id: string
+          project_planned_advance_responsible_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          project_planned_advance_id: string
+          project_planned_advance_responsible_id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          project_planned_advance_id?: string
+          project_planned_advance_responsible_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_planned_advance_respons_project_planned_advance_id_fkey"
+            columns: ["project_planned_advance_id"]
+            isOneToOne: false
+            referencedRelation: "project_planned_advances"
+            referencedColumns: ["project_planned_advance_id"]
+          },
+          {
+            foreignKeyName: "project_planned_advance_responsibles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_planned_advance_responsibles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      project_planned_advances: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          project_id: string
+          project_planned_advance_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["project_status"]
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          project_id: string
+          project_planned_advance_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["project_status"]
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          project_id?: string
+          project_planned_advance_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["project_status"]
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_planned_advances_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_planned_advances_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_details_v"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_planned_advances_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_overview_v"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_planned_advances_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_planned_advances_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      project_updates: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          project_id: string
+          project_update_id: string
+          source: Database["public"]["Enums"]["project_update_source"]
+          update_date: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          project_id: string
+          project_update_id?: string
+          source?: Database["public"]["Enums"]["project_update_source"]
+          update_date?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          project_id?: string
+          project_update_id?: string
+          source?: Database["public"]["Enums"]["project_update_source"]
+          update_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_updates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "project_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_details_v"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project_overview_v"
+            referencedColumns: ["project_id"]
+          },
+          {
+            foreignKeyName: "project_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["project_id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          department_id: string
+          due_date: string | null
+          is_active: boolean
+          name: string
+          notes: string
+          owner_user_id: string
+          progress: number
+          project_code: string | null
+          project_id: string
+          project_number: number
+          risk: Database["public"]["Enums"]["project_risk"]
+          status: Database["public"]["Enums"]["project_status"]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          due_date?: string | null
+          is_active?: boolean
+          name: string
+          notes?: string
+          owner_user_id: string
+          progress?: number
+          project_code?: string | null
+          project_id?: string
+          project_number?: never
+          risk?: Database["public"]["Enums"]["project_risk"]
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          due_date?: string | null
+          is_active?: boolean
+          name?: string
+          notes?: string
+          owner_user_id?: string
+          progress?: number
+          project_code?: string | null
+          project_id?: string
+          project_number?: never
+          risk?: Database["public"]["Enums"]["project_risk"]
+          status?: Database["public"]["Enums"]["project_status"]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "projects_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "projects_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "projects_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       quotations: {
         Row: {
           advance_payment: number
-          branch_id: string
-          business_id: string
+          advance_percentage: number
+          committed_delivery_date: string | null
           company_id: string | null
           created_at: string
+          customer_id: string
+          discount_amount: number
+          discount_percentage: number
           early_delivery: boolean
           early_delivery_date: string | null
           early_delivery_price: number | null
+          embroidery_amount: number | null
           is_active: boolean
           iva_amount: number
           method_id: string | null
           notes: string | null
           quotation_id: string
           quotation_number: string
-          representative_id: string
           state: string
           status: string
+          sublimation_amount: number | null
           subtotal: number
           total: number
+          unexpected_delivery_date: string | null
           updated_at: string
           user_id: string | null
           valid_until: string | null
         }
         Insert: {
           advance_payment?: number
-          branch_id: string
-          business_id: string
+          advance_percentage?: number
+          committed_delivery_date?: string | null
           company_id?: string | null
           created_at?: string
+          customer_id: string
+          discount_amount?: number
+          discount_percentage?: number
           early_delivery?: boolean
           early_delivery_date?: string | null
           early_delivery_price?: number | null
+          embroidery_amount?: number | null
           is_active?: boolean
           iva_amount?: number
           method_id?: string | null
           notes?: string | null
           quotation_id?: string
           quotation_number: string
-          representative_id: string
           state?: string
           status?: string
+          sublimation_amount?: number | null
           subtotal?: number
           total?: number
+          unexpected_delivery_date?: string | null
           updated_at?: string
           user_id?: string | null
           valid_until?: string | null
         }
         Update: {
           advance_payment?: number
-          branch_id?: string
-          business_id?: string
+          advance_percentage?: number
+          committed_delivery_date?: string | null
           company_id?: string | null
           created_at?: string
+          customer_id?: string
+          discount_amount?: number
+          discount_percentage?: number
           early_delivery?: boolean
           early_delivery_date?: string | null
           early_delivery_price?: number | null
+          embroidery_amount?: number | null
           is_active?: boolean
           iva_amount?: number
           method_id?: string | null
           notes?: string | null
           quotation_id?: string
           quotation_number?: string
-          representative_id?: string
           state?: string
           status?: string
+          sublimation_amount?: number | null
           subtotal?: number
           total?: number
+          unexpected_delivery_date?: string | null
           updated_at?: string
           user_id?: string | null
           valid_until?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "quotations_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "quotations_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["business_id"]
-          },
           {
             foreignKeyName: "quotations_company_id_fkey"
             columns: ["company_id"]
@@ -1754,18 +1712,18 @@ export type Database = {
             referencedColumns: ["company_id"]
           },
           {
+            foreignKeyName: "quotations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["customer_id"]
+          },
+          {
             foreignKeyName: "quotations_method_id_fkey"
             columns: ["method_id"]
             isOneToOne: false
             referencedRelation: "payment_methods"
             referencedColumns: ["method_id"]
-          },
-          {
-            foreignKeyName: "quotations_representative_id_fkey"
-            columns: ["representative_id"]
-            isOneToOne: false
-            referencedRelation: "representatives"
-            referencedColumns: ["representative_id"]
           },
           {
             foreignKeyName: "quotations_user_id_fkey"
@@ -1778,129 +1736,42 @@ export type Database = {
       }
       quote_products: {
         Row: {
-          color_hex_snapshot: string | null
-          color_name_snapshot: string | null
           created_at: string
-          embroidery_price_snapshot: number | null
-          gtin_snapshot: string | null
           has_embroidery: boolean | null
           has_sublimation: boolean | null
           iva_amount: number
-          iva_rate_snapshot: number | null
-          product_id: string
-          product_name_snapshot: string | null
           quantity: number
           quotation_id: string
           quote_product_id: string
-          size_id: string | null
-          size_name_snapshot: string | null
-          sku_snapshot: string | null
-          snapshot_color: string | null
-          snapshot_description: string | null
-          snapshot_gtin: string | null
-          snapshot_price: number | null
-          snapshot_size_id: string | null
-          snapshot_size_name: string | null
-          snapshot_sku: string | null
-          snapshot_tax_rate: number | null
-          sublimation_price_snapshot: number | null
-          subtotal: number | null
-          total: number | null
           unit_price: number
           updated_at: string
-          variant_description_snapshot: string | null
           variant_id: string
         }
         Insert: {
-          color_hex_snapshot?: string | null
-          color_name_snapshot?: string | null
           created_at?: string
-          embroidery_price_snapshot?: number | null
-          gtin_snapshot?: string | null
           has_embroidery?: boolean | null
           has_sublimation?: boolean | null
           iva_amount?: number
-          iva_rate_snapshot?: number | null
-          product_id: string
-          product_name_snapshot?: string | null
           quantity?: number
           quotation_id: string
           quote_product_id?: string
-          size_id?: string | null
-          size_name_snapshot?: string | null
-          sku_snapshot?: string | null
-          snapshot_color?: string | null
-          snapshot_description?: string | null
-          snapshot_gtin?: string | null
-          snapshot_price?: number | null
-          snapshot_size_id?: string | null
-          snapshot_size_name?: string | null
-          snapshot_sku?: string | null
-          snapshot_tax_rate?: number | null
-          sublimation_price_snapshot?: number | null
-          subtotal?: number | null
-          total?: number | null
           unit_price: number
           updated_at?: string
-          variant_description_snapshot?: string | null
           variant_id: string
         }
         Update: {
-          color_hex_snapshot?: string | null
-          color_name_snapshot?: string | null
           created_at?: string
-          embroidery_price_snapshot?: number | null
-          gtin_snapshot?: string | null
           has_embroidery?: boolean | null
           has_sublimation?: boolean | null
           iva_amount?: number
-          iva_rate_snapshot?: number | null
-          product_id?: string
-          product_name_snapshot?: string | null
           quantity?: number
           quotation_id?: string
           quote_product_id?: string
-          size_id?: string | null
-          size_name_snapshot?: string | null
-          sku_snapshot?: string | null
-          snapshot_color?: string | null
-          snapshot_description?: string | null
-          snapshot_gtin?: string | null
-          snapshot_price?: number | null
-          snapshot_size_id?: string | null
-          snapshot_size_name?: string | null
-          snapshot_sku?: string | null
-          snapshot_tax_rate?: number | null
-          sublimation_price_snapshot?: number | null
-          subtotal?: number | null
-          total?: number | null
           unit_price?: number
           updated_at?: string
-          variant_description_snapshot?: string | null
           variant_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "quote_products_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "quote_products_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "quote_products_product_variant_fkey"
-            columns: ["product_id", "variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["product_id", "variant_id"]
-          },
           {
             foreignKeyName: "quote_products_quotation_id_fkey"
             columns: ["quotation_id"]
@@ -1909,76 +1780,11 @@ export type Database = {
             referencedColumns: ["quotation_id"]
           },
           {
-            foreignKeyName: "quote_products_size_id_fkey"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["size_id"]
-          },
-          {
             foreignKeyName: "quote_products_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
-            referencedRelation: "textile_product_variants"
+            referencedRelation: "textiles_inventory"
             referencedColumns: ["variant_id"]
-          },
-        ]
-      }
-      representatives: {
-        Row: {
-          branch_id: string | null
-          business_id: string
-          created_at: string
-          email: string | null
-          is_active: boolean
-          name: string
-          representative_id: string
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          branch_id?: string | null
-          business_id: string
-          created_at?: string
-          email?: string | null
-          is_active?: boolean
-          name: string
-          representative_id?: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          branch_id?: string | null
-          business_id?: string
-          created_at?: string
-          email?: string | null
-          is_active?: boolean
-          name?: string
-          representative_id?: string
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "representatives_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["branch_id"]
-          },
-          {
-            foreignKeyName: "representatives_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["business_id"]
-          },
-          {
-            foreignKeyName: "representatives_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -2078,276 +1884,53 @@ export type Database = {
             referencedRelation: "textile_products"
             referencedColumns: ["product_id"]
           },
-          {
-            foreignKeyName: "fk_textile_product_files_product"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-        ]
-      }
-      textile_product_measurements: {
-        Row: {
-          created_at: string
-          dimension_id: string
-          measurement_id: string
-          measurement_value: number
-          product_id: string
-          size_id: string
-          unit: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          dimension_id: string
-          measurement_id?: string
-          measurement_value: number
-          product_id: string
-          size_id: string
-          unit?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          dimension_id?: string
-          measurement_id?: string
-          measurement_value?: number
-          product_id?: string
-          size_id?: string
-          unit?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_product_measurements_dimension"
-            columns: ["dimension_id"]
-            isOneToOne: false
-            referencedRelation: "dimensions"
-            referencedColumns: ["dimension_id"]
-          },
-          {
-            foreignKeyName: "fk_product_measurements_product"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "fk_product_measurements_product"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "fk_product_measurements_size"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["size_id"]
-          },
-        ]
-      }
-      textile_product_variant_measurements: {
-        Row: {
-          created_at: string
-          dimension_id: string
-          measurement_id: string
-          measurement_value: number
-          unit: string
-          updated_at: string
-          variant_id: string
-        }
-        Insert: {
-          created_at?: string
-          dimension_id: string
-          measurement_id?: string
-          measurement_value: number
-          unit?: string
-          updated_at?: string
-          variant_id: string
-        }
-        Update: {
-          created_at?: string
-          dimension_id?: string
-          measurement_id?: string
-          measurement_value?: number
-          unit?: string
-          updated_at?: string
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "textile_product_variant_measurements_dimension_fkey"
-            columns: ["dimension_id"]
-            isOneToOne: false
-            referencedRelation: "dimensions"
-            referencedColumns: ["dimension_id"]
-          },
-          {
-            foreignKeyName: "textile_product_variant_measurements_variant_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
-          },
-        ]
-      }
-      textile_product_variants: {
-        Row: {
-          color_hex: string | null
-          color_name: string | null
-          created_at: string
-          embroidery_price: number | null
-          gtin: string | null
-          is_active: boolean
-          is_default: boolean
-          iva: number
-          minimum_stock: number
-          price: number
-          product_id: string
-          reserved_quantity: number
-          size_id: string | null
-          sku: string
-          stock_quantity: number
-          sublimation_price: number | null
-          updated_at: string
-          variant_id: string
-        }
-        Insert: {
-          color_hex?: string | null
-          color_name?: string | null
-          created_at?: string
-          embroidery_price?: number | null
-          gtin?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          iva?: number
-          minimum_stock?: number
-          price: number
-          product_id: string
-          reserved_quantity?: number
-          size_id?: string | null
-          sku: string
-          stock_quantity?: number
-          sublimation_price?: number | null
-          updated_at?: string
-          variant_id?: string
-        }
-        Update: {
-          color_hex?: string | null
-          color_name?: string | null
-          created_at?: string
-          embroidery_price?: number | null
-          gtin?: string | null
-          is_active?: boolean
-          is_default?: boolean
-          iva?: number
-          minimum_stock?: number
-          price?: number
-          product_id?: string
-          reserved_quantity?: number
-          size_id?: string | null
-          sku?: string
-          stock_quantity?: number
-          sublimation_price?: number | null
-          updated_at?: string
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "textile_product_variants_product_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "textile_product_variants_product_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
-          },
-          {
-            foreignKeyName: "textile_product_variants_size_fkey"
-            columns: ["size_id"]
-            isOneToOne: false
-            referencedRelation: "sizes"
-            referencedColumns: ["size_id"]
-          },
         ]
       }
       textile_products: {
         Row: {
           category_id: string
-          collection_id: string | null
           created_at: string
           description: string
           embroidery: boolean
           embroidery_price: number | null
-          height: string | null
           is_active: boolean
           iva: number
-          length: string | null
-          price: number
           product_id: string
           product_name: string
-          size: string | null
-          sku: string
           sublimation: boolean
           sublimation_price: number | null
           type_id: string
-          unit: string | null
           updated_at: string
-          width: string | null
         }
         Insert: {
           category_id: string
-          collection_id?: string | null
           created_at?: string
           description: string
           embroidery?: boolean
           embroidery_price?: number | null
-          height?: string | null
           is_active?: boolean
           iva?: number
-          length?: string | null
-          price: number
           product_id?: string
           product_name: string
-          size?: string | null
-          sku: string
           sublimation?: boolean
           sublimation_price?: number | null
           type_id: string
-          unit?: string | null
           updated_at?: string
-          width?: string | null
         }
         Update: {
           category_id?: string
-          collection_id?: string | null
           created_at?: string
           description?: string
           embroidery?: boolean
           embroidery_price?: number | null
-          height?: string | null
           is_active?: boolean
           iva?: number
-          length?: string | null
-          price?: number
           product_id?: string
           product_name?: string
-          size?: string | null
-          sku?: string
           sublimation?: boolean
           sublimation_price?: number | null
           type_id?: string
-          unit?: string | null
           updated_at?: string
-          width?: string | null
         }
         Relationships: [
           {
@@ -2358,11 +1941,11 @@ export type Database = {
             referencedColumns: ["category_id"]
           },
           {
-            foreignKeyName: "fk_textile_products_collection"
-            columns: ["collection_id"]
+            foreignKeyName: "fk_textile_products_product_type"
+            columns: ["type_id"]
             isOneToOne: false
-            referencedRelation: "product_collections"
-            referencedColumns: ["collection_id"]
+            referencedRelation: "product_types"
+            referencedColumns: ["type_id"]
           },
           {
             foreignKeyName: "fk_textile_products_type"
@@ -2371,12 +1954,81 @@ export type Database = {
             referencedRelation: "product_types"
             referencedColumns: ["type_id"]
           },
+        ]
+      }
+      textiles_inventory: {
+        Row: {
+          created_at: string
+          dimension_id: string | null
+          gtin: string | null
+          is_active: boolean
+          is_default: boolean
+          iva: number | null
+          minimum_stock: number
+          price: number | null
+          product_id: string
+          reserved_quantity: number
+          size_id: string | null
+          sku: string
+          stock_quantity: number
+          updated_at: string
+          variant_id: string
+        }
+        Insert: {
+          created_at?: string
+          dimension_id?: string | null
+          gtin?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          iva?: number | null
+          minimum_stock?: number
+          price?: number | null
+          product_id: string
+          reserved_quantity?: number
+          size_id?: string | null
+          sku: string
+          stock_quantity?: number
+          updated_at?: string
+          variant_id?: string
+        }
+        Update: {
+          created_at?: string
+          dimension_id?: string | null
+          gtin?: string | null
+          is_active?: boolean
+          is_default?: boolean
+          iva?: number | null
+          minimum_stock?: number
+          price?: number | null
+          product_id?: string
+          reserved_quantity?: number
+          size_id?: string | null
+          sku?: string
+          stock_quantity?: number
+          updated_at?: string
+          variant_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "textile_products_category_type_fkey"
-            columns: ["category_id", "type_id"]
+            foreignKeyName: "fk_textiles_inventory_dimension"
+            columns: ["dimension_id"]
             isOneToOne: false
-            referencedRelation: "category_product_types"
-            referencedColumns: ["category_id", "type_id"]
+            referencedRelation: "dimensions"
+            referencedColumns: ["dimension_id"]
+          },
+          {
+            foreignKeyName: "fk_textiles_inventory_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "textile_products"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "fk_textiles_inventory_size"
+            columns: ["size_id"]
+            isOneToOne: false
+            referencedRelation: "sizes"
+            referencedColumns: ["size_id"]
           },
         ]
       }
@@ -2555,116 +2207,105 @@ export type Database = {
           },
         ]
       }
-      variant_files: {
-        Row: {
-          created_at: string
-          display_order: number
-          file_name: string
-          file_size: number | null
-          file_type: string
-          is_active: boolean
-          is_primary: boolean
-          mime_type: string | null
-          object_path: string
-          public_url: string | null
-          updated_at: string
-          variant_file_id: string
-          variant_id: string
-        }
-        Insert: {
-          created_at?: string
-          display_order?: number
-          file_name: string
-          file_size?: number | null
-          file_type: string
-          is_active?: boolean
-          is_primary?: boolean
-          mime_type?: string | null
-          object_path: string
-          public_url?: string | null
-          updated_at?: string
-          variant_file_id?: string
-          variant_id: string
-        }
-        Update: {
-          created_at?: string
-          display_order?: number
-          file_name?: string
-          file_size?: number | null
-          file_type?: string
-          is_active?: boolean
-          is_primary?: boolean
-          mime_type?: string | null
-          object_path?: string
-          public_url?: string | null
-          updated_at?: string
-          variant_file_id?: string
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "variant_files_variant_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
-          },
-        ]
-      }
     }
     Views: {
-      product_variant_migration_review: {
+      project_details_v: {
         Row: {
-          approved_gtin: string | null
-          approved_sku: string | null
-          category_name: string | null
-          color_name: string | null
-          keep_existing_variant: boolean | null
-          legacy_sku: string | null
-          migrated_variant_id: string | null
-          migration_id: string | null
-          migration_status: string | null
-          product_id: string | null
-          product_name: string | null
-          product_type: string | null
-          size_name: string | null
-          suggested_sku: string | null
+          additional_collaborators: string[] | null
+          company: string | null
+          company_id: string | null
+          created_at: string | null
+          department: string | null
+          department_id: string | null
+          due_date: string | null
+          is_active: boolean | null
+          name: string | null
+          notes: string | null
+          owner: string | null
+          owner_user_id: string | null
+          people: string[] | null
+          planned_advances: Json | null
+          progress: number | null
+          project_code: string | null
+          project_id: string | null
+          project_number: number | null
+          risk: string | null
+          status: string | null
+          updated_at: string | null
+          updated_at_ts: string | null
+          updates: Json | null
         }
         Relationships: [
           {
-            foreignKeyName: "product_variant_migration_map_migrated_variant_id_fkey"
-            columns: ["migrated_variant_id"]
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "textile_product_variants"
-            referencedColumns: ["variant_id"]
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
           },
           {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
+            foreignKeyName: "projects_department_id_fkey"
+            columns: ["department_id"]
             isOneToOne: false
-            referencedRelation: "textile_products"
-            referencedColumns: ["product_id"]
+            referencedRelation: "departments"
+            referencedColumns: ["department_id"]
           },
           {
-            foreignKeyName: "product_variant_migration_map_product_id_fkey"
-            columns: ["product_id"]
+            foreignKeyName: "projects_owner_user_id_fkey"
+            columns: ["owner_user_id"]
             isOneToOne: false
-            referencedRelation: "textile_variant_migration_audit"
-            referencedColumns: ["product_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
-      textile_variant_migration_audit: {
+      project_overview_v: {
         Row: {
-          has_default_variant: boolean | null
-          legacy_measurement_size_count: number | null
-          legacy_sku: string | null
-          migrated_measurement_count: number | null
-          product_id: string | null
-          product_name: string | null
-          variant_count: number | null
+          additional_collaborators: string[] | null
+          company: string | null
+          company_id: string | null
+          created_at: string | null
+          department: string | null
+          department_id: string | null
+          due_date: string | null
+          is_active: boolean | null
+          name: string | null
+          notes: string | null
+          owner: string | null
+          owner_user_id: string | null
+          people: string[] | null
+          progress: number | null
+          project_code: string | null
+          project_id: string | null
+          project_number: number | null
+          risk: string | null
+          status: string | null
+          updated_at: string | null
+          updated_at_ts: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "projects_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["department_id"]
+          },
+          {
+            foreignKeyName: "projects_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -2683,12 +2324,12 @@ export type Database = {
         Args: { check_user_id?: string }
         Returns: boolean
       }
+      cleanup_expired_user_notifications: { Args: never; Returns: number }
       codex_slug_part: { Args: { value: string }; Returns: string }
       create_production_order_from_quotation: {
         Args: { p_quotation_id: string }
         Returns: {
           balance: number
-          committed_delivery_date: string | null
           created_at: string
           is_active: boolean
           next_payment_date: string | null
@@ -2704,7 +2345,6 @@ export type Database = {
           status_change_note: string | null
           status_changed_at: string | null
           status_changed_by: string | null
-          unexpected_delivery_date: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -2771,6 +2411,7 @@ export type Database = {
         Returns: boolean
       }
       is_valid_gtin: { Args: { p_gtin: string }; Returns: boolean }
+      project_get_detail: { Args: { p_project_id: string }; Returns: Json }
       recalculate_all_overdue_production_orders: {
         Args: never
         Returns: number
@@ -2824,6 +2465,14 @@ export type Database = {
     }
     Enums: {
       legal_entity_type: "LEGAL" | "NATURAL"
+      project_risk: "Bajo" | "Medio" | "Alto"
+      project_status:
+        | "No iniciado"
+        | "En proceso"
+        | "En pausa"
+        | "Completado"
+        | "Cancelado"
+      project_update_source: "manual" | "system_personal" | "system_management"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2949,9 +2598,21 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       legal_entity_type: ["LEGAL", "NATURAL"],
+      project_risk: ["Bajo", "Medio", "Alto"],
+      project_status: [
+        "No iniciado",
+        "En proceso",
+        "En pausa",
+        "Completado",
+        "Cancelado",
+      ],
+      project_update_source: ["manual", "system_personal", "system_management"],
     },
   },
 } as const

@@ -102,7 +102,7 @@ export async function getCompanies() {
 
 async function getBusinessesCompanyMap() {
   const businesses = throwIfError(
-    await supabase.from("businesses").select("business_id, company_id"),
+    await supabase.from("customers").select("business_id:customer_id, company_id"),
     "No fue posible cargar los clientes para calcular las ventas por empresa",
   );
 
@@ -111,7 +111,7 @@ async function getBusinessesCompanyMap() {
 
 /**
  * Attaches a company_id/company name to each paid sale by resolving the
- * sale's business_id -> businesses.company_id -> companies.
+ * sale's customer_id -> customers.company_id -> companies.
  */
 async function getPaidSalesWithCompany() {
   const [sales, businessesById, companies] = await Promise.all([
@@ -149,8 +149,8 @@ export async function getDashboardStats() {
     sales,
   ] = await Promise.all([
     supabase
-      .from("businesses")
-      .select("business_id", { count: "exact", head: true })
+      .from("customers")
+      .select("customer_id", { count: "exact", head: true })
       .eq("is_active", true),
     supabase
       .from("quotations")
@@ -302,7 +302,7 @@ export async function getSalesDistributionByCompany() {
 }
 
 /**
- * TopClients: top clients (businesses) ranked by paid sales amount.
+ * TopClients: top customers ranked by paid sales amount.
  */
 export async function getTopClients(limit = 5) {
   const { sales } = await getPaidSalesWithCompany();
@@ -423,7 +423,7 @@ export async function getRecentActivity(limit = 6) {
   ] = await Promise.all([
     supabase
       .from("quotations")
-      .select("quotation_id, quotation_number, business_id, user_id, created_at")
+      .select("quotation_id, quotation_number, business_id:customer_id, user_id, created_at")
       .eq("is_active", true)
       .order("created_at", { ascending: false })
       .limit(limit),
@@ -436,8 +436,8 @@ export async function getRecentActivity(limit = 6) {
       .order("created_at", { ascending: false })
       .limit(limit),
     supabase
-      .from("businesses")
-      .select("business_id, business_name, legal_name, company_id, created_at")
+      .from("customers")
+      .select("business_id:customer_id, business_name:commercial_name, legal_name:company_name, company_id, created_at")
       .order("created_at", { ascending: false })
       .limit(limit),
   ]);
@@ -471,14 +471,14 @@ export async function getRecentActivity(limit = 6) {
     await Promise.all([
       businessIds.length
         ? supabase
-            .from("businesses")
-            .select("business_id, business_name, legal_name")
-            .in("business_id", businessIds)
+            .from("customers")
+            .select("business_id:customer_id, business_name:commercial_name, legal_name:company_name")
+            .in("customer_id", businessIds)
         : Promise.resolve({ data: [], error: null }),
       quotationIds.length
         ? supabase
             .from("quotations")
-            .select("quotation_id, business_id, quotation_number")
+            .select("quotation_id, business_id:customer_id, quotation_number")
             .in("quotation_id", quotationIds)
         : Promise.resolve({ data: [], error: null }),
       sellerIds.length

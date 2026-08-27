@@ -424,7 +424,3 @@ entrypoint = "./functions/send-quotation-proforma/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/send-quotation-proforma/*.html" ]
 
-[functions.create-representative-user]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/create-representative-user/index.ts"

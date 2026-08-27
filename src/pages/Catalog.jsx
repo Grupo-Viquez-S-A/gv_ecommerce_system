@@ -13,10 +13,10 @@ import { EMPTY_CATALOG_FILTERS } from "../components/catalog/catalogFilterDefaul
 import CatalogGrid from "../components/catalog/CatalogGrid";
 import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
-import CatalogTechnicalSheetModal from "../components/catalog/CatalogTechnicalSheetModal";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
 import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
+import { hasPetCategoryProducts } from "../components/catalog/petCategoryUtils";
 import QuotationClientIdentityFields from "../components/catalog/QuotationClientIdentityFields.jsx";
 
 import {
@@ -46,7 +46,6 @@ import {
   CATALOG_TYPES,
   createCatalogFilterId,
   getCatalogProducts,
-  getVariantAvailability,
 } from "../services/catalogService.js";
 import { resolveSelectedVariant } from "../utils/variantSelection.js";
 import {
@@ -61,6 +60,10 @@ import {
   formatLegalId,
   formatPhoneNumber,
 } from "../utils/inputMasks.js";
+import {
+  getCartItemNameWithSize,
+  getInventorySizeLabel,
+} from "../utils/inventorySizes.js";
 
 const PAGE_SIZE = 8;
 const CART_STORAGE_KEY = "gv-ecommerce:quotation-cart:v2";
@@ -88,6 +91,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   businessEmail: "",
   businessPhone: "",
   branchProvince: "",
+  branchCity: "",
   branchDistrict: "",
   branchAddress: "",
   branchPhone: "",
@@ -101,6 +105,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   earlyDelivery: false,
   earlyDeliveryDate: "",
   methodId: "",
+  advancePercentage: "50",
 };
 
 function getTodayInputDate() {
@@ -152,6 +157,12 @@ function getCartProductIva(product) {
 
 function getCartProductType(product) {
   return product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS
+    ? CATALOG_TYPES.TEXTILE_PRODUCTS
+    : CATALOG_TYPES.FABRICS;
+}
+
+function getCartProductTypeLabel(product) {
+  return product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS
     ? "Producto"
     : "Tela";
 }
@@ -182,7 +193,7 @@ export default function Catalog() {
   const cartConfirmationTimerRef = useRef(null);
 
   const [activeCatalog, setActiveCatalog] = useState(
-    CATALOG_TYPES.FABRICS,
+    CATALOG_TYPES.TEXTILE_PRODUCTS,
   );
 
   const [products, setProducts] = useState([]);
@@ -194,11 +205,6 @@ export default function Catalog() {
 
   const [selectedProductDetails, setSelectedProductDetails] =
     useState(null);
-
-  const [
-    selectedTechnicalSheetProduct,
-    setSelectedTechnicalSheetProduct,
-  ] = useState(null);
 
   const [filters, setFilters] = useState(
     EMPTY_CATALOG_FILTERS,
@@ -503,35 +509,6 @@ export default function Catalog() {
     );
   }, [products, isTextileProductsCatalog]);
 
-  const collections = useMemo(() => {
-    if (!isTextileProductsCatalog) {
-      return [];
-    }
-
-    const uniqueCollections = new Map();
-
-    products.forEach((product) => {
-      const collection = product.collection;
-
-      if (
-        collection?.collection_id &&
-        !uniqueCollections.has(collection.collection_id)
-      ) {
-        uniqueCollections.set(
-          collection.collection_id,
-          collection,
-        );
-      }
-    });
-
-    return Array.from(uniqueCollections.values()).sort(
-      (first, second) =>
-        first.collection_name.localeCompare(
-          second.collection_name,
-        ),
-    );
-  }, [products, isTextileProductsCatalog]);
-
   const sizes = useMemo(() => {
     if (!isTextileProductsCatalog) {
       return [];
@@ -550,9 +527,10 @@ export default function Catalog() {
       });
     });
 
-    return Array.from(uniqueSizes.values()).sort(
-      (first, second) =>
-        first.size_name.localeCompare(second.size_name),
+    return Array.from(uniqueSizes.values()).sort((first, second) =>
+      getInventorySizeLabel(first.size_name).localeCompare(
+        getInventorySizeLabel(second.size_name),
+      ),
     );
   }, [products, isTextileProductsCatalog]);
 
@@ -568,7 +546,6 @@ export default function Catalog() {
         product.description,
         product.category?.category_name,
         product.product_type?.product_type,
-        product.collection?.collection_name,
         product.size,
         product.length,
         product.width,
@@ -586,14 +563,14 @@ export default function Catalog() {
           (management) => management.management,
         ),
         ...(product.available_sizes || []).map(
-          (size) => size.size_name,
+          (size) => getInventorySizeLabel(size.size_name),
         ),
         ...(product.variants || []).flatMap(
           (variant) => [variant.sku, variant.gtin, variant.color],
         ),
         ...(product.measurements || []).map(
           (measurement) =>
-            `${measurement.size_name} ${measurement.dimension_name}`,
+            `${getInventorySizeLabel(measurement.size_name)} ${measurement.dimension_name}`,
         ),
       ]
         .filter(Boolean)
@@ -632,12 +609,6 @@ export default function Catalog() {
             filters.color,
         );
 
-      const matchesCollection =
-        !isTextileProductsCatalog ||
-        !filters.collectionId ||
-        product.collection?.collection_id ===
-          filters.collectionId;
-
       const matchesSize =
         !isTextileProductsCatalog ||
         !filters.sizeId ||
@@ -651,7 +622,6 @@ export default function Catalog() {
         matchesType &&
         matchesMaterial &&
         matchesColor &&
-        matchesCollection &&
         matchesSize
       );
     });
@@ -681,13 +651,19 @@ export default function Catalog() {
     );
   }, [filteredProducts, safeCurrentPage]);
 
+  const shouldShowPetNotice = useMemo(
+    () =>
+      isTextileProductsCatalog &&
+      hasPetCategoryProducts(filteredProducts),
+    [filteredProducts, isTextileProductsCatalog],
+  );
+
   const hasActiveFilters = Boolean(
     filters.search.trim() ||
       filters.categoryId ||
       filters.typeId ||
       filters.materialId ||
       filters.color ||
-      filters.collectionId ||
       filters.sizeId,
   );
 
@@ -752,6 +728,16 @@ export default function Catalog() {
     0,
   );
   const cartEstimatedTotal = cartSubtotal + cartTaxes;
+  const cartAdvancePercentage = Math.min(
+    100,
+    Math.max(0, Number(quotationClientForm.advancePercentage) || 0),
+  );
+  const cartAdvancePayment =
+    cartEstimatedTotal * (cartAdvancePercentage / 100);
+  const cartPendingBalance = Math.max(
+    0,
+    cartEstimatedTotal - cartAdvancePayment,
+  );
 
   const handleCatalogChange = (nextCatalog) => {
     if (
@@ -765,8 +751,6 @@ export default function Catalog() {
     setFilters(EMPTY_CATALOG_FILTERS);
     setCurrentPage(1);
     setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(null);
-
     scrollCatalogToTop();
   };
 
@@ -787,8 +771,6 @@ export default function Catalog() {
 
     setCurrentPage(1);
     setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(null);
-
     scrollCatalogToTop();
   };
 
@@ -843,10 +825,15 @@ export default function Catalog() {
   };
 
   const handleAddToCart = (product, quantity = 1, size = null, options = {}) => {
+    const failToAdd = (message) => {
+      setQuotationError(message);
+      return { ok: false, error: message };
+    };
+
     const productId = getCartProductId(product);
 
     if (!productId) {
-      return;
+      return failToAdd("No fue posible identificar el producto seleccionado.");
     }
 
     const safeQuantity = Math.max(1, Number(quantity) || 1);
@@ -854,8 +841,7 @@ export default function Catalog() {
       ? resolveSelectedVariant(product.variants || [], size || {})
       : null;
     if (product?.catalog_type === CATALOG_TYPES.TEXTILE_PRODUCTS && !selectedVariant) {
-      setQuotationError("Seleccione una combinación disponible de talla y color.");
-      return;
+      return failToAdd("Seleccione una talla disponible.");
     }
     const variantId = selectedVariant?.variant_id || null;
     const sizeId = size?.size_id ?? null;
@@ -875,8 +861,8 @@ export default function Catalog() {
     const baseName = getCartProductName(product);
     const isUnica =
       sizeName && sizeName.toLowerCase() === "única";
-    const itemName =
-      sizeName && !isUnica ? `${baseName} - ${sizeName}` : baseName;
+    const displaySizeName = sizeName ? getInventorySizeLabel(sizeName) : null;
+    const itemName = getCartItemNameWithSize(baseName, sizeName);
 
     const hasSublimation = Boolean(options.hasSublimation);
     const hasEmbroidery = Boolean(options.hasEmbroidery);
@@ -902,10 +888,6 @@ export default function Catalog() {
 
     const inventoryTrackingEnabled = Boolean(selectedVariant?.inventory_tracking_enabled);
     const availableStock = Number(selectedVariant?.stock) || 0;
-    if (inventoryTrackingEnabled && safeQuantity > availableStock) {
-      setQuotationError(`La variante ${selectedVariant?.sku || "seleccionada"} sólo dispone de ${availableStock} unidades.`);
-      return;
-    }
 
     setCartItems((currentItems) => {
       const itemExists = currentItems.some(
@@ -917,9 +899,7 @@ export default function Catalog() {
           item.id === cartItemId
             ? {
                 ...item,
-                quantity: inventoryTrackingEnabled
-                  ? Math.min(item.quantity + safeQuantity, availableStock)
-                  : item.quantity + safeQuantity,
+                quantity: item.quantity + safeQuantity,
               }
             : item,
         );
@@ -930,12 +910,13 @@ export default function Catalog() {
         {
           id: cartItemId,
           name: itemName,
-          sizeName: isUnica ? null : sizeName,
+          sizeName: isUnica ? null : displaySizeName,
           sizeId: isUnica ? null : sizeId,
           color: selectedVariant?.color || null,
           sku: selectedVariant?.sku || getCartProductSku(product),
           gtin: selectedVariant?.gtin || null,
           catalogType: getCartProductType(product),
+          catalogTypeLabel: getCartProductTypeLabel(product),
           quantity: safeQuantity,
           productId,
           variantId,
@@ -957,6 +938,7 @@ export default function Catalog() {
       ];
     });
 
+    setQuotationError("");
     setCartConfirmation({
       id: Date.now(),
       name: itemName,
@@ -971,6 +953,12 @@ export default function Catalog() {
       setCartConfirmation(null);
       cartConfirmationTimerRef.current = null;
     }, 3500);
+
+    return {
+      ok: true,
+      itemId: cartItemId,
+      quantity: safeQuantity,
+    };
   };
 
   const handleOpenCart = () => {
@@ -989,9 +977,7 @@ export default function Catalog() {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === itemId
-          ? item.inventoryTrackingEnabled && safeQuantity > item.availableStock
-            ? item
-            : {
+          ? {
               ...item,
               quantity: safeQuantity,
             }
@@ -1013,6 +999,7 @@ export default function Catalog() {
   const handleQuotationClientFormChange = (fieldName, value) => {
     const branchAddressChanged = [
       "branchProvince",
+      "branchCity",
       "branchDistrict",
       "branchAddress",
     ].includes(fieldName);
@@ -1114,6 +1101,7 @@ export default function Catalog() {
       ...currentForm,
       branchId: branch.branch_id,
       branchProvince: branch.province,
+      branchCity: branch.city || "",
       branchDistrict: branch.district,
       branchAddress: branch.address,
       branchPhone: branch.branchPhone || "",
@@ -1133,6 +1121,7 @@ export default function Catalog() {
       ...currentForm,
       branchId: "",
       branchProvince: "",
+      branchCity: "",
       branchDistrict: "",
       branchAddress: "",
       branchPhone: "",
@@ -1172,7 +1161,7 @@ export default function Catalog() {
       },
       (error) => {
         const errorMessages = {
-          1: "Permite el acceso a tu ubicación para registrar la sucursal.",
+          1: "Permite el acceso a tu ubicación para registrar el cliente.",
           2: "No fue posible determinar la ubicación actual.",
           3: "La solicitud de ubicación tardó demasiado. Inténtalo nuevamente.",
         };
@@ -1230,20 +1219,6 @@ export default function Catalog() {
         return;
       }
 
-      const trackedItems = cartItems.filter((item) => item.variantId && item.inventoryTrackingEnabled);
-      if (trackedItems.length > 0) {
-        const availability = await getVariantAvailability(trackedItems.map((item) => item.variantId));
-        const byId = new Map(availability.map((variant) => [variant.variant_id, variant]));
-        const unavailable = trackedItems.find((item) => {
-          const variant = byId.get(item.variantId);
-          return !variant?.is_active || item.quantity > Number(variant.stock || 0);
-        });
-        if (unavailable) {
-          setQuotationError(`La disponibilidad de ${unavailable.sku || "una variante"} cambió. Actualiza el carrito.`);
-          return;
-        }
-      }
-
       const quotation = await createBusinessQuotation({
         client: clientForm,
         items: cartItems,
@@ -1284,15 +1259,6 @@ export default function Catalog() {
     handleSaveCartQuotation("pending");
   };
 
-  const handleOpenTechnicalSheet = (product) => {
-    if (!product) {
-      return;
-    }
-
-    setSelectedProductDetails(null);
-    setSelectedTechnicalSheetProduct(product);
-  };
-
   const handleRefreshCatalog = () => {
     loadCatalog();
   };
@@ -1314,7 +1280,7 @@ export default function Catalog() {
           onChange={handleCatalogChange}
         />
 
-        <PetCostumeNotice />
+        {shouldShowPetNotice && <PetCostumeNotice />}
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
@@ -1375,7 +1341,6 @@ export default function Catalog() {
               productTypes={productTypes}
               materials={materials}
               colors={colors}
-              collections={collections}
               sizes={sizes}
               onFiltersChange={handleFiltersChange}
               onClearFilters={handleClearFilters}
@@ -1491,7 +1456,7 @@ export default function Catalog() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
-                            {item.catalogType}
+                            {item.catalogTypeLabel || item.catalogType}
                           </span>
 
                           <span className="truncate text-xs text-[#86A4CE]">
@@ -1577,7 +1542,7 @@ export default function Catalog() {
                         Datos del cliente
                       </h3>
                       <p className="text-sm text-slate-400">
-                        Registra la empresa cliente, su sucursal y el representante para guardar la cotizacion.
+                        Registra la empresa cliente y su ubicación para guardar la cotización.
                       </p>
                     </div>
 
@@ -1636,10 +1601,10 @@ export default function Catalog() {
                       />
 
                       <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">Sucursal</p>
+                        <p className="text-sm font-extrabold text-white">Ubicación del cliente</p>
                         {clientBranches.length > 0 && (
                           <p className="mt-1 text-xs text-slate-400">
-                            Selecciona una sucursal registrada o agrega una nueva.
+                            Selecciona una ubicación registrada o agrega una nueva.
                           </p>
                         )}
                       </div>
@@ -1668,9 +1633,9 @@ export default function Catalog() {
                                 />
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold text-white">
-                                    {[branch.province, branch.district]
+                                    {[branch.province, branch.city, branch.district]
                                       .filter(Boolean)
-                                      .join(", ") || "Sucursal"}
+                                      .join(", ") || "Ubicación registrada"}
                                   </p>
                                   {branch.address && (
                                     <p className="mt-0.5 truncate text-xs text-slate-400">
@@ -1703,7 +1668,7 @@ export default function Catalog() {
                             />
                             <Plus className="h-5 w-5 text-[#D7A91D]" />
                             <span className="text-sm font-semibold text-[#9BB3D3]">
-                              Nueva sucursal
+                              Nueva ubicación
                             </span>
                           </label>
                         </div>
@@ -1732,10 +1697,10 @@ export default function Catalog() {
                               Cantón
                             </span>
                             <input
-                              value={quotationClientForm.branchDistrict}
+                              value={quotationClientForm.branchCity}
                               onChange={(event) =>
                                 handleQuotationClientFormChange(
-                                  "branchDistrict",
+                                  "branchCity",
                                   event.target.value,
                                 )
                               }
@@ -1745,18 +1710,18 @@ export default function Catalog() {
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Teléfono sucursal
+                              Distrito
                             </span>
                             <input
-                              value={quotationClientForm.branchPhone}
+                              value={quotationClientForm.branchDistrict}
                               onChange={(event) =>
                                 handleQuotationClientFormChange(
-                                  "branchPhone",
+                                  "branchDistrict",
                                   event.target.value,
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. 22223333"
+                              placeholder="Ej. Carmen"
                             />
                           </label>
                           <label>
@@ -1775,51 +1740,96 @@ export default function Catalog() {
                               placeholder="Direccion exacta"
                             />
                           </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Teléfono del cliente
+                            </span>
+                            <input
+                              value={quotationClientForm.branchPhone}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchPhone",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. 22223333"
+                            />
+                          </label>
                         </>
                       )}
 
-                      <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">
-                          Representante
-                        </p>
+                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#091A31] text-[#E9BC2D]">
+                              <MapPin className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-extrabold text-white">
+                                Ubicación del cliente
+                              </p>
+                              <p className="mt-1 text-xs leading-5 text-slate-400">
+                                Obtén las coordenadas precisas desde este dispositivo.
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleUseCurrentLocation}
+                            disabled={branchLocationLoading || quotationSubmitting}
+                            className="inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-[#D7A91D]/45 bg-[#D7A91D]/10 px-4 text-sm font-bold text-[#E9BC2D] transition hover:border-[#D7A91D] hover:bg-[#D7A91D]/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {branchLocationLoading ? (
+                              <RiLoader4Line className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <LocateFixed className="h-4 w-4" />
+                            )}
+                            {branchLocationLoading
+                              ? "Obteniendo ubicación..."
+                              : "Obtener mi ubicación actual"}
+                          </button>
+                        </div>
+
+                        {quotationClientForm.branchLatitude !== "" &&
+                        quotationClientForm.branchLongitude !== "" ? (
+                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+                                Latitud
+                              </span>
+                              <span className="mt-1 block font-mono text-sm text-white">
+                                {quotationClientForm.branchLatitude}
+                              </span>
+                            </div>
+                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+                                Longitud
+                              </span>
+                              <span className="mt-1 block font-mono text-sm text-white">
+                                {quotationClientForm.branchLongitude}
+                              </span>
+                            </div>
+                            <p className="text-xs text-emerald-200 sm:col-span-2">
+                              Ubicación capturada
+                              {quotationClientForm.branchLocationAccuracy !== ""
+                                ? ` con una precisión aproximada de ${quotationClientForm.branchLocationAccuracy} m.`
+                                : "."}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="mt-4 text-xs text-amber-200">
+                            Aún no se han registrado coordenadas para este cliente.
+                          </p>
+                        )}
+
+                        {branchLocationError && (
+                          <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                            {branchLocationError}
+                          </p>
+                        )}
                       </div>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Nombre
-                        </span>
-                        <input
-                          value={quotationClientForm.representativeName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Nombre del contacto"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo representante *
-                        </span>
-                        <input
-                          type="email"
-                          required
-                          autoComplete="email"
-                          value={quotationClientForm.representativeEmail}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeEmail",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="contacto@cliente.com"
-                        />
-                      </label>
 
                       <label className="md:col-span-2">
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
@@ -1868,6 +1878,35 @@ export default function Catalog() {
                             {selectedPaymentMethodDescription}
                           </p>
                         ) : null}
+                      </label>
+
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Porcentaje de adelanto
+                        </span>
+                        <div className="mt-2 relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={quotationClientForm.advancePercentage}
+                            onChange={(event) =>
+                              handleQuotationClientFormChange(
+                                "advancePercentage",
+                                event.target.value,
+                              )
+                            }
+                            className="h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 pr-10 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                            placeholder="50"
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-bold text-[#9BB3D3]">
+                            %
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">
+                          Define el porcentaje del total que se solicitará como adelanto al aprobar la cotización.
+                        </p>
                       </label>
 
                       <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
@@ -1920,7 +1959,7 @@ export default function Catalog() {
 
               ) : (
                 <p className="mt-4 rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-4 py-3 text-sm text-slate-500">
-                  Selecciona cantidades en las tarjetas del catálogo para preparar el pedido.
+                  Agrega desde la tarjeta si hay una sola talla o abre el detalle para seleccionar variantes.
                 </p>
               )}
             </section>
@@ -2061,7 +2100,7 @@ export default function Catalog() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-lg border border-[#D7A91D]/25 bg-[#D7A91D]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#D7A91D]">
-                            {item.catalogType}
+                            {item.catalogTypeLabel || item.catalogType}
                           </span>
 
                           <span className="max-w-full truncate text-xs text-[#86A4CE]">
@@ -2222,10 +2261,10 @@ export default function Catalog() {
                       />
 
                       <div className="md:col-span-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">Sucursal</p>
+                        <p className="text-sm font-extrabold text-white">Ubicación del cliente</p>
                         {clientBranches.length > 0 && (
                           <p className="mt-1 text-xs text-slate-400">
-                            Selecciona una sucursal registrada o agrega una nueva.
+                            Selecciona una ubicación registrada o agrega una nueva.
                           </p>
                         )}
                       </div>
@@ -2254,9 +2293,9 @@ export default function Catalog() {
                                 />
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold text-white">
-                                    {[branch.province, branch.district]
+                                    {[branch.province, branch.city, branch.district]
                                       .filter(Boolean)
-                                      .join(", ") || "Sucursal"}
+                                      .join(", ") || "Ubicación registrada"}
                                   </p>
                                   {branch.address && (
                                     <p className="mt-0.5 truncate text-xs text-slate-400">
@@ -2289,7 +2328,7 @@ export default function Catalog() {
                             />
                             <Plus className="h-5 w-5 text-[#D7A91D]" />
                             <span className="text-sm font-semibold text-[#9BB3D3]">
-                              Nueva sucursal
+                              Nueva ubicación
                             </span>
                           </label>
                         </div>
@@ -2318,6 +2357,22 @@ export default function Catalog() {
                               Cantón
                             </span>
                             <input
+                              value={quotationClientForm.branchCity}
+                              onChange={(event) =>
+                                handleQuotationClientFormChange(
+                                  "branchCity",
+                                  event.target.value,
+                                )
+                              }
+                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                              placeholder="Ej. Central"
+                            />
+                          </label>
+                          <label>
+                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                              Distrito
+                            </span>
+                            <input
                               value={quotationClientForm.branchDistrict}
                               onChange={(event) =>
                                 handleQuotationClientFormChange(
@@ -2326,7 +2381,7 @@ export default function Catalog() {
                                 )
                               }
                               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Central"
+                              placeholder="Ej. Carmen"
                             />
                           </label>
                           <label>
@@ -2347,7 +2402,7 @@ export default function Catalog() {
                           </label>
                           <label>
                             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Teléfono sucursal
+                              Teléfono del cliente
                             </span>
                             <input
                               value={quotationClientForm.branchPhone}
@@ -2372,7 +2427,7 @@ export default function Catalog() {
                             </div>
                             <div>
                               <p className="text-sm font-extrabold text-white">
-                                Ubicación de la sucursal
+                                Ubicación del cliente
                               </p>
                               <p className="mt-1 text-xs leading-5 text-slate-400">
                                 Obtén las coordenadas precisas desde este dispositivo.
@@ -2393,7 +2448,7 @@ export default function Catalog() {
                             )}
                             {branchLocationLoading
                               ? "Obteniendo ubicación..."
-                              : "Ubicación actual"}
+                              : "Obtener mi ubicación actual"}
                           </button>
                         </div>
 
@@ -2425,7 +2480,7 @@ export default function Catalog() {
                           </div>
                         ) : (
                           <p className="mt-4 text-xs text-amber-200">
-                            Aún no se han registrado coordenadas para esta sucursal.
+                            Aún no se han registrado coordenadas para este cliente.
                           </p>
                         )}
 
@@ -2435,47 +2490,6 @@ export default function Catalog() {
                           </p>
                         )}
                       </div>
-
-                      <div className="md:col-span-2 border-t border-[#29466F] pt-4 text-sm font-extrabold text-white">
-                        Representante
-                      </div>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Nombre
-                        </span>
-                        <input
-                          value={quotationClientForm.representativeName}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeName",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Nombre del contacto"
-                        />
-                      </label>
-
-                      <label>
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Correo representante *
-                        </span>
-                        <input
-                          type="email"
-                          required
-                          autoComplete="email"
-                          value={quotationClientForm.representativeEmail}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "representativeEmail",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="contacto@cliente.com"
-                        />
-                      </label>
 
                       <label className="md:col-span-2">
                         <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
@@ -2524,6 +2538,35 @@ export default function Catalog() {
                             {selectedPaymentMethodDescription}
                           </p>
                         ) : null}
+                      </label>
+
+                      <label className="md:col-span-2">
+                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                          Porcentaje de adelanto
+                        </span>
+                        <div className="mt-2 relative">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={quotationClientForm.advancePercentage}
+                            onChange={(event) =>
+                              handleQuotationClientFormChange(
+                                "advancePercentage",
+                                event.target.value,
+                              )
+                            }
+                            className="h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 pr-10 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+                            placeholder="50"
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-bold text-[#9BB3D3]">
+                            %
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-slate-400">
+                          Define el porcentaje del total que se solicitará como adelanto al aprobar la cotización.
+                        </p>
                       </label>
 
                       <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
@@ -2604,6 +2647,20 @@ export default function Catalog() {
                           {formatCartCurrency(cartEstimatedTotal)}
                         </dd>
                       </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-slate-300">
+                          Adelanto ({cartAdvancePercentage}%)
+                        </dt>
+                        <dd className="font-bold text-white">
+                          {formatCartCurrency(cartAdvancePayment)}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-4">
+                        <dt className="text-slate-400">Saldo pendiente</dt>
+                        <dd className="font-bold text-white">
+                          {formatCartCurrency(cartPendingBalance)}
+                        </dd>
+                      </div>
                     </dl>
 
                     <div className="mt-6 flex gap-3 rounded-xl border border-[#D7A91D]/35 bg-[#071A31]/70 p-4 text-sm leading-5 text-[#B6C7DD]">
@@ -2640,7 +2697,7 @@ export default function Catalog() {
                   </p>
 
                   <p className="mt-1 max-w-sm text-sm text-slate-500">
-                    Selecciona cantidades en las tarjetas del catálogo para preparar una cotización o pedido.
+                    Agrega desde la tarjeta si hay una sola talla o abre el detalle para seleccionar variantes.
                   </p>
                 </div>
               )}
@@ -2677,15 +2734,7 @@ export default function Catalog() {
       <CatalogProductDetailsModal
         product={selectedProductDetails}
         onClose={() => setSelectedProductDetails(null)}
-        onViewTechnicalSheet={handleOpenTechnicalSheet}
-        showPrice={canPurchase}
-      />
-
-      <CatalogTechnicalSheetModal
-        product={selectedTechnicalSheetProduct}
-        onClose={() =>
-          setSelectedTechnicalSheetProduct(null)
-        }
+        onAddToCart={canPurchase ? handleAddToCart : undefined}
       />
 
       {cartConfirmation && (

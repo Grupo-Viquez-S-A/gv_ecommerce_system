@@ -130,6 +130,24 @@ export function addDaysCRDateString(days = 0, fromValue = new Date()) {
   )}`;
 }
 
+export function addBusinessDaysCRDateString(days = 0, fromValue = new Date()) {
+  const { year, month, day } = getCRDateParts(fromValue);
+  const utcMidnight = new Date(Date.UTC(year, month - 1, day));
+
+  let remainingDays = Math.max(0, Number(days) || 0);
+  while (remainingDays > 0) {
+    utcMidnight.setUTCDate(utcMidnight.getUTCDate() + 1);
+    const dayOfWeek = utcMidnight.getUTCDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      remainingDays -= 1;
+    }
+  }
+
+  return `${utcMidnight.getUTCFullYear()}-${pad(utcMidnight.getUTCMonth() + 1)}-${pad(
+    utcMidnight.getUTCDate(),
+  )}`;
+}
+
 export function toDateInputValueCR(value) {
   if (!value) return "";
 

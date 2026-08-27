@@ -1,25 +1,31 @@
 import {
-  RiStoreFill,
-  RiTeamFill,
+  RiDeleteBinLine,
   RiEyeFill,
   RiEditFill,
+  RiMapPinFill,
   RiUserSharedFill,
 } from "react-icons/ri";
 
 import { useAuth } from "../../context/AuthContext.js";
-import { hasSystemAccess } from "../../utils/roles.js";
+import {
+  hasClientDeletionAccess,
+  hasSystemAccess,
+  isSalesAgent,
+} from "../../utils/roles.js";
 
 export default function ClientActionButtons({
   client,
   compact = false,
-  onOpenBranches,
-  onOpenRepresentatives,
   onView,
   onEdit,
   onDeactivate,
+  onDelete,
 }) {
   const { user } = useAuth();
-  const canEditClient = hasSystemAccess(user);
+  const canManageClient = hasSystemAccess(user);
+  const canEditClient = canManageClient || isSalesAgent(user);
+  const canDeactivateClient = canManageClient;
+  const canDeleteClient = hasClientDeletionAccess(user);
   const buttonSize = compact ? "w-7 h-7" : "w-7 h-7";
   const iconSize = compact ? 13 : 14;
 
@@ -44,26 +50,6 @@ export default function ClientActionButtons({
     >
       <button
         type="button"
-        onClick={() => onOpenBranches(client)}
-        className={baseButtonClasses}
-        title="Ver sucursales"
-        aria-label={`Ver sucursales de ${client.name}`}
-      >
-        <RiStoreFill size={iconSize} />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onOpenRepresentatives(client)}
-        className={baseButtonClasses}
-        title="Ver representantes"
-        aria-label={`Ver representantes de ${client.name}`}
-      >
-        <RiTeamFill size={iconSize} />
-      </button>
-
-      <button
-        type="button"
         onClick={() => onView(client)}
         className={baseButtonClasses}
         title="Ver cliente"
@@ -77,22 +63,44 @@ export default function ClientActionButtons({
           type="button"
           onClick={() => onEdit(client)}
           className={baseButtonClasses}
-          title="Editar cliente"
-          aria-label={`Editar ${client.name}`}
+          title={canManageClient ? "Editar cliente" : "Actualizar ubicación"}
+          aria-label={
+            canManageClient
+              ? `Editar ${client.name}`
+              : `Actualizar ubicación de ${client.name}`
+          }
         >
-          <RiEditFill size={iconSize} />
+          {canManageClient ? (
+            <RiEditFill size={iconSize} />
+          ) : (
+            <RiMapPinFill size={iconSize} />
+          )}
         </button>
       )}
 
-      <button
-        type="button"
-        onClick={() => onDeactivate(client)}
-        className={`${buttonSize} rounded-lg text-yellow-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors cursor-pointer`}
-        title="Desactivar cliente"
-        aria-label={`Desactivar ${client.name}`}
-      >
-        <RiUserSharedFill size={iconSize} />
-      </button>
+      {canDeactivateClient && (
+        <button
+          type="button"
+          onClick={() => onDeactivate(client)}
+          className={`${buttonSize} rounded-lg text-yellow-400 hover:text-white hover:bg-yellow-500/20 flex items-center justify-center transition-colors cursor-pointer`}
+          title="Desactivar cliente"
+          aria-label={`Desactivar ${client.name}`}
+        >
+          <RiUserSharedFill size={iconSize} />
+        </button>
+      )}
+
+      {canDeleteClient && (
+        <button
+          type="button"
+          onClick={() => onDelete(client)}
+          className={`${buttonSize} rounded-lg text-red-300 hover:text-white hover:bg-red-500/15 flex items-center justify-center transition-colors cursor-pointer`}
+          title="Eliminar cliente"
+          aria-label={`Eliminar ${client.name}`}
+        >
+          <RiDeleteBinLine size={iconSize} />
+        </button>
+      )}
     </div>
   );
 }

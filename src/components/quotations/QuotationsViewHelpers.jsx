@@ -15,7 +15,15 @@ export const QUOTATION_LINE_DATA = [{ name: "Ene", value: 35 }, { name: "Feb", v
 const currencyFormatter = new Intl.NumberFormat("es-CR", { style: "currency", currency: "CRC", maximumFractionDigits: 0 });
 const dateFormatter = new Intl.DateTimeFormat("es-CR", { timeZone: "America/Costa_Rica", day: "2-digit", month: "2-digit", year: "numeric" });
 export function formatQuotationCurrency(value) { return currencyFormatter.format(Number(value) || 0); }
-export function formatQuotationDate(value) { const date = value ? new Date(value) : null; return !date || Number.isNaN(date.getTime()) ? "-" : dateFormatter.format(date); }
+export function formatQuotationDate(value) {
+  if (!value) return "-";
+  const stringValue = String(value).trim();
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(stringValue);
+  const date = dateOnlyMatch
+    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
+    : new Date(stringValue);
+  return Number.isNaN(date.getTime()) ? "-" : dateFormatter.format(date);
+}
 export function normalizeQuotationSearch(value) { return String(value || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
 export function isQuotationApproved(quotation) {
   const status = normalizeQuotationSearch(quotation?.dbStatus || quotation?.status);

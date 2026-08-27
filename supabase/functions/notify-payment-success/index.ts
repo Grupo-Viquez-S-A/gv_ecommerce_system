@@ -718,7 +718,7 @@ Deno.serve(async (request) => {
     const { data: quotation, error: quotationError } = await supabaseAdmin
       .from("quotations")
       .select(
-        "quotation_id, quotation_number, representative_id, business_id, total",
+        "quotation_id, quotation_number, customer_id, total",
       )
       .eq("quotation_id", order.quotation_id)
       .maybeSingle();
@@ -736,20 +736,21 @@ Deno.serve(async (request) => {
     }
 
     const [
-      { data: representative, error: representativeError },
       { data: business, error: businessError },
+      { data: emails, error: emailsError },
       { data: payments, error: paymentsError },
     ] = await Promise.all([
       supabaseAdmin
-        .from("representatives")
-        .select("representative_id, name, email")
-        .eq("representative_id", quotation.representative_id)
+        .from("customers")
+        .select("customer_id, company_id, commercial_name, company_name")
+        .eq("customer_id", quotation.customer_id)
         .maybeSingle(),
       supabaseAdmin
-        .from("businesses")
-        .select("business_id, company_id, business_name, legal_name")
-        .eq("business_id", quotation.business_id)
-        .maybeSingle(),
+        .from("emails")
+        .select("email")
+        .eq("customer_id", quotation.customer_id)
+        .order("is_primary", { ascending: false })
+        .limit(1),
       supabaseAdmin
         .from("payments")
         .select("amount, payment_date, method_id, reference_number, created_at")
@@ -757,14 +758,6 @@ Deno.serve(async (request) => {
         .eq("is_valid", true)
         .order("payment_date", { ascending: false }),
     ]);
-
-    if (representativeError) {
-      return errorResponse(
-        "No fue posible cargar el representante.",
-        500,
-        representativeError,
-      );
-    }
 
     if (businessError) {
       return errorResponse(
@@ -776,6 +769,14 @@ Deno.serve(async (request) => {
 
     if (!business) {
       return errorResponse("El cliente de la orden no existe.", 404);
+    }
+
+    if (emailsError) {
+      return errorResponse(
+        "No fue posible cargar el correo del cliente.",
+        500,
+        emailsError,
+      );
     }
 
     const authorizationResult = await authorizeCompanyAction({
@@ -797,11 +798,13 @@ Deno.serve(async (request) => {
       );
     }
 
-    if (!representative?.email) {
+    const recipientEmail = String(emails?.[0]?.email || "").trim();
+
+    if (!recipientEmail) {
       return errorResponse(
-        "El representante no tiene correo registrado.",
+        "El cliente no tiene correo registrado.",
         409,
-        representative,
+        business,
       );
     }
 
@@ -833,9 +836,10 @@ Deno.serve(async (request) => {
     }
 
     const emailPayload = {
-      representativeName: representative.name || "representante",
+      representativeName:
+        business?.commercial_name || business?.company_name || "cliente",
       clientName:
-        business?.business_name || business?.legal_name || "Cliente sin nombre",
+        business?.commercial_name || business?.company_name || "Cliente sin nombre",
       orderCode: order.production_order_code || "Sin codigo",
       quotationNumber: quotation.quotation_number || "Sin cotizacion",
       amountPaid,
@@ -856,7 +860,7 @@ Deno.serve(async (request) => {
       password: smtpConfig.password,
       fromEmail: smtpConfig.fromEmail,
       fromName: smtpConfig.fromName,
-      to: representative.email,
+      to: recipientEmail,
       subject,
       text: buildEmailText(emailPayload),
       html: buildEmailHtml(emailPayload),
