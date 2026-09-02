@@ -1,3 +1,5 @@
+import { getQuotationAdvancePercentageForItems } from "./quotationAdvanceRules.js";
+
 function getText(value) {
   const normalizedValue = String(value || "").trim();
 
@@ -35,8 +37,7 @@ function isTextileCartItem(item) {
 }
 
 export function normalizeQuotationPayload(
-  { client = {}, items = [], status },
-  { getDbQuotationStatus },
+  { client = {}, items = [] },
 ) {
   const companyId = getText(client.companyId);
   const identificationType =
@@ -46,6 +47,7 @@ export function normalizeQuotationPayload(
   const ownerName = getText(client.ownerName);
   const legalId = getText(client.legalId);
   const activityCode = getText(client.activityCode);
+  const taxStatus = getText(client.taxStatus);
   const businessEmail = getText(client.businessEmail);
   const branchProvince = getText(client.branchProvince);
   const branchCity = getText(client.branchCity);
@@ -56,10 +58,7 @@ export function normalizeQuotationPayload(
   const branchLocationAccuracy = getNullableNumber(
     client.branchLocationAccuracy,
   );
-  const advancePercentage = Math.min(
-    100,
-    Math.max(0, getNumber(client.advancePercentage, 50)),
-  );
+  const advancePercentage = getQuotationAdvancePercentageForItems(items);
 
   if (!companyId) {
     throw new Error("Selecciona la empresa del grupo.");
@@ -97,6 +96,14 @@ export function normalizeQuotationPayload(
     throw new Error("Ingresa un correo electrónico principal válido.");
   }
 
+  if (!getText(client.methodId)) {
+    throw new Error("Selecciona el método de pago.");
+  }
+
+  if (!getText(client.conditionId)) {
+    throw new Error("Selecciona la condición de pago.");
+  }
+
   if (!branchAddress) {
     throw new Error("Ingresa la dirección del cliente.");
   }
@@ -130,6 +137,7 @@ export function normalizeQuotationPayload(
       ownerName: identificationType === "personal" ? ownerName : "",
       businessName,
       activityCode,
+      taxStatus,
 
       businessEmail,
       businessPhone: getText(client.businessPhone),
@@ -149,10 +157,9 @@ export function normalizeQuotationPayload(
 
       notes: getText(client.notes),
 
-      earlyDelivery: getBoolean(client.earlyDelivery),
-      earlyDeliveryDate: getText(client.earlyDeliveryDate),
       validUntil: getText(client.validUntil),
       methodId: getText(client.methodId),
+      conditionId: getText(client.conditionId),
       advancePercentage,
     },
 
@@ -176,9 +183,12 @@ export function normalizeQuotationPayload(
         iva_amount: ivaAmount,
         has_sublimation: getBoolean(item.hasSublimation),
         has_embroidery: getBoolean(item.hasEmbroidery),
+        category_name: getText(
+          item.categoryName ||
+          item.category_name ||
+          item.category?.category_name,
+        ),
       };
     }),
-
-    status: getDbQuotationStatus(status),
   };
 }

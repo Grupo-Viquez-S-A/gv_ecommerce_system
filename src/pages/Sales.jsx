@@ -7,17 +7,32 @@ import SalesList from "../components/sales/SalesList.jsx";
 import SalesMetrics from "../components/sales/SalesMetrics.jsx";
 import SalesPageHeader from "../components/sales/SalesPageHeader.jsx";
 import { buildDailySalesData, formatSalesCurrency, formatSalesDate } from "../components/sales/salesViewConfig.js";
+import { useAuth } from "../context/AuthContext.js";
+import { getSalesAgentNames } from "../services/agentService.js";
+import { getOrderPayments, importOrderPayments } from "../services/paymentService.js";
 import { getPaidSales } from "../services/salesService.js";
+import { hasPaymentApprovalAccess } from "../utils/roles.js";
 
 const EMPTY_FILTERS = { search: "", representative: "Todos", dateFrom: "", dateTo: "" };
 
 export default function Sales() {
+  const { user } = useAuth();
+  const canApprovePayments = hasPaymentApprovalAccess(user);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [selectedSale, setSelectedSale] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [sellerOptions, setSellerOptions] = useState(["Todos"]);
+  const [salePayments, setSalePayments] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentsError, setPaymentsError] = useState(null);
+  const [previewReceipt, setPreviewReceipt] = useState(null);
+  const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approvalError, setApprovalError] = useState(null);
+  const [approvalSuccess, setApprovalSuccess] = useState(null);
+  const [expandedPaymentId, setExpandedPaymentId] = useState(null);
 
   const loadSales = async () => {
     setLoading(true);
@@ -25,7 +40,7 @@ export default function Sales() {
     try {
       setSales(await getPaidSales());
     } catch (error) {
-      setLoadError(error?.message || "No fue posible cargar las ventas pagadas.");
+      setLoadError(error?.message || "No fue posible cargar las ventas registradas.");
     } finally {
       setLoading(false);
     }
@@ -36,7 +51,32 @@ export default function Sales() {
     return () => window.clearTimeout(timerId);
   }, []);
 
-  const representatives = useMemo(() => ["Todos", ...new Set(sales.map((sale) => sale.representative).filter(Boolean))], [sales]);
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSellerOptions() {
+      try {
+        const names = await getSalesAgentNames();
+
+        if (mounted) {
+          setSellerOptions(["Todos", ...names]);
+        }
+      } catch (error) {
+        console.error("Sales seller options loading error:", error);
+
+        if (mounted) {
+          setSellerOptions(["Todos"]);
+        }
+      }
+    }
+
+    loadSellerOptions();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const chartData = useMemo(() => buildDailySalesData(sales), [sales]);
 
   const metrics = useMemo(() => {
@@ -46,7 +86,7 @@ export default function Sales() {
       { label: "TOTAL VENDIDO", value: formatSalesCurrency(total), color: "#C9A227", bg: "bg-[#C9A227]/10" },
       { label: "CANTIDAD DE VENTAS", value: String(sales.length), color: "#22c55e", bg: "bg-[#22c55e]/10" },
       { label: "TICKET PROMEDIO", value: formatSalesCurrency(sales.length ? total / sales.length : 0), color: "#8b5cf6", bg: "bg-[#8b5cf6]/10" },
-      { label: "ÚLTIMA VENTA PAGADA", value: latestSale ? formatSalesDate(latestSale.saleDate) : "Sin ventas", color: "#f59e0b", bg: "bg-[#f59e0b]/10" },
+      { label: "ÚLTIMA VENTA REGISTRADA", value: latestSale ? formatSalesDate(latestSale.saleDate) : "Sin ventas", color: "#f59e0b", bg: "bg-[#f59e0b]/10" },
     ];
   }, [sales]);
 
@@ -60,8 +100,81 @@ export default function Sales() {
     return matchesSearch && matchesRepresentative && matchesFrom && matchesTo;
   }), [filters, sales]);
 
-  const openDrawer = (sale) => { setSelectedSale(sale); setDrawerOpen(true); };
-  const closeDrawer = () => { setDrawerOpen(false); window.setTimeout(() => setSelectedSale(null), 300); };
+  const openDrawer = async (sale) => {
+    setSelectedSale(sale);
+    setDrawerOpen(true);
+    setPaymentsLoading(true);
+    setPaymentsError(null);
+    setApprovalError(null);
+    setApprovalSuccess(null);
+    setSalePayments([]);
+
+    try {
+      const payments = await getOrderPayments(sale.productionOrderId);
+      setSalePayments(payments);
+      setExpandedPaymentId(payments.length > 0 ? payments[0].paymentId : null);
+    } catch (error) {
+      setPaymentsError(
+        error?.message || "No fue posible cargar los pagos reportados de la venta.",
+      );
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    setPreviewReceipt(null);
+
+    window.setTimeout(() => {
+      setSelectedSale(null);
+      setSalePayments([]);
+      setPaymentsError(null);
+      setPaymentsLoading(false);
+      setApprovalLoading(false);
+      setApprovalError(null);
+      setApprovalSuccess(null);
+      setExpandedPaymentId(null);
+    }, 300);
+  };
+
+  const handleApprovePayments = async () => {
+    if (!selectedSale || !canApprovePayments) {
+      return;
+    }
+
+    setApprovalLoading(true);
+    setApprovalError(null);
+    setApprovalSuccess(null);
+
+    try {
+      await importOrderPayments(selectedSale.productionOrderId);
+      const [updatedSales, updatedPayments] = await Promise.all([
+        getPaidSales(),
+        getOrderPayments(selectedSale.productionOrderId),
+      ]);
+
+      setSales(updatedSales);
+      setSalePayments(updatedPayments);
+      setExpandedPaymentId(
+        updatedPayments.length > 0 ? updatedPayments[0].paymentId : null,
+      );
+
+      const refreshedSale =
+        updatedSales.find(
+          (sale) => sale.productionOrderId === selectedSale.productionOrderId,
+        ) || selectedSale;
+
+      setSelectedSale(refreshedSale);
+      setApprovalSuccess("Reporte de pago aprobado correctamente.");
+    } catch (error) {
+      setApprovalError(
+        error?.message || "No fue posible aprobar el reporte de pago.",
+      );
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
 
   return <>
     <div className="p-4 lg:p-6">
@@ -69,9 +182,25 @@ export default function Sales() {
       {loadError && <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{loadError}</div>}
       <SalesMetrics metrics={metrics} />
       <SalesChart data={chartData} />
-      <SalesFilters filters={filters} representatives={representatives} onChange={(field, value) => setFilters((current) => ({ ...current, [field]: value }))} onClear={() => setFilters(EMPTY_FILTERS)} />
+      <SalesFilters filters={filters} representatives={sellerOptions} onChange={(field, value) => setFilters((current) => ({ ...current, [field]: value }))} onClear={() => setFilters(EMPTY_FILTERS)} />
       <SalesList sales={filteredSales} totalSales={sales.length} loading={loading} onClear={() => setFilters(EMPTY_FILTERS)} onView={openDrawer} />
     </div>
-    <SaleDetailsDrawer open={drawerOpen} sale={selectedSale} onClose={closeDrawer} />
+    <SaleDetailsDrawer
+      open={drawerOpen}
+      sale={selectedSale}
+      payments={salePayments}
+      paymentsLoading={paymentsLoading}
+      paymentsError={paymentsError}
+      previewReceipt={previewReceipt}
+      setPreviewReceipt={setPreviewReceipt}
+      canApprovePayments={canApprovePayments}
+      approvalLoading={approvalLoading}
+      approvalError={approvalError}
+      approvalSuccess={approvalSuccess}
+      expandedPaymentId={expandedPaymentId}
+      setExpandedPaymentId={setExpandedPaymentId}
+      onApprovePayments={handleApprovePayments}
+      onClose={closeDrawer}
+    />
   </>;
 }

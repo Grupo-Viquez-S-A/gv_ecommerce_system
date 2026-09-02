@@ -1,3 +1,7 @@
+import { useEffect, useRef } from "react";
+
+import { isValidCostaRicaIdentificationForHacienda } from "../../services/haciendaTaxpayerService.js";
+
 const inputClassName =
   "mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]";
 
@@ -17,6 +21,27 @@ export default function QuotationClientIdentityFields({
   onLookup,
 }) {
   const isPersonal = form.identificationType === "personal";
+  const lastLookupKeyRef = useRef("");
+
+  useEffect(() => {
+    const lookupKey = `${form.identificationType}:${form.legalId || ""}`;
+
+    if (!isValidCostaRicaIdentificationForHacienda(form.legalId)) {
+      lastLookupKeyRef.current = "";
+      return undefined;
+    }
+
+    if (lastLookupKeyRef.current === lookupKey) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      lastLookupKeyRef.current = lookupKey;
+      onLookup?.();
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [form.identificationType, form.legalId, onLookup]);
 
   return (
     <>
@@ -90,6 +115,16 @@ export default function QuotationClientIdentityFields({
           required
           className={inputClassName}
           placeholder="Ej. 551001"
+        />
+      </label>
+
+      <label>
+        <FieldLabel>Estado tributario</FieldLabel>
+        <input
+          value={form.taxStatus || ""}
+          onChange={(event) => onChange("taxStatus", event.target.value)}
+          className={inputClassName}
+          placeholder="Ej. Contribuyente activo"
         />
       </label>
 

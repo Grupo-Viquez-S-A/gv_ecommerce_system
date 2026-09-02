@@ -163,7 +163,7 @@ export default function ClientProductCard({
     product?.title ||
     "Producto sin nombre";
 
-  const productCode = product?.gtin || "Sin código";
+  const productCode = product?.gtin || "";
 
   const categoryName = getCategoryName(product);
   const productTypeName = getProductTypeName(product);
@@ -250,9 +250,11 @@ export default function ClientProductCard({
           {productName}
         </button>
 
-        <p className="mt-2 text-sm font-medium text-[#8EA4C9]">
-          {productCode}
-        </p>
+        {productCode && (
+          <p className="mt-2 text-sm font-medium text-[#8EA4C9]">
+            {productCode}
+          </p>
+        )}
 
         <p className="mt-4 min-h-[84px] text-[0.95rem] leading-8 text-[#C9D4E5] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] overflow-hidden">
           {productDescription}

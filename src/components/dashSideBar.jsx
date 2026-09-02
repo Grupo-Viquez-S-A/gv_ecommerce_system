@@ -8,7 +8,6 @@ import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
   RiStoreFill,
-  RiFileListFill,
   RiShoppingBagFill,
   RiMapPinLine,
   RiCustomerService2Fill,
@@ -266,13 +265,6 @@ function DashSideBar({
                 to="/ventas"
                 collapsed={sidebarCollapsed}
               />
-
-              <NavItem
-                icon={<RiFileListFill size={18} />}
-                label="Ordenes de venta"
-                to="/pedidos"
-                collapsed={sidebarCollapsed}
-              />
             </>
           )}
 
@@ -525,13 +517,6 @@ function DashSideBar({
                   icon={<RiStoreFill size={18} />}
                   label="Ventas"
                   to="/ventas"
-                  collapsed={false}
-                />
-
-                <NavItem
-                  icon={<RiFileListFill size={18} />}
-                  label="Ordenes de venta"
-                  to="/pedidos"
                   collapsed={false}
                 />
               </>

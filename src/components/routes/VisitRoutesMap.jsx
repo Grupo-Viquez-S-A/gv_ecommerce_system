@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Info, Navigation } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
@@ -50,22 +51,22 @@ function createNumberedIcon(number) {
     className: "",
     html: `
       <div style="
-        width: 28px;
-        height: 28px;
+        width: 40px;
+        height: 40px;
         border-radius: 999px;
-        background: #c9a227;
-        color: #0b1120;
-        border: 2px solid #f4e2a0;
+        background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+        color: #ffffff;
+        border: 3px solid rgba(219, 234, 254, 0.95);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
+        font-size: 16px;
         font-weight: 800;
-        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 18px 35px rgba(29, 78, 216, 0.35);
       ">${number}</div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
   });
 }
 
@@ -84,7 +85,7 @@ function buildTravelPopupContent(item, index) {
   const googleMapsUrl = buildGoogleMapsUrl(
     item.latitude,
     item.longitude,
-    `${item.clientName} ${item.branchLabel}`,
+    `${item.clientName} ${item.locationLabel || ""}`.trim(),
   );
   const wazeUrl = buildWazeUrl(item.latitude, item.longitude);
 
@@ -94,13 +95,10 @@ function buildTravelPopupContent(item, index) {
         ${index + 1}. ${item.clientName}
       </p>
       <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600;">
-        ${item.branchLabel}
+        ${item.locationLabel || "Ubicación del cliente"}
       </p>
       <p style="margin: 0 0 10px; font-size: 12px; color: #475569;">
-        ${item.branchAddress}
-      </p>
-      <p style="margin: 0 0 10px; font-size: 12px; font-weight: 700;">
-        Viajar a la ubicación
+        ${item.address || "Dirección sin registrar"}
       </p>
       <div style="display: flex; gap: 8px; flex-wrap: wrap;">
         <a
@@ -132,6 +130,23 @@ export default function VisitRoutesMap({ routeItems = [] }) {
   const tileLayerRef = useRef(null);
   const fallbackTimeoutRef = useRef(null);
   const [tileLoadError, setTileLoadError] = useState("");
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  const safeRouteItems = useMemo(
+    () =>
+      routeItems
+        .map((item) => ({
+          ...item,
+          latitude: Number(item.latitude),
+          longitude: Number(item.longitude),
+        }))
+        .filter(
+          (item) =>
+            Number.isFinite(item.latitude) &&
+            Number.isFinite(item.longitude),
+        ),
+    [routeItems],
+  );
 
   useEffect(
     () => () => {
@@ -244,18 +259,7 @@ export default function VisitRoutesMap({ routeItems = [] }) {
       routeLineRef.current = null;
     }
 
-    const points = routeItems
-      .map((item) => ({
-        ...item,
-        latitude: Number(item.latitude),
-        longitude: Number(item.longitude),
-      }))
-      .filter(
-        (item) =>
-          Number.isFinite(item.latitude) && Number.isFinite(item.longitude),
-      );
-
-    if (points.length === 0) {
+    if (safeRouteItems.length === 0) {
       map.setView(
         [DEFAULT_CENTER.latitude, DEFAULT_CENTER.longitude],
         DEFAULT_ZOOM,
@@ -270,18 +274,15 @@ export default function VisitRoutesMap({ routeItems = [] }) {
 
     const bounds = [];
 
-    points.forEach((item, index) => {
+    safeRouteItems.forEach((item, index) => {
       const marker = L.marker([item.latitude, item.longitude], {
         icon: createNumberedIcon(index + 1),
       });
 
-      marker.bindTooltip(
-        `${index + 1}. ${item.clientName} - ${item.branchLabel}`,
-        {
-          direction: "top",
-          offset: [0, -12],
-        },
-      );
+      marker.bindTooltip(`${index + 1}. ${item.clientName}`, {
+        direction: "top",
+        offset: [0, -18],
+      });
       marker.bindPopup(buildTravelPopupContent(item, index), {
         maxWidth: 260,
       });
@@ -290,14 +291,13 @@ export default function VisitRoutesMap({ routeItems = [] }) {
       bounds.push([item.latitude, item.longitude]);
     });
 
-    if (points.length > 1) {
+    if (safeRouteItems.length > 1) {
       routeLineRef.current = L.polyline(
-        points.map((item) => [item.latitude, item.longitude]),
+        safeRouteItems.map((item) => [item.latitude, item.longitude]),
         {
-          color: "#c9a227",
-          weight: 4,
-          opacity: 0.9,
-          dashArray: "8 10",
+          color: "#2563eb",
+          weight: 5,
+          opacity: 0.92,
         },
       ).addTo(map);
     }
@@ -306,29 +306,62 @@ export default function VisitRoutesMap({ routeItems = [] }) {
       map.setView(bounds[0], 15);
     } else {
       map.fitBounds(bounds, {
-        padding: [32, 32],
+        padding: [34, 34],
       });
     }
 
     window.requestAnimationFrame(() => {
       map.invalidateSize();
     });
-  }, [routeItems]);
+  }, [safeRouteItems]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#2a3550] bg-[#141d2e]">
-      <div
-        ref={mapContainerRef}
-        className="h-[420px] w-full"
-        aria-label="Mapa de la ruta de visita"
-      />
+    <div className="overflow-hidden rounded-3xl border border-[#2a3550] bg-[#141d2e]/95 shadow-[0_18px_45px_rgba(0,0,0,0.22)]">
+      <div className="relative">
+        <div
+          ref={mapContainerRef}
+          className="h-[420px] w-full"
+          aria-label="Mapa de la ruta de visita"
+        />
 
-      <div className="border-t border-[#2a3550] px-4 py-3">
+        <button
+          type="button"
+          onClick={() => setLegendOpen((currentValue) => !currentValue)}
+          className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-2xl border border-[#1d3358] bg-[#0e1830]/92 px-3.5 py-2.5 text-[13px] font-bold text-white shadow-[0_10px_30px_rgba(0,0,0,0.28)] transition-colors hover:border-[#35547E]"
+        >
+          <Info size={16} />
+          Ver leyenda
+        </button>
+
+        {legendOpen && (
+          <div className="absolute bottom-18 right-3 w-[220px] rounded-2xl border border-[#223452] bg-[#0d172c]/96 p-3.5 text-[13px] text-[#d8e3f5] shadow-[0_20px_45px_rgba(0,0,0,0.35)]">
+            <p className="font-bold text-white">Leyenda de la ruta</p>
+            <div className="mt-2.5 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2563eb] text-[11px] font-black text-white">
+                  1
+                </span>
+                <span>Primera visita del recorrido</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Navigation size={16} className="text-[#60a5fa]" />
+                <span>Línea azul del trayecto estimado</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-[#24314d] px-4 py-2.5">
         {tileLoadError ? (
-          <p className="text-xs text-amber-200">{tileLoadError}</p>
+          <p className="text-[11px] text-amber-200">{tileLoadError}</p>
+        ) : safeRouteItems.length > 0 ? (
+          <p className="text-[11px] text-[#9fb1cc]">
+            La ruta muestra los clientes asignados en el orden preestablecido del día.
+          </p>
         ) : (
-          <p className="text-xs text-gray-400">
-            Las sucursales seleccionadas se muestran en el orden actual de la ruta.
+          <p className="text-[11px] text-[#9fb1cc]">
+            Cuando existan clientes asignados para este día, el recorrido aparecerá aquí.
           </p>
         )}
       </div>

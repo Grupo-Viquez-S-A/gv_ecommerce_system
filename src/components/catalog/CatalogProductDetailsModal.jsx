@@ -14,7 +14,7 @@ import {
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
 import PetCostumeNotice from "./PetCostumeNotice";
-import { isPetCategoryProduct } from "./petCategoryUtils";
+import { isPetCategoryProduct, shouldProductUseDimensions } from "./petCategoryUtils";
 import { formatCurrency } from "../../utils/formatCurrency.js";
 import { getInventorySizeLabel } from "../../utils/inventorySizes.js";
 
@@ -192,6 +192,7 @@ export default function CatalogProductDetailsModal({
   const productKey = product.product_id || product.id || product.sku || "product";
 
   const isTextileProduct = product.catalog_type === "textile_products";
+  const showDimensions = shouldProductUseDimensions(product);
   const entityName = isTextileProduct ? "producto" : "tela";
 
   const productName = product.product_name || product.fabric_name || "Sin nombre";
@@ -488,11 +489,13 @@ export default function CatalogProductDetailsModal({
                         <thead className="border-b border-[#2F486C] text-[#A1B5D6]">
                           <tr>
                             <th className="px-4 py-2.5 font-semibold">Talla</th>
-                            <th className="px-4 py-2.5 font-semibold">GTIN</th>
+                            <th className="px-4 py-2.5 font-semibold">SKU</th>
                             <th className="px-4 py-2.5 font-semibold">Precio (sin IVA)</th>
                             <th className="px-4 py-2.5 font-semibold">Monto IVA</th>
                             <th className="px-4 py-2.5 font-semibold">Monto IVAI</th>
-                            <th className="px-4 py-2.5 font-semibold">Dimensiones</th>
+                            {showDimensions && (
+                              <th className="px-4 py-2.5 font-semibold">Dimensiones</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -510,7 +513,7 @@ export default function CatalogProductDetailsModal({
                                   {getInventorySizeLabel(variant.size?.size_name || "Talla")}
                                 </td>
                                 <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
-                                  {variant.gtin || "-"}
+                                  {variant.sku || "-"}
                                 </td>
                                 <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
                                   {formatCurrency(basePrice)}
@@ -521,9 +524,11 @@ export default function CatalogProductDetailsModal({
                                 <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
                                   {formatCurrency(basePrice + ivaAmount)}
                                 </td>
-                                <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
-                                  {getVariantDimensions(variant) || "-"}
-                                </td>
+                                {showDimensions && (
+                                  <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
+                                    {getVariantDimensions(variant) || "-"}
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}

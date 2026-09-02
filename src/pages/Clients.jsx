@@ -172,6 +172,7 @@ function cloneClient(client = {}, index = 0) {
     legalName: client.legalName || client.legal_name || "",
     ownerName: client.ownerName || client.owner_name || "",
     activityCode: client.activityCode || client.activity_code || "",
+    taxStatus: client.taxStatus || client.tax_status || "",
     email: client.email || "",
     status: normalizeStatus(
       client.status || (client.is_active === false ? "Inactivo" : "Activo"),
@@ -200,6 +201,7 @@ function createEditableForm(client) {
     legalName: safeClient.legalName || "",
     ownerName: safeClient.ownerName || "",
     activityCode: safeClient.activityCode || "",
+    taxStatus: safeClient.taxStatus || "",
     companyId: safeClient.companyId || "",
     email: safeClient.email || "",
     status: normalizeStatus(safeClient.status),
@@ -264,6 +266,7 @@ function normalizeClientForm(form = {}) {
   const legalName = form.legalName?.trim() || "";
   const ownerName = form.ownerName?.trim() || "";
   const activityCode = form.activityCode?.trim() || "";
+  const taxStatus = form.taxStatus?.trim() || "";
   const email = form.email?.trim() || "";
 
   if (!name) {
@@ -420,6 +423,7 @@ function normalizeClientForm(form = {}) {
           ? ownerName
           : "",
       activityCode,
+      taxStatus,
       companyId,
       email,
       status: normalizeStatus(form.status),
@@ -748,7 +752,7 @@ export default function Clients() {
 
     if (!canDeleteClients) {
       const message =
-        "Solo los roles Presidente, Gerente y Encargado pueden eliminar clientes.";
+        "Solo los roles Presidente, Gerente de Marca y Encargado pueden eliminar clientes.";
       setClientsError(message);
       window.alert(message);
       return;

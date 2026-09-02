@@ -11,7 +11,7 @@ const CLIENT_ALLOWED_ROUTES = [
 ];
 
 const SYSTEM_ONLY_ROUTES = ["/admin/usuarios"];
-const SALES_AGENT_RESTRICTED_ROUTES = ["/ventas", "/pedidos"];
+const SALES_AGENT_RESTRICTED_ROUTES = ["/ventas"];
 
 function isSystemOnlyRoute(pathname) {
   return SYSTEM_ONLY_ROUTES.some(

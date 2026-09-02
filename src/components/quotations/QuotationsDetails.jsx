@@ -1,5 +1,6 @@
 import {
   RiAddFill,
+  RiCalendarLine,
   RiDownloadFill,
   RiEyeFill,
   RiLoader4Line,
@@ -12,10 +13,8 @@ import {
 } from "../../services/quotationService.js";
 import {
   QuotationProductThumb as ProductThumb,
-  QuotationStatusBadge as StatusBadge,
   formatQuotationCurrency as formatCurrency,
   formatQuotationDate as formatDate,
-  isQuotationApproved,
 } from "./QuotationsViewHelpers.jsx";
 
 export default function QuotationsDetails({
@@ -39,19 +38,53 @@ export default function QuotationsDetails({
   setPaymentError,
   paymentSuccess,
   setPaymentSuccess,
-  productionOrderForm,
-  onProductionOrderFieldChange,
-  onSaveProductionOrder,
-  productionOrderSaving,
-  productionOrderSaveError,
-  productionOrderSaveSuccess,
   selectedQuotation,
+  quotationDateForm,
+  onQuotationDateFieldChange,
+  onSaveQuotationDates,
+  quotationDatesSaving,
+  quotationDatesError,
+  quotationDatesSuccess,
+  canManageQuotationDiscounts = false,
+  quotationDiscountForm,
+  onQuotationDiscountFieldChange,
+  onSaveQuotationDiscount,
+  quotationDiscountSaving,
+  quotationDiscountError,
+  quotationDiscountSuccess,
   closeQuotationModal,
   onDownloadQuotation,
   downloadingQuotationId,
   onSendQuotation,
   sendingQuotationId,
 }) {
+  const openNativeDatePicker = (event) => {
+    const input = event.currentTarget;
+
+    if (typeof input.showPicker === "function") {
+      try {
+        input.showPicker();
+      } catch {
+        // Algunos navegadores solo permiten showPicker con gesto directo.
+      }
+    }
+  };
+
+  const renderSummaryRow = (label, value, align = "left") => (
+    <div className="grid gap-1 border-b border-[#20314d] py-3 md:grid-cols-[180px,1fr] md:gap-4">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
+        {label}
+      </p>
+      <p
+        className={`text-sm text-white ${
+          align === "right" ? "md:text-right" : ""
+        }`}
+      >
+        {value || "Sin definir"}
+      </p>
+    </div>
+  );
+
   return (
     <>
       {drawerOpen && (
@@ -116,7 +149,9 @@ export default function QuotationsDetails({
                     {viewQuote.number}
                   </h3>
 
-                  <StatusBadge status={viewQuote.status} />
+                  <p className="text-sm text-gray-400">
+                    {viewQuote.client}
+                  </p>
                 </div>
               </div>
 
@@ -176,13 +211,6 @@ export default function QuotationsDetails({
         paymentLoading={paymentLoading}
         paymentError={paymentError}
         paymentSuccess={paymentSuccess}
-        manageProduction={manageProduction}
-        productionOrderForm={productionOrderForm}
-        onProductionOrderFieldChange={onProductionOrderFieldChange}
-        onSaveProductionOrder={onSaveProductionOrder}
-        productionOrderSaving={productionOrderSaving}
-        productionOrderSaveError={productionOrderSaveError}
-        productionOrderSaveSuccess={productionOrderSaveSuccess}
         onOpenPaymentForm={async () => {
           setPaymentError("");
           setPaymentSuccess("");
@@ -271,9 +299,8 @@ export default function QuotationsDetails({
 
                 return (
                   <>
-                    <div className="mb-4 grid gap-3 md:grid-cols-4">
+                    <div className="mb-4 grid gap-3 md:grid-cols-3">
                       {[
-                        { label: "Estado", value: selectedQuotation.status },
                         {
                           label: "Fecha",
                           value: formatDate(selectedQuotation.date),
@@ -298,78 +325,255 @@ export default function QuotationsDetails({
                       ))}
                     </div>
 
-                    <div className="mb-4 grid gap-3 md:grid-cols-3">
-                      <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
+                    <section className="mb-4 overflow-hidden rounded-xl border border-[#2a3550] bg-[#091A31]">
+                      <div className="border-b border-[#2a3550] px-4 py-3">
                         <h3 className="text-sm font-bold text-white">
-                          Cliente
+                          Datos del cliente
                         </h3>
-                        <p className="mt-2 text-sm text-gray-300">
-                          {selectedQuotation.company}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {selectedQuotation.legalName || "Sin razon social"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {selectedQuotation.legalId || "Sin cédula jurídica"}
+                      </div>
+
+                      <div className="px-4">
+                        {renderSummaryRow("Cliente", selectedQuotation.client)}
+                        {renderSummaryRow(
+                          "Razón social",
+                          selectedQuotation.legalName || "Sin razón social",
+                        )}
+                        {renderSummaryRow(
+                          "Cédula jurídica",
+                          selectedQuotation.legalId || "Sin cédula jurídica",
+                        )}
+                        {renderSummaryRow(
+                          "Correo",
+                          selectedQuotation.email || "Sin correo",
+                        )}
+                        {renderSummaryRow(
+                          "Teléfono",
+                          selectedQuotation.phone || "Sin teléfono",
+                        )}
+                        {renderSummaryRow(
+                          "Provincia",
+                          selectedQuotation.province || "Sin definir",
+                        )}
+                        {renderSummaryRow(
+                          "Cantón",
+                          selectedQuotation.city || "Sin definir",
+                        )}
+                        <div className="py-3">
+                          {renderSummaryRow(
+                            "Distrito",
+                            selectedQuotation.district || "Sin definir",
+                          )}
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className="mb-4 rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
+                      <div className="mb-4">
+                        <h3 className="text-sm font-bold text-white">
+                          Fechas de entrega
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Administra las fechas de compromiso e imprevisto desde la cotización.
                         </p>
                       </div>
 
-                      <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
-                        <h3 className="text-sm font-bold text-white">
-                          Sucursal
-                        </h3>
-                        <p className="mt-2 text-sm text-gray-300">
-                          {selectedQuotation.branch?.address ||
-                            "Sin direccion"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {[
-                            selectedQuotation.branch?.province,
-                            selectedQuotation.branch?.district,
-                          ]
-                            .filter(Boolean)
-                            .join(", ") || "Sin ubicacion"}
-                        </p>
-                      </div>
+                      {manageProduction ? (
+                        <>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <label className="space-y-2">
+                              <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                                Fecha compromiso
+                              </span>
+                              <div className="relative">
+                                <input
+                                  type="date"
+                                  value={quotationDateForm?.committedDeliveryDate || ""}
+                                  onPointerDown={openNativeDatePicker}
+                                  onClick={openNativeDatePicker}
+                                  onFocus={openNativeDatePicker}
+                                  onChange={(event) =>
+                                    onQuotationDateFieldChange?.(
+                                      "committedDeliveryDate",
+                                      event.target.value,
+                                    )
+                                  }
+                                  className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2.5 pr-10 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                                />
+                                <RiCalendarLine className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                              </div>
+                            </label>
 
-                      <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
-                        <h3 className="text-sm font-bold text-white">
-                          Representante
-                        </h3>
-                        <p className="mt-2 text-sm text-gray-300">
-                          {selectedQuotation.representative?.name ||
-                            "Sin representante"}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {selectedQuotation.representative?.email ||
-                            "Sin correo"}
-                        </p>
-                      </div>
-                    </div>
+                            <label className="space-y-2">
+                              <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                                Fecha imprevisto
+                              </span>
+                              <div className="relative">
+                                <input
+                                  type="date"
+                                  value={quotationDateForm?.unexpectedDeliveryDate || ""}
+                                  onPointerDown={openNativeDatePicker}
+                                  onClick={openNativeDatePicker}
+                                  onFocus={openNativeDatePicker}
+                                  onChange={(event) =>
+                                    onQuotationDateFieldChange?.(
+                                      "unexpectedDeliveryDate",
+                                      event.target.value,
+                                    )
+                                  }
+                                  className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2.5 pr-10 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
+                                />
+                                <RiCalendarLine className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                              </div>
+                            </label>
+                          </div>
 
-                    <div className="mb-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
-                        <h3 className="text-sm font-bold text-white">
-                          Fecha de entrega compromiso
-                        </h3>
-                        <p className="mt-2 text-sm text-gray-300">
-                          {selectedQuotation.committedDeliveryDate
-                            ? formatDate(selectedQuotation.committedDeliveryDate)
-                            : "Sin fecha asignada"}
-                        </p>
-                      </div>
+                          {(quotationDatesError || quotationDatesSuccess) && (
+                            <div className="mt-4 space-y-2">
+                              {quotationDatesError && (
+                                <p className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                                  {quotationDatesError}
+                                </p>
+                              )}
+                              {quotationDatesSuccess && (
+                                <p className="rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-2 text-sm text-green-200">
+                                  {quotationDatesSuccess}
+                                </p>
+                              )}
+                            </div>
+                          )}
 
-                      <div className="rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
-                        <h3 className="text-sm font-bold text-white">
-                          Fecha de entrega imprevisto
-                        </h3>
-                        <p className="mt-2 text-sm text-gray-300">
-                          {selectedQuotation.unexpectedDeliveryDate
-                            ? formatDate(selectedQuotation.unexpectedDeliveryDate)
-                            : "Sin fecha asignada"}
-                        </p>
-                      </div>
-                    </div>
+                          <div className="mt-4 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={onSaveQuotationDates}
+                              disabled={quotationDatesSaving}
+                              className="rounded-lg border border-[#C9A227]/50 bg-[#C9A227]/15 px-4 py-2 text-sm font-semibold text-[#F5D875] transition hover:bg-[#C9A227]/25 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {quotationDatesSaving ? "Guardando..." : "Guardar fechas"}
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          {renderSummaryRow(
+                            "Fecha compromiso",
+                            selectedQuotation.committedDeliveryDate
+                              ? formatDate(selectedQuotation.committedDeliveryDate)
+                              : "Sin fecha asignada",
+                          )}
+                          <div className="py-3">
+                            {renderSummaryRow(
+                              "Fecha imprevisto",
+                              selectedQuotation.unexpectedDeliveryDate
+                                ? formatDate(selectedQuotation.unexpectedDeliveryDate)
+                                : "Sin fecha asignada",
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </section>
+
+                    {canManageQuotationDiscounts && (
+                      <section className="mb-4 rounded-xl border border-[#2a3550] bg-[#091A31] p-4">
+                        <div className="mb-4">
+                          <h3 className="text-sm font-bold text-white">
+                            Descuentos a aplicar
+                          </h3>
+                          <p className="mt-1 text-sm text-gray-500">
+                            Ajusta el descuento de esta cotización y actualiza la proforma.
+                          </p>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <label className="space-y-2">
+                            <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                              Porcentaje de descuento
+                            </span>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                value={quotationDiscountForm?.discountPercentage || ""}
+                                onChange={(event) =>
+                                  onQuotationDiscountFieldChange?.(
+                                    "discountPercentage",
+                                    event.target.value,
+                                  )
+                                }
+                                className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2.5 pr-10 text-sm text-white outline-none transition focus:border-[#C9A227]"
+                                placeholder="0"
+                              />
+                              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-500">
+                                %
+                              </span>
+                            </div>
+                          </label>
+
+                          <label className="space-y-2">
+                            <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
+                              Monto de descuento
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              max={subtotal}
+                              step="0.01"
+                              value={quotationDiscountForm?.discountAmount || ""}
+                              onChange={(event) =>
+                                onQuotationDiscountFieldChange?.(
+                                  "discountAmount",
+                                  event.target.value,
+                                )
+                              }
+                              className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2.5 text-sm text-white outline-none transition focus:border-[#C9A227]"
+                              placeholder="0"
+                            />
+                          </label>
+
+                          <div className="rounded-xl border border-[#2a3550] bg-[#0B1F3A] p-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                              Subtotal disponible
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-white">
+                              {formatCurrency(subtotal)}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              El descuento no puede superar este monto.
+                            </p>
+                          </div>
+                        </div>
+
+                        {(quotationDiscountError || quotationDiscountSuccess) && (
+                          <div className="mt-4 space-y-2">
+                            {quotationDiscountError && (
+                              <p className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                                {quotationDiscountError}
+                              </p>
+                            )}
+                            {quotationDiscountSuccess && (
+                              <p className="rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-2 text-sm text-green-200">
+                                {quotationDiscountSuccess}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="mt-4 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={onSaveQuotationDiscount}
+                            disabled={quotationDiscountSaving}
+                            className="rounded-lg border border-[#C9A227]/50 bg-[#C9A227]/15 px-4 py-2 text-sm font-semibold text-[#F5D875] transition hover:bg-[#C9A227]/25 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {quotationDiscountSaving
+                              ? "Guardando..."
+                              : "Guardar descuento"}
+                          </button>
+                        </div>
+                      </section>
+                    )}
 
                     <div className="overflow-hidden rounded-xl border border-[#2a3550]">
                       <div className="border-b border-[#2a3550] bg-[#091A31] px-4 py-3">
@@ -492,12 +696,12 @@ export default function QuotationsDetails({
                       <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-7">
                         {[
                           {
-                            label: "Porcentaje de adelanto",
-                            value: `${advancePercentage.toFixed(0)}%`,
+                            label: "Condición de pago",
+                            value: selectedQuotation.paymentCondition || "No definida",
                           },
                           {
-                            label: "Aplicar adelanto",
-                            value: advancePercentage > 0 ? "Sí" : "No",
+                            label: "Regla de adelanto",
+                            value: `${advancePercentage.toFixed(0)}%`,
                           },
                           {
                             label: "Porcentaje de descuento",
@@ -595,7 +799,7 @@ export default function QuotationsDetails({
                             highlight: true,
                           },
                           {
-                            label: `Adelanto (${advancePercentage.toFixed(0)}%)`,
+                            label: `Adelanto automático (${advancePercentage.toFixed(0)}%)`,
                             value: formatCurrency(
                               selectedQuotation.advancePayment,
                             ),
@@ -638,24 +842,18 @@ export default function QuotationsDetails({
 
             <div className="flex flex-col gap-3 border-t border-[#2a3550] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-gray-500">
-                Cotizacion {selectedQuotation.number} —{" "}
-                {selectedQuotation.status}
+                Cotizacion {selectedQuotation.number}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   type="button"
                   disabled={
-                    !isQuotationApproved(selectedQuotation) ||
                     sendingQuotationId ===
                       (selectedQuotation.quotationId || selectedQuotation.id)
                   }
                   onClick={() => onSendQuotation?.(selectedQuotation)}
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#C9A227]/50 px-4 py-2.5 text-sm font-bold text-[#F4C542] transition hover:bg-[#C9A227]/10 disabled:cursor-not-allowed disabled:opacity-40"
-                  title={
-                    isQuotationApproved(selectedQuotation)
-                      ? "Enviar al representante de la sucursal"
-                      : "Disponible cuando la cotización sea aprobada"
-                  }
+                  title="Enviar proforma al cliente"
                 >
                   {sendingQuotationId ===
                   (selectedQuotation.quotationId || selectedQuotation.id) ? (
@@ -668,17 +866,12 @@ export default function QuotationsDetails({
                 <button
                   type="button"
                   disabled={
-                    !isQuotationApproved(selectedQuotation) ||
                     downloadingQuotationId ===
                       (selectedQuotation.quotationId || selectedQuotation.id)
                   }
                   onClick={() => onDownloadQuotation?.(selectedQuotation)}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#C9A227] px-4 py-2.5 text-sm font-bold text-[#091A31] transition hover:bg-[#D7B538] disabled:cursor-not-allowed disabled:opacity-40"
-                  title={
-                    isQuotationApproved(selectedQuotation)
-                      ? "Descargar proforma PDF"
-                      : "Disponible cuando la cotización sea aprobada"
-                  }
+                  title="Descargar proforma PDF"
                 >
                   {downloadingQuotationId ===
                   (selectedQuotation.quotationId || selectedQuotation.id) ? (

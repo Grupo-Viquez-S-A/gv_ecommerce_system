@@ -236,3 +236,11 @@ export async function getSalesAgents() {
       }),
     );
 }
+
+export async function getSalesAgentNames() {
+  const agents = await getSalesAgents();
+
+  return [...new Set(agents.map((agent) => agent.name).filter(Boolean))].sort(
+    (left, right) => left.localeCompare(right, "es-CR"),
+  );
+}

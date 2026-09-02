@@ -44,10 +44,6 @@ function indexRowsByKey(rows = [], keyName) {
   }, {});
 }
 
-function getQuotationStatus(quotation) {
-  return quotation?.state || quotation?.status || "pending";
-}
-
 function getItemTotal(items = []) {
   return items.reduce((total, item) => total + getNumber(item.total), 0);
 }
@@ -231,6 +227,28 @@ async function getQuotationRelations(quotation) {
         )
       : null;
 
+  const [emails, phones] = business
+    ? await Promise.all([
+        throwIfError(
+          await supabase
+            .from("emails")
+            .select("email, is_primary")
+            .eq("customer_id", business.business_id),
+          "No fue posible cargar el correo del cliente",
+        ),
+        throwIfError(
+          await supabase
+            .from("phones")
+            .select("phone, is_primary")
+            .eq("customer_id", business.business_id),
+          "No fue posible cargar el telefono del cliente",
+        ),
+      ])
+    : [[], []];
+
+  const primaryEmail = emails.find((row) => row.is_primary)?.email || emails[0]?.email || "";
+  const primaryPhone = phones.find((row) => row.is_primary)?.phone || phones[0]?.phone || "";
+
   const branch = business
     ? {
         branch_id: business.business_id,
@@ -241,10 +259,20 @@ async function getQuotationRelations(quotation) {
       }
     : null;
 
-  return { business, branch, representative: null };
+  return {
+    business: business
+      ? {
+          ...business,
+          email: primaryEmail,
+          phone: primaryPhone,
+        }
+      : null,
+    branch,
+    representative: null,
+  };
 }
 
-function normalizeQuotationDetail({ quotation, business, branch, representative, items }) {
+function normalizeQuotationDetail({ quotation, business, branch, items }) {
   const total =
     getNumber(quotation.total, null) ?? getItemTotal(items);
   const advancePayment =
@@ -278,7 +306,15 @@ function normalizeQuotationDetail({ quotation, business, branch, representative,
     id: quotation.quotation_id,
     quotationId: quotation.quotation_id,
     number: quotation.quotation_number || "Sin numero",
-    status: getQuotationStatus(quotation),
+    client: business?.business_name || business?.legal_name || "Sin cliente",
+    legalName: business?.legal_name || "",
+    legalId: business?.legal_id || "",
+    email: business?.email || "",
+    phone: business?.phone || "",
+    province: branch?.province || business?.province || "",
+    city: branch?.city || business?.city || "",
+    district: branch?.district || business?.district || "",
+    address: branch?.address || business?.address || "",
     notes: quotation.notes || "",
     createdAt: quotation.created_at,
     updatedAt: quotation.updated_at,
@@ -297,6 +333,8 @@ function normalizeQuotationDetail({ quotation, business, branch, representative,
     sublimationAmount,
     methodId: quotation.method_id || null,
     paymentMethod: quotation.payment_methods?.method_name || null,
+    conditionId: quotation.condition_id || null,
+    paymentCondition: quotation.payment_conditions?.condition_name || null,
     business: business
       ? {
           id: business.business_id,
@@ -304,23 +342,20 @@ function normalizeQuotationDetail({ quotation, business, branch, representative,
           legalName: business.legal_name || "",
           legalId: business.legal_id || "",
           activityCode: business.activity_code || "",
+          email: business.email || "",
+          phone: business.phone || "",
         }
       : null,
     branch: branch
       ? {
           id: branch.branch_id,
           province: branch.province || "",
+          city: branch.city || "",
           district: branch.district || "",
           address: branch.address || "",
         }
       : null,
-    representative: representative
-      ? {
-          id: representative.representative_id,
-          name: representative.name || "Representante sin nombre",
-          email: representative.email || "",
-        }
-      : null,
+    representative: null,
     items: normalizedItems,
   };
 }
@@ -373,8 +408,6 @@ export async function getAuthenticatedUserId() {
   return user.id;
 }
 
-const APPROVED_QUOTATION_STATES = ["approved", "Aprobada", "aprobada"];
-
 export async function acceptMyQuotation(quotationId) {
   const currentUser = await getAuthenticatedUser();
 
@@ -385,17 +418,16 @@ export async function acceptMyQuotation(quotationId) {
   const quotation = throwIfError(
     await supabase
       .from("quotations")
-      .select("quotation_id, state, is_active")
+      .select("quotation_id, is_active")
       .eq("quotation_id", quotationId)
       .eq("user_id", currentUser.id)
-      .in("state", APPROVED_QUOTATION_STATES)
       .eq("is_active", true)
       .maybeSingle(),
     "No fue posible validar la cotizacion",
   );
 
   if (!quotation) {
-    throw new Error("No se encontro la cotizacion aprobada o no pertenece a tu usuario.");
+    throw new Error("No se encontro la cotizacion o no pertenece a tu usuario.");
   }
 
   const productionOrder = throwIfError(
@@ -419,21 +451,17 @@ export async function acceptMyQuotation(quotationId) {
   };
 }
 
-async function fetchOwnedQuotations({ statesFilter = null } = {}) {
+async function fetchOwnedQuotations() {
   const currentUser = await getAuthenticatedUser();
 
   let query = supabase
     .from("quotations")
     .select(
-      "quotation_id, business_id:customer_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
+      "quotation_id, business_id:customer_id, quotation_number, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, condition_id, payment_methods:method_id ( method_id, method_name ), payment_conditions:condition_id ( condition_id, condition_name )",
     )
     .eq("user_id", currentUser.id)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
-
-  if (statesFilter) {
-    query = query.in("state", statesFilter);
-  }
 
   const quotations = throwIfError(await query, "No fue posible cargar tus cotizaciones");
 
@@ -477,7 +505,6 @@ async function fetchOwnedQuotations({ statesFilter = null } = {}) {
       id: quotation.quotation_id,
       quotationId: quotation.quotation_id,
       number: quotation.quotation_number || "Sin numero",
-      status: getQuotationStatus(quotation),
       notes: quotation.notes || "",
       createdAt: quotation.created_at,
       updatedAt: quotation.updated_at,
@@ -496,6 +523,8 @@ async function fetchOwnedQuotations({ statesFilter = null } = {}) {
       sublimationAmount,
       methodId: quotation.method_id || null,
       paymentMethod: quotation.payment_methods?.method_name || null,
+      conditionId: quotation.condition_id || null,
+      paymentCondition: quotation.payment_conditions?.condition_name || null,
       items,
     };
   });
@@ -562,7 +591,7 @@ export async function getMyQuotationDetail(quotationId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id:customer_id, quotation_number, status, state, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id:customer_id, quotation_number, notes, is_active, created_at, updated_at, valid_until, user_id, iva_amount, subtotal, total, advance_payment, advance_percentage, discount_percentage, discount_amount, embroidery_amount, sublimation_amount, committed_delivery_date, unexpected_delivery_date, method_id, condition_id, payment_methods:method_id ( method_id, method_name ), payment_conditions:condition_id ( condition_id, condition_name )",
       )
       .eq("quotation_id", quotationId)
       .eq("user_id", currentUser.id)
@@ -616,7 +645,7 @@ export async function getMyOrderDetail(productionOrderId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id:customer_id, quotation_number, status, state, notes, is_active, created_at, updated_at, user_id, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id:customer_id, quotation_number, notes, is_active, created_at, updated_at, user_id, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, condition_id, payment_methods:method_id ( method_id, method_name ), payment_conditions:condition_id ( condition_id, condition_name )",
       )
       .eq("quotation_id", order.quotation_id)
       .eq("user_id", currentUser.id)

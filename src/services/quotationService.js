@@ -4,6 +4,8 @@ import {
   getTodayCRDateString,
 } from "../utils/dateUtils.js";
 import { normalizeQuotationPayload } from "../utils/quotationPayload.js";
+import { getCurrentCustomerRouteAssignment } from "./customerRouteAssignmentService.js";
+import { getQuotationAdvancePercentageForItems } from "../utils/quotationAdvanceRules.js";
 
 const QUOTATION_VALIDITY_BUSINESS_DAYS = 15;
 
@@ -21,6 +23,21 @@ function getNumber(value, fallback = 0) {
 
 function getDatePlusDays(days = QUOTATION_VALIDITY_BUSINESS_DAYS) {
   return addBusinessDaysCRDateString(days);
+}
+
+function normalizeDateInput(value) {
+  const text = String(value || "").trim();
+
+  return text || null;
+}
+
+function roundCurrency(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function clampNumber(value, min, max) {
+  const numberValue = getNumber(value, min);
+  return Math.min(max, Math.max(min, numberValue));
 }
 
 function throwIfError(response, actionMessage) {
@@ -45,51 +62,6 @@ function createQuotationNumber(prefix = "COT") {
     .replaceAll(":", "");
 
   return `${prefix}-${date}-${time}`;
-}
-
-const QUOTATION_STATUS_TO_DB = {
-  Pendiente: "pending",
-  pendiente: "pending",
-  pending: "pending",
-  "En revision": "review",
-  "En revisión": "review",
-  review: "review",
-  Aprobada: "approved",
-  aprobada: "approved",
-  approved: "approved",
-  Rechazada: "rejected",
-  rechazada: "rejected",
-  rejected: "rejected",
-  Vencida: "expired",
-  vencida: "expired",
-  expired: "expired",
-  Convertida: "converted",
-  convertida: "converted",
-  converted: "converted",
-};
-
-const QUOTATION_STATUS_TO_LABEL = {
-  pending: "Pendiente",
-  review: "En revision",
-  approved: "Aprobada",
-  rejected: "Rechazada",
-  expired: "Vencida",
-  converted: "Convertida",
-  Pendiente: "Pendiente",
-  "En revision": "En revision",
-  "En revisión": "En revision",
-  Aprobada: "Aprobada",
-  Rechazada: "Rechazada",
-  Vencida: "Vencida",
-  Convertida: "Convertida",
-};
-
-function getDbQuotationStatus(status) {
-  return QUOTATION_STATUS_TO_DB[status] || "pending";
-}
-
-function getQuotationStatusLabel(status) {
-  return QUOTATION_STATUS_TO_LABEL[status] || "Pendiente";
 }
 
 function formatProfileName(profile) {
@@ -308,21 +280,23 @@ function normalizeQuotation({
     quotationId: quotation.quotation_id,
     number: quotation.quotation_number || "Sin numero",
 
-    client: representative?.name || business?.business_name || "Sin cliente",
-    company: business?.business_name || business?.legal_name || "Sin empresa",
+    client: business?.business_name || business?.legal_name || "Sin cliente",
+    company: business?.business_name || business?.legal_name || "Sin cliente",
     legalName: business?.legal_name || "",
     legalId: business?.legal_id || "",
     activityCode: business?.activity_code || "",
+    email: business?.email || "",
+    phone: business?.phone || "",
+    province: branch?.province || business?.province || "",
+    city: branch?.city || business?.city || "",
+    district: branch?.district || business?.district || "",
+    address: branch?.address || business?.address || "",
 
     date: quotation.created_at,
     validity: quotation.valid_until || getValidityDate(quotation.created_at),
     validUntil: quotation.valid_until,
     committedDeliveryDate: quotation.committed_delivery_date || null,
     unexpectedDeliveryDate: quotation.unexpected_delivery_date || null,
-
-    earlyDelivery: quotation.early_delivery === true,
-    earlyDeliveryDate: quotation.early_delivery_date || null,
-    earlyDeliveryPrice: getNumber(quotation.early_delivery_price, 0),
 
     subtotal: subtotal !== null ? subtotal : itemsTotal,
     ivaAmount:
@@ -346,8 +320,8 @@ function normalizeQuotation({
           : 0,
     methodId: quotation.method_id || null,
     paymentMethod: quotation.payment_methods?.method_name || null,
-    status: getQuotationStatusLabel(quotation.state || quotation.status),
-    dbStatus: quotation.state || quotation.status || "pending",
+    conditionId: quotation.condition_id || null,
+    paymentCondition: quotation.payment_conditions?.condition_name || null,
 
     agent: sellerName,
     avatar: getInitials(sellerName),
@@ -437,6 +411,19 @@ export async function getPaymentMethods() {
   );
 
   return paymentMethods || [];
+}
+
+export async function getPaymentConditions() {
+  const paymentConditions = throwIfError(
+    await supabase
+      .from("payment_conditions")
+      .select("condition_id, condition_name, description, is_active")
+      .eq("is_active", true)
+      .order("condition_name", { ascending: true }),
+    "No fue posible cargar las condiciones de pago",
+  );
+
+  return paymentConditions || [];
 }
 
 export async function reportPayment({
@@ -558,7 +545,7 @@ export async function getQuotationClientByLegalId(legalId) {
     await supabase
       .from("customers")
       .select(
-        "customer_id, company_id, identification_type, legal_id, company_name, owner_name, commercial_name, activity_code, province, city, district, address, latitude, longitude, location_accuracy_meters, is_active",
+        "customer_id, company_id, identification_type, legal_id, company_name, owner_name, commercial_name, activity_code, tax_status, province, city, district, address, latitude, longitude, location_accuracy_meters, is_active",
       )
       .eq("legal_id", normalizedLegalId)
       .maybeSingle(),
@@ -600,6 +587,7 @@ export async function getQuotationClientByLegalId(legalId) {
     ownerName: customer.owner_name || "",
     businessName: customer.commercial_name || customer.company_name || "",
     activityCode: customer.activity_code || "",
+    taxStatus: customer.tax_status || "",
 
     businessEmail: getPrimaryValue(emails, "email"),
     businessPhone: getPrimaryValue(customerPhones, "phone"),
@@ -630,16 +618,11 @@ export async function getQuotations({ ownerUserId } = {}) {
         company_id,
         customer_id,
         quotation_number,
-        status,
-        state,
         notes,
         is_active,
         created_at,
         updated_at,
         user_id,
-        early_delivery,
-        early_delivery_date,
-        early_delivery_price,
         valid_until,
         committed_delivery_date,
         unexpected_delivery_date,
@@ -653,9 +636,14 @@ export async function getQuotations({ ownerUserId } = {}) {
         discount_percentage,
         discount_amount,
         method_id,
+        condition_id,
         payment_methods:method_id (
           method_id,
           method_name
+        ),
+        payment_conditions:condition_id (
+          condition_id,
+          condition_name
         )
       `,
     )
@@ -685,7 +673,7 @@ export async function getQuotations({ ownerUserId } = {}) {
 
   const quotationIds = quotations.map((item) => item.quotation_id);
 
-  const [customers, sellers, quoteProducts] =
+  const [customers, customerEmails, customerPhones, sellers, quoteProducts] =
     await Promise.all([
       customerIds.length
         ? throwIfError(
@@ -696,6 +684,26 @@ export async function getQuotations({ ownerUserId } = {}) {
               )
               .in("customer_id", customerIds),
             "No fue posible cargar los clientes de las cotizaciones",
+          )
+        : [],
+
+      customerIds.length
+        ? throwIfError(
+            await supabase
+              .from("emails")
+              .select("email_id, customer_id, email, type, is_primary")
+              .in("customer_id", customerIds),
+            "No fue posible cargar los correos de los clientes",
+          )
+        : [],
+
+      customerIds.length
+        ? throwIfError(
+            await supabase
+              .from("phones")
+              .select("phone_id, customer_id, phone, type, is_primary")
+              .in("customer_id", customerIds),
+            "No fue posible cargar los telefonos de los clientes",
           )
         : [],
 
@@ -778,6 +786,8 @@ export async function getQuotations({ ownerUserId } = {}) {
   ]);
 
   const customersById = indexById(customers, "customer_id");
+  const emailsByCustomerId = groupById(customerEmails, "customer_id");
+  const phonesByCustomerId = groupById(customerPhones, "customer_id");
   const companyIds = [
     ...new Set(
       [
@@ -823,6 +833,14 @@ export async function getQuotations({ ownerUserId } = {}) {
 
   return quotations.map((quotation) => {
     const customer = customersById[quotation.customer_id];
+    const customerEmail = getPrimaryValue(
+      emailsByCustomerId[quotation.customer_id] || [],
+      "email",
+    );
+    const customerPhone = getPrimaryValue(
+      phonesByCustomerId[quotation.customer_id] || [],
+      "phone",
+    );
     const quotationProducts = (
       quoteProductsByQuotationId[quotation.quotation_id] || []
     ).map((item) => ({
@@ -841,6 +859,8 @@ export async function getQuotations({ ownerUserId } = {}) {
             business_id: customer.customer_id,
             legal_name: customer.company_name,
             business_name: customer.commercial_name,
+            email: customerEmail,
+            phone: customerPhone,
           }
         : null,
       groupCompany:
@@ -863,41 +883,14 @@ export async function getQuotations({ ownerUserId } = {}) {
   });
 }
 
-export async function updateQuotationStatus(quotationId, status) {
-  if (!quotationId) {
-    throw new Error("No se encontro la cotizacion a actualizar.");
-  }
-
-  return throwIfError(
-    await supabase
-      .from("quotations")
-      .update({
-        state: getDbQuotationStatus(status),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("quotation_id", quotationId)
-      .select("quotation_id, state")
-      .single(),
-    "No fue posible actualizar el estado de la cotizacion",
-  );
-}
-
 export async function createBusinessQuotation(payload) {
-  const normalizedPayload = normalizeQuotationPayload(payload, {
-    getDbQuotationStatus,
-  });
-  const { client, items, status } = normalizedPayload;
+  const normalizedPayload = normalizeQuotationPayload(payload);
+  const { client, items } = normalizedPayload;
 
   let businessId = client.businessId || null;
 
   let quotationId = null;
   let createdBusinessId = null;
-
-  if (client.earlyDelivery && !client.earlyDeliveryDate) {
-    throw new Error("Selecciona la fecha solicitada para la entrega anticipada.");
-  }
-
-  const earlyDeliveryDate = client.earlyDelivery ? client.earlyDeliveryDate : null;
 
   const validUntil = client.validUntil || getDatePlusDays();
 
@@ -913,6 +906,7 @@ export async function createBusinessQuotation(payload) {
     }
 
     if (!businessId) {
+      const routeAssignment = await getCurrentCustomerRouteAssignment();
       const businessResponse = await supabase
         .from("customers")
         .insert({
@@ -923,6 +917,7 @@ export async function createBusinessQuotation(payload) {
           owner_name: client.ownerName,
           commercial_name: client.businessName,
           activity_code: client.activityCode,
+          tax_status: client.taxStatus,
           regime: "general",
           province: client.branchProvince || "",
           city: client.branchCity || "",
@@ -932,6 +927,7 @@ export async function createBusinessQuotation(payload) {
           longitude: client.branchLongitude,
           location_accuracy_meters: client.branchLocationAccuracy,
           "isValidForCredit": "pending",
+          ...routeAssignment,
           is_active: true,
         })
         .select("customer_id")
@@ -978,6 +974,7 @@ export async function createBusinessQuotation(payload) {
             owner_name: client.ownerName,
             commercial_name: client.businessName,
             activity_code: client.activityCode,
+            tax_status: client.taxStatus,
             province: client.branchProvince || "",
             city: client.branchCity || "",
             district: client.branchDistrict || "",
@@ -999,10 +996,7 @@ export async function createBusinessQuotation(payload) {
     );
     const ivaAmount = items.reduce((sum, item) => sum + item.iva_amount, 0);
     const total = subtotal + ivaAmount;
-    const advancePercentage = Math.min(
-      100,
-      Math.max(0, getNumber(client.advancePercentage, 50)),
-    );
+    const advancePercentage = getQuotationAdvancePercentageForItems(items);
     const advancePayment = total * (advancePercentage / 100);
 
     const quotationResponse = await supabase
@@ -1011,11 +1005,8 @@ export async function createBusinessQuotation(payload) {
         company_id: client.companyId,
         customer_id: businessId,
         quotation_number: createQuotationNumber("COT"),
-        state: status,
         notes: client.notes,
         is_active: true,
-        early_delivery: client.earlyDelivery,
-        early_delivery_date: earlyDeliveryDate,
         valid_until: validUntil,
         subtotal,
         iva_amount: ivaAmount,
@@ -1023,21 +1014,21 @@ export async function createBusinessQuotation(payload) {
         advance_payment: advancePayment,
         advance_percentage: advancePercentage,
         method_id: client.methodId || null,
+        condition_id: client.conditionId || null,
       })
       .select(
         `
         quotation_id,
         company_id,
         quotation_number,
-        early_delivery,
-        early_delivery_date,
         valid_until,
         subtotal,
         iva_amount,
         total,
         advance_payment,
         advance_percentage,
-        method_id
+        method_id,
+        condition_id
       `,
       )
       .single();
@@ -1051,10 +1042,15 @@ export async function createBusinessQuotation(payload) {
 
     throwIfError(
       await supabase.from("quote_products").insert(
-        items.map((item) => ({
-          quotation_id: quotationId,
-          ...item,
-        })),
+        items.map((item) => {
+          const quoteProductItem = { ...item };
+          delete quoteProductItem.category_name;
+
+          return {
+            quotation_id: quotationId,
+            ...quoteProductItem,
+          };
+        }),
       ),
       "No fue posible guardar los productos cotizados",
     );
@@ -1065,10 +1061,9 @@ export async function createBusinessQuotation(payload) {
       representativeId: "",
       quotationId,
       quotationNumber: quotation.quotation_number,
-      earlyDelivery: quotation.early_delivery,
-      earlyDeliveryDate: quotation.early_delivery_date,
       validUntil: quotation.valid_until,
       methodId: quotation.method_id,
+      conditionId: quotation.condition_id,
       advancePercentage: getNumber(quotation.advance_percentage, advancePercentage),
       accessError: null,
       representativeAccessMessage: null,
@@ -1082,4 +1077,139 @@ export async function createBusinessQuotation(payload) {
 
     throw error;
   }
+}
+
+export async function updateQuotationDeliveryDates(
+  quotationId,
+  values = {},
+) {
+  const {
+    committedDeliveryDate,
+    unexpectedDeliveryDate,
+  } = values;
+
+  if (!quotationId) {
+    throw new Error("No se encontro la cotizacion a actualizar.");
+  }
+
+  const updates = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (Object.prototype.hasOwnProperty.call(values, "committedDeliveryDate")) {
+    updates.committed_delivery_date = normalizeDateInput(committedDeliveryDate);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(values, "unexpectedDeliveryDate")) {
+    updates.unexpected_delivery_date = normalizeDateInput(unexpectedDeliveryDate);
+  }
+
+  return throwIfError(
+    await supabase
+      .from("quotations")
+      .update(updates)
+      .eq("quotation_id", quotationId)
+      .select(
+        "quotation_id, committed_delivery_date, unexpected_delivery_date, updated_at",
+      )
+      .single(),
+    "No fue posible actualizar las fechas de entrega de la cotizacion",
+  );
+}
+
+export async function updateQuotationDiscount(
+  quotationId,
+  values = {},
+) {
+  if (!quotationId) {
+    throw new Error("No se encontro la cotizacion a actualizar.");
+  }
+
+  const quotation = throwIfError(
+    await supabase
+      .from("quotations")
+      .select("quotation_id, subtotal, iva_amount, total, advance_percentage")
+      .eq("quotation_id", quotationId)
+      .single(),
+    "No fue posible cargar la cotizacion para calcular el descuento",
+  );
+
+  const subtotal = Math.max(0, getNumber(quotation.subtotal, 0));
+  const currentIva = Math.max(0, getNumber(quotation.iva_amount, 0));
+  const currentDiscountedSubtotal = Math.max(
+    0,
+    getNumber(quotation.total, subtotal + currentIva) - currentIva,
+  );
+  const effectiveTaxRate =
+    currentDiscountedSubtotal > 0 ? currentIva / currentDiscountedSubtotal : 0;
+  const discountPercentage = clampNumber(values.discountPercentage, 0, 100);
+  const discountAmount = roundCurrency(
+    Math.min(subtotal, subtotal * (discountPercentage / 100)),
+  );
+  const subtotalAfterDiscount = roundCurrency(
+    Math.max(0, subtotal - discountAmount),
+  );
+  const ivaAmount = roundCurrency(subtotalAfterDiscount * effectiveTaxRate);
+  const total = roundCurrency(subtotalAfterDiscount + ivaAmount);
+  const advancePercentage = clampNumber(quotation.advance_percentage, 0, 100);
+  const advancePayment = roundCurrency(total * (advancePercentage / 100));
+
+  return throwIfError(
+    await supabase
+      .from("quotations")
+      .update({
+        discount_percentage: roundCurrency(discountPercentage),
+        discount_amount: discountAmount,
+        iva_amount: ivaAmount,
+        total,
+        advance_payment: advancePayment,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("quotation_id", quotationId)
+      .select(
+        "quotation_id, discount_percentage, discount_amount, iva_amount, total, advance_payment, updated_at",
+      )
+      .single(),
+    "No fue posible actualizar el descuento de la cotizacion",
+  );
+}
+
+export async function deleteQuotation(quotationId) {
+  if (!quotationId) {
+    throw new Error("No se encontro la cotizacion a eliminar.");
+  }
+
+  const updatedAt = new Date().toISOString();
+
+  throwIfError(
+    await supabase
+      .from("production_orders")
+      .update({
+        is_active: false,
+        updated_at: updatedAt,
+      })
+      .eq("quotation_id", quotationId)
+      .eq("is_active", true),
+    "No fue posible desactivar las ordenes relacionadas a la cotizacion",
+  );
+
+  const deactivatedQuotation = throwIfError(
+    await supabase
+      .from("quotations")
+      .update({
+        is_active: false,
+        updated_at: updatedAt,
+      })
+      .eq("quotation_id", quotationId)
+      .eq("is_active", true)
+      .select("quotation_id")
+      .maybeSingle(),
+    "No fue posible eliminar la cotizacion",
+  );
+
+  if (!deactivatedQuotation?.quotation_id) {
+    throw new Error("La cotizacion ya no estaba activa o no se pudo eliminar.");
+  }
+
+  return deactivatedQuotation;
 }

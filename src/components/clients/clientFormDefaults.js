@@ -39,6 +39,7 @@ export function createEmptyClientForm() {
     legalName: "",
     ownerName: "",
     activityCode: "",
+    taxStatus: "",
     companyId: "",
     email: "",
     status: "Activo",

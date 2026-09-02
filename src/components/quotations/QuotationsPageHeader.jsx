@@ -10,7 +10,7 @@ export default function QuotationsPageHeader({ onRefresh }) {
         </div>
         <h1 className="text-xl font-bold text-white">Producción</h1>
         <p className="mt-0.5 text-sm text-gray-400">
-          Gestiona cotizaciones aprobadas y órdenes de producción del e-commerce.
+          Gestiona cotizaciones y órdenes de producción del e-commerce.
         </p>
       </div>
       <button type="button" onClick={onRefresh} className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#C9A227] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-[#C9A227]/20 transition-colors hover:bg-[#B8921F]">

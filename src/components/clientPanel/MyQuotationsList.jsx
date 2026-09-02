@@ -3,7 +3,6 @@ import { RiEyeFill } from "react-icons/ri";
 import formatCurrency from "../../utils/formatCurrency.js";
 import { formatDateCR } from "../../utils/dateUtils.js";
 import EmptyClientState from "./EmptyClientState.jsx";
-import StatusBadge from "./StatusBadge.jsx";
 
 
 function formatDate(dateValue) {
@@ -23,8 +22,8 @@ export default function MyQuotationsList({
   if (!quotations.length) {
     return (
       <EmptyClientState
-        title="No tienes cotizaciones aprobadas"
-        description="Cuando una de tus cotizaciones sea aprobada, aparecera aqui para que puedas revisar su estado y resumen."
+        title="No tienes cotizaciones"
+        description="Cuando generes una cotizacion, aparecera aqui para que puedas revisar su resumen."
       />
     );
   }
@@ -48,9 +47,6 @@ export default function MyQuotationsList({
             </th>
             <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
               Total
-            </th>
-            <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
-              Estado
             </th>
             <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">
               Acciones
@@ -86,10 +82,6 @@ export default function MyQuotationsList({
               </td>
 
               <td className="px-4 py-3">
-                <StatusBadge status={quotation.status} />
-              </td>
-
-              <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1.5">
                   <button
                     type="button"
@@ -121,7 +113,6 @@ export default function MyQuotationsList({
                 <p className="font-semibold text-white">{quotation.number}</p>
                 <p className="mt-1 text-xs text-gray-400">{formatDate(quotation.createdAt)}</p>
               </div>
-              <StatusBadge status={quotation.status} />
             </div>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>

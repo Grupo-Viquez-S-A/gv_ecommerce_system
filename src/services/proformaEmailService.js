@@ -1,5 +1,4 @@
 import { supabase } from "./primarySupabaseClient.js";
-import { isQuotationApproved } from "../components/quotations/QuotationsViewHelpers.jsx";
 import { createQuotationProforma } from "../utils/proformaPdf.js";
 
 const POLICIES_ATTACHMENT_PATH = `${import.meta.env.BASE_URL}legal/politicas-y-condiciones-generales.pdf`;
@@ -53,8 +52,8 @@ async function loadPoliciesAttachment() {
 }
 
 export async function sendQuotationProformaEmail(quotation) {
-  if (!quotation || !isQuotationApproved(quotation)) {
-    throw new Error("La proforma solo puede enviarse cuando la cotizacion este aprobada.");
+  if (!quotation) {
+    throw new Error("No se encontro la cotizacion para enviar la proforma.");
   }
 
   const quotationId = quotation.quotationId || quotation.id;

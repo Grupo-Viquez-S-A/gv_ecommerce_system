@@ -107,6 +107,33 @@ function groupRowsByKey(rows = [], keyName) {
   }, {});
 }
 
+function buildDerivedPaymentState(total, amountPaid, currentStatus = "") {
+  const normalizedTotal = getNumber(total, 0);
+  const normalizedAmountPaid = getNumber(amountPaid, 0);
+  const balance = Math.max(
+    Math.round((normalizedTotal - normalizedAmountPaid) * 100) / 100,
+    0,
+  );
+  const normalizedStatus = String(currentStatus || "").toLowerCase();
+
+  if (["cancelado", "anulado", "rechazado"].includes(normalizedStatus)) {
+    return {
+      balance,
+      paymentStatus: normalizedStatus,
+    };
+  }
+
+  return {
+    balance,
+    paymentStatus:
+      normalizedAmountPaid <= 0
+        ? "pendiente"
+        : balance <= 0
+          ? "pagado"
+          : "parcial",
+  };
+}
+
 /**
  * Loads every payment reported for a production order (through the linked
  * quotation), together with its payment method and any uploaded receipts.
@@ -278,21 +305,30 @@ export async function importOrderPayments(productionOrderId) {
     0,
   );
 
-  const balance = Math.max(Math.round((total - amountPaid) * 100) / 100, 0);
+  const { balance, paymentStatus } = buildDerivedPaymentState(
+    total,
+    amountPaid,
+    order.payment_status,
+  );
 
-  const paymentStatus =
-    amountPaid <= 0 ? "pendiente" : balance <= 0 ? "pagado" : "parcial";
-
-  throwIfError(
+  const updatedOrder = throwIfError(
     await supabase
       .from("production_orders")
       .update({
         balance,
         payment_status: paymentStatus,
       })
-      .eq("production_order_id", productionOrderId),
+      .eq("production_order_id", productionOrderId)
+      .select("production_order_id, balance, payment_status")
+      .maybeSingle(),
     "No fue posible actualizar el estado de pago de la orden",
   );
+
+  if (!updatedOrder?.production_order_id) {
+    throw new Error(
+      "No fue posible confirmar la actualizacion del saldo de la orden.",
+    );
+  }
 
   let emailNotification;
 
@@ -318,8 +354,9 @@ export async function importOrderPayments(productionOrderId) {
     productionOrderId,
     total,
     amountPaid,
-    balance,
-    paymentStatus,
+    balance: getNumber(updatedOrder.balance, balance),
+    paymentStatus:
+      String(updatedOrder.payment_status || paymentStatus).toLowerCase(),
     movedToSales: paymentStatus === "pagado",
     emailNotification,
   };

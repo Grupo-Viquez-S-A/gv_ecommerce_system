@@ -1,6 +1,6 @@
 import { RiArrowDownSFill, RiCalendarLine, RiSearchLine } from "react-icons/ri";
 
-export default function QuotationsFilters({ search, setSearch, statusFilter, setStatusFilter, companyFilter, setCompanyFilter, agentFilter, setAgentFilter, clientFilter, setClientFilter, dateFrom, setDateFrom, dateTo, setDateTo, clearFilters, error, ordersError, companyOptions, agentOptions, clientOptions }) {
+export default function QuotationsFilters({ search, setSearch, companyFilter, setCompanyFilter, agentFilter, setAgentFilter, clientFilter, setClientFilter, dateFrom, setDateFrom, dateTo, setDateTo, clearFilters, error, ordersError, companyOptions, agentOptions, clientOptions, showAgentFilter = true }) {
   return <>
         {/* Filtros */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl p-4 mb-6">
@@ -75,59 +75,32 @@ export default function QuotationsFilters({ search, setSearch, statusFilter, set
               </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-                Estado
-              </label>
+            {showAgentFilter && (
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+                  Vendedor
+                </label>
 
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value)
-                  }
-                  className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                >
-                  <option value="Todos">Todos los estados</option>
-                  <option value="Pendiente">Pendiente</option>
-                  <option value="En revisión">En revisión</option>
-                  <option value="Aprobada">Aprobada</option>
-                  <option value="Rechazada">Rechazada</option>
-                  <option value="Vencida">Vencida</option>
-                  <option value="Convertida">Convertida</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={agentFilter}
+                    onChange={(event) =>
+                      setAgentFilter(event.target.value)
+                    }
+                    className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
+                  >
+                    {agentOptions.map((agent) => (
+                      <option key={agent}>{agent}</option>
+                    ))}
+                  </select>
 
-                <RiArrowDownSFill
-                  size={14}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                />
+                  <RiArrowDownSFill
+                    size={14}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+                  />
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">
-                Vendedor
-              </label>
-
-              <div className="relative">
-                <select
-                  value={agentFilter}
-                  onChange={(event) =>
-                    setAgentFilter(event.target.value)
-                  }
-                  className="appearance-none w-full bg-[#222e44] border border-[#2a3550] rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-[#C9A227] transition-colors cursor-pointer"
-                >
-                  {agentOptions.map((agent) => (
-                    <option key={agent}>{agent}</option>
-                  ))}
-                </select>
-
-                <RiArrowDownSFill
-                  size={14}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-                />
-              </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-[10px] text-gray-500 uppercase tracking-wider mb-1">

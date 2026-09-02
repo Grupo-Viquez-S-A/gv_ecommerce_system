@@ -182,6 +182,8 @@ function normalizeOrigin(value: string | undefined) {
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://grupoviquez.com",
   "https://www.grupoviquez.com",
+  "https://erp.grupoviquez.com",
+  "https://rpv.grupoviquez.com",
   "http://192.168.100.6:5000",
   "http://192.168.100.6:5001",
 ];

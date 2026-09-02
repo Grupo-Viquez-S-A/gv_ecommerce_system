@@ -15,13 +15,6 @@ const COMPANY_COLORS = [
 
 const CANCELLED_ORDER_STATUSES = ["cancelada", "cancelado"];
 const FINISHED_ORDER_STATUSES = ["finalizada", ...CANCELLED_ORDER_STATUSES];
-const INACTIVE_QUOTATION_STATES = [
-  "converted",
-  "rejected",
-  "expired",
-  "cancelled",
-  "cancelada",
-];
 
 const MONTH_LABELS = [
   "Ene",
@@ -154,7 +147,7 @@ export async function getDashboardStats() {
       .eq("is_active", true),
     supabase
       .from("quotations")
-      .select("quotation_id, state, status")
+      .select("quotation_id")
       .eq("is_active", true),
     supabase
       .from("production_orders")
@@ -177,11 +170,7 @@ export async function getDashboardStats() {
     throw new Error(`No fue posible cargar las órdenes: ${ordersError.message}`);
   }
 
-  const activeQuotations = (quotations || []).filter((quotation) => {
-    const state = String(quotation.state || quotation.status || "").toLowerCase();
-
-    return !INACTIVE_QUOTATION_STATES.includes(state);
-  }).length;
+  const activeQuotations = (quotations || []).length;
 
   const activeOrders = (orders || []).filter((order) => {
     const status = String(order.production_order_status || "").toLowerCase();

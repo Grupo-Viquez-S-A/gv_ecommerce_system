@@ -6,7 +6,7 @@ import process from 'node:process'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "")
-  const defaultBasePath = mode === "production" ? "/ecommerce/" : "/"
+  const defaultBasePath = "/"
 
   return {
     base: env.VITE_APP_BASE_PATH || defaultBasePath,

@@ -94,6 +94,33 @@ function getProductImageUrl(files = []) {
 
   return getFileUrl(imageFile);
 }
+
+function buildDerivedPaymentState(total, amountPaid, currentStatus = "") {
+  const normalizedTotal = getNumber(total, 0);
+  const normalizedAmountPaid = getNumber(amountPaid, 0);
+  const balance = Math.max(
+    Math.round((normalizedTotal - normalizedAmountPaid) * 100) / 100,
+    0,
+  );
+  const normalizedStatus = String(currentStatus || "").toLowerCase();
+
+  if (["cancelado", "anulado", "rechazado"].includes(normalizedStatus)) {
+    return {
+      balance,
+      paymentStatus: normalizedStatus,
+    };
+  }
+
+  return {
+    balance,
+    paymentStatus:
+      normalizedAmountPaid <= 0
+        ? "pendiente"
+        : balance <= 0
+          ? "pagado"
+          : "parcial",
+  };
+}
 export const PENDING_PAYMENT_STATUSES = ["pendiente", "parcial"];
 
 export const PAYMENT_STATUS_LABELS = {
@@ -131,14 +158,38 @@ export async function createSalesProductionOrderFromQuotation(quotationId) {
     throw new Error("No se encontro la cotizacion para crear la orden de produccion.");
   }
 
-  const productionOrder = throwIfError(
-    await supabase.rpc("create_production_order_from_quotation", {
+  const productionOrderResult = throwIfError(
+    await supabase.rpc("secure_create_production_order_from_quotation", {
       p_quotation_id: quotationId,
     }),
     "No fue posible crear la orden de produccion",
   );
 
-  return Array.isArray(productionOrder) ? productionOrder[0] : productionOrder;
+  if (
+    productionOrderResult &&
+    typeof productionOrderResult === "object" &&
+    !Array.isArray(productionOrderResult)
+  ) {
+    return {
+      created: Boolean(productionOrderResult.created),
+      alreadyExisted: Boolean(productionOrderResult.alreadyExisted),
+      productionOrderId: productionOrderResult.productionOrderId || null,
+      productionOrderCode: productionOrderResult.productionOrderCode || null,
+      raw: productionOrderResult,
+    };
+  }
+
+  const productionOrder = Array.isArray(productionOrderResult)
+    ? productionOrderResult[0]
+    : productionOrderResult;
+
+  return {
+    created: true,
+    alreadyExisted: false,
+    productionOrderId: productionOrder?.production_order_id || null,
+    productionOrderCode: productionOrder?.production_order_code || null,
+    raw: productionOrder,
+  };
 }
 
 /**
@@ -148,6 +199,7 @@ export async function createSalesProductionOrderFromQuotation(quotationId) {
  */
 export async function getSalesOrders({
   paymentStatuses = PENDING_PAYMENT_STATUSES,
+  ownerUserId = null,
 } = {}) {
   let ordersQuery = supabase
     .from("production_orders")
@@ -174,24 +226,56 @@ export async function getSalesOrders({
     ...new Set(orders.map((order) => order.quotation_id).filter(Boolean)),
   ];
 
-  const quotations = throwIfError(
-    await supabase
-      .from("quotations")
-      .select(
-        "quotation_id, business_id:customer_id, user_id, quotation_number, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, created_at",
-      )
-      .in("quotation_id", quotationIds),
-    "No fue posible cargar las cotizaciones asociadas",
-  );
+  const [quotations, payments] = await Promise.all([
+    throwIfError(
+      await supabase
+        .from("quotations")
+        .select(
+          "quotation_id, business_id:customer_id, user_id, quotation_number, total, committed_delivery_date, unexpected_delivery_date, created_at",
+        )
+        .in("quotation_id", quotationIds),
+      "No fue posible cargar las cotizaciones asociadas",
+    ),
+    throwIfError(
+      await supabase
+        .from("payments")
+        .select("production_order_id, amount, is_valid")
+        .in(
+          "production_order_id",
+          orders.map((order) => order.production_order_id),
+        )
+        .eq("is_valid", true),
+      "No fue posible cargar los pagos de las ordenes",
+    ),
+  ]);
 
-  const quotationsById = indexRowsByKey(quotations, "quotation_id");
+  const visibleQuotations = ownerUserId
+    ? quotations.filter((quotation) => quotation.user_id === ownerUserId)
+    : quotations;
+
+  if (!visibleQuotations.length) {
+    return [];
+  }
+
+  const visibleQuotationIds = new Set(
+    visibleQuotations.map((quotation) => quotation.quotation_id),
+  );
+  const visibleOrders = orders.filter((order) =>
+    visibleQuotationIds.has(order.quotation_id),
+  );
+  const quotationsById = indexRowsByKey(visibleQuotations, "quotation_id");
+  const validPaymentsByOrderId = groupRowsByKey(payments, "production_order_id");
 
   const businessIds = [
-    ...new Set(quotations.map((quotation) => quotation.business_id).filter(Boolean)),
+    ...new Set(
+      visibleQuotations.map((quotation) => quotation.business_id).filter(Boolean),
+    ),
   ];
 
   const sellerUserIds = [
-    ...new Set(quotations.map((quotation) => quotation.user_id).filter(Boolean)),
+    ...new Set(
+      visibleQuotations.map((quotation) => quotation.user_id).filter(Boolean),
+    ),
   ];
 
   const [businesses, sellerProfiles] = await Promise.all([
@@ -218,7 +302,7 @@ export async function getSalesOrders({
   const businessesById = indexRowsByKey(businesses, "business_id");
   const sellerProfilesById = indexRowsByKey(sellerProfiles, "user_id");
 
-  return orders.map((order) => {
+  return visibleOrders.map((order) => {
     const quotation = quotationsById[order.quotation_id] || null;
     const business = quotation ? businessesById[quotation.business_id] : null;
     const sellerProfile = quotation
@@ -237,7 +321,16 @@ export async function getSalesOrders({
       sellerProfile?.email ||
       "Sin asignar";
 
-    const paymentStatus = String(order.payment_status || "pendiente").toLowerCase();
+    const total = getNumber(quotation?.total, 0);
+    const amountPaid = (validPaymentsByOrderId[order.production_order_id] || []).reduce(
+      (sum, payment) => sum + getNumber(payment.amount, 0),
+      0,
+    );
+    const { balance, paymentStatus } = buildDerivedPaymentState(
+      total,
+      amountPaid,
+      order.payment_status,
+    );
     const productionStatus = String(
       order.production_order_status || "pendiente",
     ).toLowerCase();
@@ -252,10 +345,9 @@ export async function getSalesOrders({
       branchLabel,
       agent: sellerName,
       avatar: getInitials(sellerName),
-      total: getNumber(quotation?.total, 0),
-      earlyDelivery: quotation?.early_delivery === true,
-      earlyDeliveryDate: quotation?.early_delivery_date || null,
-      balance: getNumber(order.balance, 0),
+      total,
+      balance,
+      amountPaid,
       paymentStatus,
       paymentStatusLabel: PAYMENT_STATUS_LABELS[paymentStatus] || paymentStatus,
       productionStatus,
@@ -267,7 +359,7 @@ export async function getSalesOrders({
       overdueDays: getNumber(order.overdue_days, 0),
       penaltyAmount: getNumber(order.penalty_amount, 0),
       penaltyPercentage: getNumber(order.penalty_percentage, 0),
-      totalOwed: getNumber(order.balance, 0) + getNumber(order.penalty_amount, 0),
+      totalOwed: balance + getNumber(order.penalty_amount, 0),
       paidAt: order.paid_at,
       createdAt: order.created_at,
       updatedAt: order.updated_at,
@@ -300,7 +392,7 @@ export async function getSalesOrderDetail(productionOrderId) {
     await supabase
       .from("quotations")
       .select(
-        "quotation_id, business_id:customer_id, user_id, quotation_number, status, state, notes, is_active, created_at, updated_at, total, early_delivery, early_delivery_date, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, payment_methods:method_id ( method_id, method_name )",
+        "quotation_id, business_id:customer_id, user_id, quotation_number, notes, is_active, created_at, updated_at, total, committed_delivery_date, unexpected_delivery_date, embroidery_amount, sublimation_amount, method_id, condition_id, payment_methods:method_id ( method_id, method_name ), payment_conditions:condition_id ( condition_id, condition_name )",
       )
       .eq("quotation_id", order.quotation_id)
       .eq("is_active", true)
@@ -431,6 +523,13 @@ export async function getSalesOrderDetail(productionOrderId) {
     };
   });
 
+  const total = getNumber(quotation.total, 0);
+  const { balance, paymentStatus } = buildDerivedPaymentState(
+    total,
+    amountPaid,
+    order.payment_status,
+  );
+
   return {
     id: order.production_order_id,
     productionOrderId: order.production_order_id,
@@ -438,25 +537,24 @@ export async function getSalesOrderDetail(productionOrderId) {
     quotationId: order.quotation_id,
     quotationNumber: quotation.quotation_number || "Sin cotizacion",
     productionStatus: order.production_order_status || "pendiente",
-    paymentStatus: order.payment_status || "pendiente",
+    paymentStatus,
     paymentMethod: quotation.payment_methods?.method_name || "No definido",
-    earlyDelivery: quotation.early_delivery === true,
-    earlyDeliveryDate: quotation.early_delivery_date || null,
+    paymentCondition: quotation.payment_conditions?.condition_name || "No definida",
     committedDeliveryDate: quotation.committed_delivery_date || null,
     unexpectedDeliveryDate: quotation.unexpected_delivery_date || null,
     nextPaymentDate: order.next_payment_date,
     statusChangeNote: order.status_change_note || "",
     statusChangedAt: order.status_changed_at,
-    balance: getNumber(order.balance, 0),
+    balance,
     amountPaid,
     overdueDays: getNumber(order.overdue_days, 0),
     penaltyAmount: getNumber(order.penalty_amount, 0),
     penaltyPercentage: getNumber(order.penalty_percentage, 0),
-    totalOwed: getNumber(order.balance, 0) + getNumber(order.penalty_amount, 0),
+    totalOwed: balance + getNumber(order.penalty_amount, 0),
     paidAt: order.paid_at,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
-    total: getNumber(quotation.total, 0),
+    total,
     embroideryAmount: quotationEmbroideryAmount,
     sublimationAmount: quotationSublimationAmount,
     itemsCount: items.length,
@@ -637,4 +735,32 @@ export async function updateProductionOrderDetails(productionOrderId, values = {
     penaltyPercentage: getNumber(updatedOrder.penalty_percentage, 0),
     updatedAt: updatedOrder.updated_at,
   };
+}
+
+export async function deleteProductionOrder(productionOrderId) {
+  if (!productionOrderId) {
+    throw new Error("No se encontro la orden de produccion a eliminar.");
+  }
+
+  const deactivatedOrder = throwIfError(
+    await supabase
+      .from("production_orders")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("production_order_id", productionOrderId)
+      .eq("is_active", true)
+      .select("production_order_id")
+      .maybeSingle(),
+    "No fue posible eliminar la orden de produccion",
+  );
+
+  if (!deactivatedOrder?.production_order_id) {
+    throw new Error(
+      "La orden de produccion ya no estaba activa o no se pudo eliminar.",
+    );
+  }
+
+  return deactivatedOrder;
 }

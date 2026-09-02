@@ -1,25 +1,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "../context/AuthContext.js";
-import { hasSystemAccess } from "../utils/roles.js";
+import {
+  hasQuotationAdjustmentAccess,
+  isBrandManager,
+} from "../utils/roles.js";
 import {
   getQuotations,
+  deleteQuotation,
+  updateQuotationDiscount,
+  updateQuotationDeliveryDates,
 } from "../services/quotationService.js";
 import {
   createSalesProductionOrderFromQuotation,
+  deleteProductionOrder,
   getSalesOrderDetail,
   getSalesOrders,
-  updateProductionOrderDetails,
 } from "../services/orderService.js";
+import { getSalesAgentNames } from "../services/agentService.js";
 import {
-  QUOTATION_STATUSES,
-  isQuotationApproved,
   normalizeQuotationSearch as normalizeSearchText,
 } from "../components/quotations/QuotationsViewHelpers.jsx";
 import QuotationsPageHeader from "../components/quotations/QuotationsPageHeader.jsx";
 import QuotationsFilters from "../components/quotations/QuotationsFilters.jsx";
 import QuotationsProductionLists from "../components/quotations/QuotationsProductionLists.jsx";
-import QuotationsCharts from "../components/quotations/QuotationsCharts.jsx";
 import QuotationsDetails from "../components/quotations/QuotationsDetails.jsx";
 import OperationalMetrics from "../components/shared/OperationalMetrics.jsx";
 import { downloadQuotationProforma } from "../utils/proformaPdf.js";
@@ -29,10 +33,23 @@ function toDateInputValue(value) {
   return value ? String(value).slice(0, 10) : "";
 }
 
+function formatDiscountInput(value) {
+  const numberValue = Number(value);
+
+  if (!Number.isFinite(numberValue)) {
+    return "";
+  }
+
+  return String(Math.round(numberValue * 100) / 100);
+}
+
 /* --- PÁGINA PRINCIPAL --- */
 export default function Quotations() {
+  const { user } = useAuth();
+  const canViewAllProduction = isBrandManager(user);
+  const canManageQuotationDates = isBrandManager(user);
+  const canManageQuotationDiscounts = hasQuotationAdjustmentAccess(user);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
   const [companyFilter, setCompanyFilter] = useState("Todas");
   const [agentFilter, setAgentFilter] = useState("Todos");
   const [clientFilter, setClientFilter] = useState("Todos");
@@ -50,19 +67,7 @@ export default function Quotations() {
   const [productionOrderDetail, setProductionOrderDetail] = useState(null);
   const [productionOrderDetailLoading, setProductionOrderDetailLoading] = useState(false);
   const [productionOrderDetailError, setProductionOrderDetailError] = useState("");
-  const [productionOrderForm, setProductionOrderForm] = useState({
-    committedDeliveryDate: "",
-    unexpectedDeliveryDate: "",
-    nextPaymentDate: "",
-    productionStatus: "pendiente",
-    penaltyPercentage: "4",
-    statusChangeNote: "",
-  });
-  const [productionOrderSaving, setProductionOrderSaving] = useState(false);
-  const [productionOrderSaveError, setProductionOrderSaveError] = useState("");
-  const [productionOrderSaveSuccess, setProductionOrderSaveSuccess] = useState("");
   const [creatingProductionOrderId, setCreatingProductionOrderId] = useState(null);
-  const { user } = useAuth();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -70,6 +75,21 @@ export default function Quotations() {
   const [paymentSuccess, setPaymentSuccess] = useState("");
   const [downloadingQuotationId, setDownloadingQuotationId] = useState(null);
   const [sendingQuotationId, setSendingQuotationId] = useState(null);
+  const [quotationDateForm, setQuotationDateForm] = useState({
+    committedDeliveryDate: "",
+    unexpectedDeliveryDate: "",
+  });
+  const [quotationDatesSaving, setQuotationDatesSaving] = useState(false);
+  const [quotationDatesError, setQuotationDatesError] = useState("");
+  const [quotationDatesSuccess, setQuotationDatesSuccess] = useState("");
+  const [quotationDiscountForm, setQuotationDiscountForm] = useState({
+    discountPercentage: "",
+    discountAmount: "",
+  });
+  const [quotationDiscountSaving, setQuotationDiscountSaving] = useState(false);
+  const [quotationDiscountError, setQuotationDiscountError] = useState("");
+  const [quotationDiscountSuccess, setQuotationDiscountSuccess] = useState("");
+  const [agentOptions, setAgentOptions] = useState(["Todos"]);
 
   const loadQuotations = useCallback(async () => {
     try {
@@ -77,7 +97,7 @@ export default function Quotations() {
       setError("");
       setQuotations(
         await getQuotations({
-          ownerUserId: hasSystemAccess(user) ? null : user?.id,
+          ownerUserId: canViewAllProduction ? null : user?.id,
         }),
       );
     } catch (loadError) {
@@ -88,14 +108,19 @@ export default function Quotations() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [canViewAllProduction, user]);
 
 
   const loadProductionOrders = useCallback(async () => {
     try {
       setOrdersLoading(true);
       setOrdersError("");
-      setProductionOrders(await getSalesOrders({ paymentStatuses: [] }));
+      setProductionOrders(
+        await getSalesOrders({
+          paymentStatuses: [],
+          ownerUserId: canViewAllProduction ? null : user?.id,
+        }),
+      );
     } catch (loadError) {
       console.error("Production orders loading error:", loadError);
       setOrdersError(
@@ -104,7 +129,7 @@ export default function Quotations() {
     } finally {
       setOrdersLoading(false);
     }
-  }, []);
+  }, [canViewAllProduction, user]);
   useEffect(() => {
     if (!user) return;
     Promise.resolve().then(() => {
@@ -112,6 +137,32 @@ export default function Quotations() {
       loadProductionOrders();
     });
   }, [user, loadQuotations, loadProductionOrders]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadAgentOptions() {
+      try {
+        const names = await getSalesAgentNames();
+
+        if (mounted) {
+          setAgentOptions(["Todos", ...names]);
+        }
+      } catch (loadError) {
+        console.error("Sales agents loading error:", loadError);
+
+        if (mounted) {
+          setAgentOptions(["Todos"]);
+        }
+      }
+    }
+
+    loadAgentOptions();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -156,31 +207,30 @@ export default function Quotations() {
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
-    if (!productionOrderDetail) {
-      setProductionOrderForm({
-        committedDeliveryDate: "",
-        unexpectedDeliveryDate: "",
-        nextPaymentDate: "",
-        productionStatus: "pendiente",
-        penaltyPercentage: "4",
-        statusChangeNote: "",
+      setQuotationDateForm({
+        committedDeliveryDate: toDateInputValue(
+          selectedQuotation?.committedDeliveryDate,
+        ),
+        unexpectedDeliveryDate: toDateInputValue(
+          selectedQuotation?.unexpectedDeliveryDate,
+        ),
       });
-      return;
-    }
+      setQuotationDatesError("");
+      setQuotationDatesSuccess("");
+      setQuotationDiscountForm({
+        discountPercentage: formatDiscountInput(
+          selectedQuotation?.discountPercentage || 0,
+        ),
+        discountAmount: formatDiscountInput(
+          selectedQuotation?.discountAmount || 0,
+        ),
+      });
+      setQuotationDiscountError("");
+      setQuotationDiscountSuccess("");
+    });
 
-    setProductionOrderForm({
-      committedDeliveryDate: toDateInputValue(productionOrderDetail.committedDeliveryDate),
-      unexpectedDeliveryDate: toDateInputValue(productionOrderDetail.unexpectedDeliveryDate),
-      nextPaymentDate: toDateInputValue(productionOrderDetail.nextPaymentDate),
-      productionStatus: productionOrderDetail.productionStatus || "pendiente",
-      penaltyPercentage: String(productionOrderDetail.penaltyPercentage ?? 4),
-      statusChangeNote: "",
-    });
-    setProductionOrderSaveError("");
-    setProductionOrderSaveSuccess("");
-    });
     return () => window.cancelAnimationFrame(frameId);
-  }, [productionOrderDetail]);
+  }, [selectedQuotation]);
 
   const companyOptions = useMemo(
     () => [
@@ -190,31 +240,11 @@ export default function Quotations() {
     [quotations],
   );
 
-  const agentOptions = useMemo(
-    () => [
-      "Todos",
-      ...new Set(quotations.map((quotation) => quotation.agent).filter(Boolean)),
-    ],
-    [quotations],
-  );
-
   const clientOptions = useMemo(
     () => [
       "Todos",
       ...new Set(quotations.map((quotation) => quotation.client).filter(Boolean)),
     ],
-    [quotations],
-  );
-
-  const statusCounts = useMemo(
-    () =>
-      quotations.reduce((counts, quotation) => {
-        const status = quotation.status || "Pendiente";
-
-        counts[status] = (counts[status] || 0) + 1;
-
-        return counts;
-      }, {}),
     [quotations],
   );
 
@@ -279,49 +309,35 @@ export default function Quotations() {
       bg: "bg-[#8b5cf6]/10",
     },
     {
-      label: "PENDIENTES",
-      value: String(statusCounts.Pendiente || 0),
-      growth: "Por revisar",
-      growthColor: "text-red-400",
-      color: "#f59e0b",
-      iconColor: "text-[#f59e0b]",
-      bg: "bg-[#f59e0b]/10",
-    },
-    {
-      label: "EN REVISIÓN",
-      value: String(statusCounts["En revision"] || statusCounts["En revisión"] || 0),
-      growth: "En seguimiento",
+      label: "VALOR COTIZADO",
+      value: new Intl.NumberFormat("es-CR", {
+        style: "currency",
+        currency: "CRC",
+        maximumFractionDigits: 0,
+      }).format(totalQuotedValue),
+      growth: "Monto total",
       growthColor: "text-green-400",
       color: "#C9A227",
       iconColor: "text-[#C9A227]",
       bg: "bg-[#C9A227]/10",
     },
     {
-      label: "APROBADAS",
-      value: String(statusCounts.Aprobada || 0),
-      growth: "Confirmadas",
+      label: "CLIENTES",
+      value: String(new Set(quotations.map((quotation) => quotation.client).filter(Boolean)).size),
+      growth: "Con cotizaciones",
       growthColor: "text-green-400",
       color: "#22c55e",
       iconColor: "text-[#22c55e]",
       bg: "bg-[#22c55e]/10",
     },
     {
-      label: "RECHAZADAS",
-      value: String(statusCounts.Rechazada || 0),
-      growth: "No aceptadas",
-      growthColor: "text-red-400",
-      color: "#ef4444",
-      iconColor: "text-[#ef4444]",
-      bg: "bg-[#ef4444]/10",
-    },
-    {
-      label: "VENCIDAS",
-      value: String(statusCounts.Vencida || 0),
-      growth: "Fuera de vigencia",
+      label: "ÓRDENES DE PRODUCCIÓN",
+      value: String(productionOrders.length),
+      growth: "Generadas desde cotizaciones",
       growthColor: "text-green-400",
-      color: "#ec4899",
-      iconColor: "text-[#ec4899]",
-      bg: "bg-[#ec4899]/10",
+      color: "#14b8a6",
+      iconColor: "text-[#14b8a6]",
+      bg: "bg-[#14b8a6]/10",
     },
   ];
 
@@ -338,9 +354,6 @@ export default function Quotations() {
         normalizeSearchText(quotation.number).includes(normalizedSearch) ||
         normalizeSearchText(quotation.client).includes(normalizedSearch) ||
         normalizeSearchText(quotation.company).includes(normalizedSearch);
-
-      const matchesStatus =
-        statusFilter === "Todos" || quotation.status === statusFilter;
 
       const matchesCompany =
         companyFilter === "Todas" || quotation.company === companyFilter;
@@ -365,7 +378,6 @@ export default function Quotations() {
 
       return (
         matchesSearch &&
-        matchesStatus &&
         matchesCompany &&
         matchesAgent &&
         matchesClient &&
@@ -381,7 +393,6 @@ export default function Quotations() {
     dateTo,
     quotations,
     search,
-    statusFilter,
   ]);
 
 
@@ -404,7 +415,7 @@ export default function Quotations() {
   };
 
   const handleDownloadProforma = async (quotation) => {
-    if (!quotation || !isQuotationApproved(quotation)) return;
+    if (!quotation) return;
 
     const quotationId = quotation.quotationId || quotation.id;
 
@@ -420,14 +431,14 @@ export default function Quotations() {
   };
 
   const handleSendProforma = async (quotation) => {
-    if (!quotation || !isQuotationApproved(quotation)) return;
+    if (!quotation) return;
 
     const quotationId = quotation.quotationId || quotation.id;
 
     try {
       setSendingQuotationId(quotationId);
       const result = await sendQuotationProformaEmail(quotation);
-      window.alert(result?.message || "La proforma fue enviada al representante de la sucursal.");
+      window.alert(result?.message || "La proforma fue enviada correctamente al cliente.");
     } catch (sendError) {
       console.error("Quotation proforma email error:", sendError);
       window.alert(sendError?.message || "No fue posible enviar la proforma por correo.");
@@ -440,55 +451,172 @@ export default function Quotations() {
     setSelectedProductionOrder(null);
     setProductionOrderDetail(null);
     setProductionOrderDetailError("");
-    setProductionOrderSaveError("");
-    setProductionOrderSaveSuccess("");
     setShowPaymentForm(false);
     setPaymentError("");
     setPaymentSuccess("");
   };
 
-  const handleProductionOrderFieldChange = (field, value) => {
-    setProductionOrderForm((current) => ({
+  const handleQuotationDateFieldChange = (field, value) => {
+    setQuotationDateForm((current) => ({
       ...current,
       [field]: value,
     }));
-    setProductionOrderSaveError("");
-    setProductionOrderSaveSuccess("");
+    setQuotationDatesError("");
+    setQuotationDatesSuccess("");
   };
 
-  const handleSaveProductionOrder = async () => {
-    if (!productionOrderDetail?.productionOrderId) return;
+  const handleSaveQuotationDates = async () => {
+    const quotationId = selectedQuotation?.quotationId || selectedQuotation?.id;
+
+    if (!quotationId) return;
 
     try {
-      setProductionOrderSaving(true);
-      setProductionOrderSaveError("");
-      setProductionOrderSaveSuccess("");
+      setQuotationDatesSaving(true);
+      setQuotationDatesError("");
+      setQuotationDatesSuccess("");
 
-      const updatedOrder = await updateProductionOrderDetails(
-        productionOrderDetail.productionOrderId,
-        productionOrderForm,
-      );
-      const refreshedDetail = await getSalesOrderDetail(
-        productionOrderDetail.productionOrderId,
+      const updatedQuotation = await updateQuotationDeliveryDates(
+        quotationId,
+        quotationDateForm,
       );
 
-      setProductionOrderDetail(refreshedDetail);
-      setProductionOrders((current) =>
-        current.map((order) =>
-          order.productionOrderId === updatedOrder.productionOrderId
-            ? { ...order, ...updatedOrder }
-            : order,
+      setQuotations((current) =>
+        current.map((quotation) =>
+          (quotation.quotationId || quotation.id) === quotationId
+            ? {
+                ...quotation,
+                committedDeliveryDate:
+                  updatedQuotation.committed_delivery_date || null,
+                unexpectedDeliveryDate:
+                  updatedQuotation.unexpected_delivery_date || null,
+              }
+            : quotation,
         ),
       );
-      setProductionOrderSaveSuccess("Cambios guardados correctamente.");
-      await loadProductionOrders();
+
+      setSelectedQuotation((current) =>
+        current
+          ? {
+              ...current,
+              committedDeliveryDate:
+                updatedQuotation.committed_delivery_date || null,
+              unexpectedDeliveryDate:
+                updatedQuotation.unexpected_delivery_date || null,
+            }
+          : current,
+      );
+
+      if (
+        selectedProductionOrder?.quotationId &&
+        selectedProductionOrder.quotationId === quotationId
+      ) {
+        const refreshedDetail = await getSalesOrderDetail(
+          selectedProductionOrder.productionOrderId,
+        );
+        setProductionOrderDetail(refreshedDetail);
+      }
+
+      setQuotationDatesSuccess("Fechas de entrega actualizadas correctamente.");
     } catch (saveError) {
-      console.error("Production order update error:", saveError);
-      setProductionOrderSaveError(
-        saveError?.message || "No fue posible guardar los cambios de la orden.",
+      console.error("Quotation delivery dates update error:", saveError);
+      setQuotationDatesError(
+        saveError?.message ||
+          "No fue posible guardar las fechas de entrega de la cotizacion.",
       );
     } finally {
-      setProductionOrderSaving(false);
+      setQuotationDatesSaving(false);
+    }
+  };
+
+  const handleQuotationDiscountFieldChange = (field, value) => {
+    const subtotal = Math.max(0, Number(selectedQuotation?.subtotal) || 0);
+    const numberValue = Number(value);
+
+    setQuotationDiscountForm((current) => {
+      if (field === "discountPercentage") {
+        const safePercentage = Number.isFinite(numberValue)
+          ? Math.min(100, Math.max(0, numberValue))
+          : "";
+        const nextAmount =
+          subtotal > 0 && safePercentage !== ""
+            ? formatDiscountInput(subtotal * (safePercentage / 100))
+            : "";
+
+        return {
+          ...current,
+          discountPercentage: value,
+          discountAmount: nextAmount,
+        };
+      }
+
+      const safeAmount = Number.isFinite(numberValue)
+        ? Math.min(subtotal, Math.max(0, numberValue))
+        : "";
+      const nextPercentage =
+        subtotal > 0 && safeAmount !== ""
+          ? formatDiscountInput((safeAmount / subtotal) * 100)
+          : "";
+
+      return {
+        ...current,
+        discountAmount: value,
+        discountPercentage: nextPercentage,
+      };
+    });
+    setQuotationDiscountError("");
+    setQuotationDiscountSuccess("");
+  };
+
+  const handleSaveQuotationDiscount = async () => {
+    const quotationId = selectedQuotation?.quotationId || selectedQuotation?.id;
+
+    if (!quotationId) return;
+
+    try {
+      setQuotationDiscountSaving(true);
+      setQuotationDiscountError("");
+      setQuotationDiscountSuccess("");
+
+      const updatedQuotation = await updateQuotationDiscount(quotationId, {
+        discountPercentage: quotationDiscountForm.discountPercentage,
+      });
+
+      const mappedUpdates = {
+        discountPercentage:
+          updatedQuotation.discount_percentage ?? 0,
+        discountAmount: updatedQuotation.discount_amount ?? 0,
+        ivaAmount: updatedQuotation.iva_amount ?? 0,
+        total: updatedQuotation.total ?? 0,
+        advancePayment: updatedQuotation.advance_payment ?? 0,
+      };
+
+      setQuotations((current) =>
+        current.map((quotation) =>
+          (quotation.quotationId || quotation.id) === quotationId
+            ? { ...quotation, ...mappedUpdates }
+            : quotation,
+        ),
+      );
+
+      setSelectedQuotation((current) =>
+        current ? { ...current, ...mappedUpdates } : current,
+      );
+
+      setQuotationDiscountForm({
+        discountPercentage: formatDiscountInput(
+          mappedUpdates.discountPercentage,
+        ),
+        discountAmount: formatDiscountInput(mappedUpdates.discountAmount),
+      });
+      setQuotationDiscountSuccess("Descuento actualizado correctamente.");
+    } catch (saveError) {
+      console.error("Quotation discount update error:", saveError);
+      setQuotationDiscountError(
+        saveError?.message ||
+          "No fue posible guardar el descuento de la cotizacion.",
+      );
+    } finally {
+      setQuotationDiscountSaving(false);
     }
   };
 
@@ -522,10 +650,73 @@ export default function Quotations() {
     }
   };
 
+  const handleDeleteQuotation = async (quotation) => {
+    const quotationId = quotation?.quotationId || quotation?.id;
+
+    if (!quotationId) {
+      window.alert("No se encontro la cotizacion a eliminar.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Deseas eliminar la cotizacion ${quotation.number}? Si tiene una orden de produccion activa asociada, tambien sera desactivada.`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteQuotation(quotationId);
+      if ((selectedQuotation?.quotationId || selectedQuotation?.id) === quotationId) {
+        setSelectedQuotation(null);
+      }
+      if (selectedProductionOrder?.quotationId === quotationId) {
+        closeProductionOrderModal();
+      }
+      await Promise.all([loadQuotations(), loadProductionOrders()]);
+      window.alert("Cotizacion eliminada correctamente.");
+    } catch (deleteError) {
+      console.error("Quotation deletion error:", deleteError);
+      window.alert(
+        deleteError?.message || "No fue posible eliminar la cotizacion.",
+      );
+    }
+  };
+
+  const handleDeleteProductionOrder = async (order) => {
+    const productionOrderId = order?.productionOrderId || order?.id;
+
+    if (!productionOrderId) {
+      window.alert("No se encontro la orden de produccion a eliminar.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Deseas eliminar la orden de produccion ${order.code}?`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteProductionOrder(productionOrderId);
+      if (
+        (selectedProductionOrder?.productionOrderId || selectedProductionOrder?.id) ===
+        productionOrderId
+      ) {
+        closeProductionOrderModal();
+      }
+      await Promise.all([loadQuotations(), loadProductionOrders()]);
+      window.alert("Orden de produccion eliminada correctamente.");
+    } catch (deleteError) {
+      console.error("Production order deletion error:", deleteError);
+      window.alert(
+        deleteError?.message || "No fue posible eliminar la orden de produccion.",
+      );
+    }
+  };
+
 
   const clearFilters = () => {
     setSearch("");
-    setStatusFilter("Todos");
     setCompanyFilter("Todas");
     setAgentFilter("Todos");
     setClientFilter("Todos");
@@ -533,11 +724,6 @@ export default function Quotations() {
     setDateTo("");
   };
 
-  const dynamicDonutData = QUOTATION_STATUSES.map((status) => ({
-    name: status,
-    value: statusCounts[status] || 0,
-    count: statusCounts[status] || 0,
-  }));
   const drawerOpen = false;
   const drawerMode = "view";
   const viewQuote = selectedQuotation;
@@ -559,7 +745,6 @@ export default function Quotations() {
 
         <QuotationsFilters
           search={search} setSearch={setSearch}
-          statusFilter={statusFilter} setStatusFilter={setStatusFilter}
           companyFilter={companyFilter} setCompanyFilter={setCompanyFilter}
           agentFilter={agentFilter} setAgentFilter={setAgentFilter}
           clientFilter={clientFilter} setClientFilter={setClientFilter}
@@ -570,6 +755,7 @@ export default function Quotations() {
           companyOptions={companyOptions}
           agentOptions={agentOptions}
           clientOptions={clientOptions}
+          showAgentFilter={canViewAllProduction}
         />
 
         <QuotationsProductionLists
@@ -589,18 +775,15 @@ export default function Quotations() {
           downloadingQuotationId={downloadingQuotationId}
           onSendQuotation={handleSendProforma}
           sendingQuotationId={sendingQuotationId}
+          onDeleteQuotation={handleDeleteQuotation}
+          onDeleteProductionOrder={handleDeleteProductionOrder}
           clearFilters={clearFilters}
         />
 
-        <QuotationsCharts
-          dynamicDonutData={dynamicDonutData}
-          quotations={quotations}
-          totalQuotedValue={totalQuotedValue}
-        />
       </div>
 
       <QuotationsDetails
-        manageProduction={hasSystemAccess(user)}
+        manageProduction={canManageQuotationDates}
         drawerOpen={drawerOpen} closeDrawer={closeDrawer}
         drawerMode={drawerMode} viewQuote={viewQuote}
         selectedProductionOrder={selectedProductionOrder}
@@ -613,13 +796,20 @@ export default function Quotations() {
         paymentLoading={paymentLoading} setPaymentLoading={setPaymentLoading}
         paymentError={paymentError} setPaymentError={setPaymentError}
         paymentSuccess={paymentSuccess} setPaymentSuccess={setPaymentSuccess}
-        productionOrderForm={productionOrderForm}
-        onProductionOrderFieldChange={handleProductionOrderFieldChange}
-        onSaveProductionOrder={handleSaveProductionOrder}
-        productionOrderSaving={productionOrderSaving}
-        productionOrderSaveError={productionOrderSaveError}
-        productionOrderSaveSuccess={productionOrderSaveSuccess}
         selectedQuotation={selectedQuotation}
+        quotationDateForm={quotationDateForm}
+        onQuotationDateFieldChange={handleQuotationDateFieldChange}
+        onSaveQuotationDates={handleSaveQuotationDates}
+        quotationDatesSaving={quotationDatesSaving}
+        quotationDatesError={quotationDatesError}
+        quotationDatesSuccess={quotationDatesSuccess}
+        canManageQuotationDiscounts={canManageQuotationDiscounts}
+        quotationDiscountForm={quotationDiscountForm}
+        onQuotationDiscountFieldChange={handleQuotationDiscountFieldChange}
+        onSaveQuotationDiscount={handleSaveQuotationDiscount}
+        quotationDiscountSaving={quotationDiscountSaving}
+        quotationDiscountError={quotationDiscountError}
+        quotationDiscountSuccess={quotationDiscountSuccess}
         closeQuotationModal={closeQuotationModal}
         onDownloadQuotation={handleDownloadProforma}
         downloadingQuotationId={downloadingQuotationId}

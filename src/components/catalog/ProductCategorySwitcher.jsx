@@ -94,16 +94,6 @@ export default function ProductCategorySwitcher({
 
   return (
     <section className="mb-6">
-      <div className="mb-3">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#86A4CE]">
-          Subcatálogos de productos
-        </p>
-
-        <p className="mt-1 text-sm text-slate-400">
-          Explora los productos organizados por categoría.
-        </p>
-      </div>
-
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <CategoryCard
           icon={Grid2X2}

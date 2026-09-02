@@ -9,7 +9,7 @@ import {
   importOrderPayments,
 } from "../services/paymentService.js";
 import { useAuth } from "../context/AuthContext.js";
-import { hasSystemAccess } from "../utils/roles.js";
+import { hasPaymentApprovalAccess, hasSystemAccess } from "../utils/roles.js";
 import {
   buildDailyOrdersData,
   formatOrderCurrency as formatCurrency,
@@ -26,6 +26,7 @@ import OperationalMetrics from "../components/shared/OperationalMetrics.jsx";
 export default function Orders() {
   const { user } = useAuth();
   const canManagePenalty = hasSystemAccess(user);
+  const canApprovePayments = hasPaymentApprovalAccess(user);
 
   const [search, setSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("Todos");
@@ -406,6 +407,7 @@ export default function Orders() {
         importResult={importResult}
         handleImportPayments={handleImportPayments}
         previewReceipt={previewReceipt}
+        canApprovePayments={canApprovePayments}
       />
     </>
   );

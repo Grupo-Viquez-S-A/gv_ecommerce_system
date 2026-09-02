@@ -12,7 +12,6 @@ import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
 import Sales from "./pages/Sales";
-import Orders from "./pages/Orders";
 import Reports from "./pages/Reports";
 import MyOrders from "./pages/MyOrders";
 import MyQuotations from "./pages/MyQuotations";
@@ -97,15 +96,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Sales />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/pedidos"
-            element={
-              <ProtectedRoute>
-                <Orders />
               </ProtectedRoute>
             }
           />

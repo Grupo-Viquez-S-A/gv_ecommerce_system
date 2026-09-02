@@ -1,7 +1,7 @@
 import { RiArrowDownSFill, RiCheckboxCircleFill, RiDownloadFill, RiFileTextLine } from "react-icons/ri";
 import { OrderDetailRow as DetailRow, formatOrderCurrency as formatCurrency, formatOrderDate as formatDate, formatOrderFileSize as formatFileSize } from "./OrdersViewHelpers.jsx";
 
-export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsDrawer, viewOrder, paymentSummary, paymentsLoading, paymentsError, orderPayments, expandedPaymentId, setExpandedPaymentId, setPreviewReceipt, importing, importResult, handleImportPayments, previewReceipt }) {
+export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsDrawer, viewOrder, paymentSummary, paymentsLoading, paymentsError, orderPayments, expandedPaymentId, setExpandedPaymentId, setPreviewReceipt, importing, importResult, handleImportPayments, previewReceipt, canApprovePayments }) {
   return <>
       {/* Fondo del drawer de pagos */}
       {paymentsDrawerOpen && (
@@ -290,6 +290,7 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
           <button
             type="button"
             disabled={
+              !canApprovePayments ||
               importing ||
               paymentsLoading ||
               !orderPayments.some((payment) => !payment.isValid)
@@ -300,6 +301,13 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
             {importing ? "Importando..." : "Importar comprobantes"}
           </button>
         </div>
+
+        {!canApprovePayments && (
+          <div className="border-t border-[#2a3550] px-4 pb-4 text-xs text-gray-500 sm:px-6">
+            Solo los usuarios con rol Contador/ACCOUNTANT o Presidente/PRESIDENT
+            pueden aprobar reportes de pago.
+          </div>
+        )}
       </div>
 
       {/* Lightbox de previsualizacion del comprobante */}

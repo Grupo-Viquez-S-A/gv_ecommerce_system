@@ -54,7 +54,7 @@ export default function DeleteClientModal({
                 </h3>
 
                 <p className="mt-1 text-sm text-gray-400">
-                  Esta acción elimina el cliente de forma permanente.
+                  Esta acción quita el cliente del módulo y de las rutas de visita.
                 </p>
               </div>
             </div>
@@ -94,9 +94,8 @@ export default function DeleteClientModal({
               <div className="flex items-start gap-2">
                 <RiErrorWarningLine size={18} className="mt-0.5 flex-shrink-0" />
                 <p className="leading-relaxed">
-                  Si el cliente ya tiene cotizaciones asociadas, la eliminación
-                  se bloqueará para proteger el historial comercial. En ese caso
-                  debes usar la opción de desactivar.
+                  El historial comercial se conserva para no afectar cotizaciones,
+                  órdenes o reportes existentes.
                 </p>
               </div>
             </div>

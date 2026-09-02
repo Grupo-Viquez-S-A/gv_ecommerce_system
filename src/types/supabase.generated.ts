@@ -139,6 +139,7 @@ export type Database = {
         Row: {
           activity_code: string | null
           address: string | null
+          assigned_sales_agent_user_id: string | null
           city: string
           commercial_name: string | null
           company_id: string
@@ -159,10 +160,12 @@ export type Database = {
           regime: string
           tax_status: string | null
           updated_at: string
+          visit_route_day: string | null
         }
         Insert: {
           activity_code?: string | null
           address?: string | null
+          assigned_sales_agent_user_id?: string | null
           city: string
           commercial_name?: string | null
           company_id: string
@@ -183,10 +186,12 @@ export type Database = {
           regime: string
           tax_status?: string | null
           updated_at?: string
+          visit_route_day?: string | null
         }
         Update: {
           activity_code?: string | null
           address?: string | null
+          assigned_sales_agent_user_id?: string | null
           city?: string
           commercial_name?: string | null
           company_id?: string
@@ -207,8 +212,16 @@ export type Database = {
           regime?: string
           tax_status?: string | null
           updated_at?: string
+          visit_route_day?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customers_assigned_sales_agent_user_id_fkey"
+            columns: ["assigned_sales_agent_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "customers_company_id_fkey"
             columns: ["company_id"]
@@ -863,6 +876,27 @@ export type Database = {
             referencedColumns: ["module_id"]
           },
         ]
+      }
+      payment_conditions: {
+        Row: {
+          condition_id: string
+          condition_name: string
+          description: string | null
+          is_active: boolean
+        }
+        Insert: {
+          condition_id?: string
+          condition_name: string
+          description?: string | null
+          is_active?: boolean
+        }
+        Update: {
+          condition_id?: string
+          condition_name?: string
+          description?: string | null
+          is_active?: boolean
+        }
+        Relationships: []
       }
       payment_methods: {
         Row: {
@@ -1621,13 +1655,11 @@ export type Database = {
           advance_percentage: number
           committed_delivery_date: string | null
           company_id: string | null
+          condition_id: string | null
           created_at: string
           customer_id: string
           discount_amount: number
           discount_percentage: number
-          early_delivery: boolean
-          early_delivery_date: string | null
-          early_delivery_price: number | null
           embroidery_amount: number | null
           is_active: boolean
           iva_amount: number
@@ -1635,8 +1667,6 @@ export type Database = {
           notes: string | null
           quotation_id: string
           quotation_number: string
-          state: string
-          status: string
           sublimation_amount: number | null
           subtotal: number
           total: number
@@ -1650,13 +1680,11 @@ export type Database = {
           advance_percentage?: number
           committed_delivery_date?: string | null
           company_id?: string | null
+          condition_id?: string | null
           created_at?: string
           customer_id: string
           discount_amount?: number
           discount_percentage?: number
-          early_delivery?: boolean
-          early_delivery_date?: string | null
-          early_delivery_price?: number | null
           embroidery_amount?: number | null
           is_active?: boolean
           iva_amount?: number
@@ -1664,8 +1692,6 @@ export type Database = {
           notes?: string | null
           quotation_id?: string
           quotation_number: string
-          state?: string
-          status?: string
           sublimation_amount?: number | null
           subtotal?: number
           total?: number
@@ -1679,13 +1705,11 @@ export type Database = {
           advance_percentage?: number
           committed_delivery_date?: string | null
           company_id?: string | null
+          condition_id?: string | null
           created_at?: string
           customer_id?: string
           discount_amount?: number
           discount_percentage?: number
-          early_delivery?: boolean
-          early_delivery_date?: string | null
-          early_delivery_price?: number | null
           embroidery_amount?: number | null
           is_active?: boolean
           iva_amount?: number
@@ -1693,8 +1717,6 @@ export type Database = {
           notes?: string | null
           quotation_id?: string
           quotation_number?: string
-          state?: string
-          status?: string
           sublimation_amount?: number | null
           subtotal?: number
           total?: number
@@ -1724,6 +1746,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "payment_methods"
             referencedColumns: ["method_id"]
+          },
+          {
+            foreignKeyName: "quotations_condition_id_fkey"
+            columns: ["condition_id"]
+            isOneToOne: false
+            referencedRelation: "payment_conditions"
+            referencedColumns: ["condition_id"]
           },
           {
             foreignKeyName: "quotations_user_id_fkey"

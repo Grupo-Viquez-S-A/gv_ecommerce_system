@@ -6,13 +6,13 @@ import {
   RiFileList3Line,
   RiMapPin2Line,
   RiPriceTag3Line,
-  RiUser3Line,
+  RiPhoneLine,
+  RiMailLine,
 } from "react-icons/ri";
 
 import formatCurrency from "../../utils/formatCurrency.js";
 import { formatDateCR } from "../../utils/dateUtils.js";
 import ClientDetailModal from "./ClientDetailModal.jsx";
-import StatusBadge from "./StatusBadge.jsx";
 
 function formatDate(dateValue) {
   if (!dateValue) {
@@ -105,7 +105,6 @@ export default function QuotationDetailModal({
       title={quotation?.number || "Cotizacion"}
       subtitle="Resumen completo de la cotizacion seleccionada."
       icon={<RiFileList3Line size={24} />}
-      badges={quotation && <StatusBadge status={quotation.status} />}
       loading={loading}
       error={error}
       onClose={onClose}
@@ -113,11 +112,6 @@ export default function QuotationDetailModal({
       {quotation && (
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <ReadonlyCard
-              label="Estado"
-              value={quotation.status}
-              icon={<StatusBadge status={quotation.status} />}
-            />
             <ReadonlyCard
               label="Fecha"
               value={formatDate(quotation.createdAt)}
@@ -133,23 +127,48 @@ export default function QuotationDetailModal({
               value={formatCurrency(total, "CRC 0")}
               highlight
             />
+            <ReadonlyCard
+              label="Condición de pago"
+              value={quotation.paymentCondition || "No definida"}
+            />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <ReadonlyCard
               label="Cliente"
-              value={quotation.business?.name || "Sin cliente"}
+              value={quotation.client || quotation.business?.name || "Sin cliente"}
               icon={<RiBuilding2Line size={16} className="text-[#D9A72A]" />}
             />
             <ReadonlyCard
-              label="Sucursal"
-              value={quotation.branch?.address || "Sin direccion"}
+              label="Razón social"
+              value={quotation.legalName || quotation.business?.legalName || "Sin razón social"}
+            />
+            <ReadonlyCard
+              label="Cédula jurídica"
+              value={quotation.legalId || quotation.business?.legalId || "Sin cédula jurídica"}
+            />
+            <ReadonlyCard
+              label="Correo"
+              value={quotation.email || "Sin correo"}
+              icon={<RiMailLine size={16} className="text-[#D9A72A]" />}
+            />
+            <ReadonlyCard
+              label="Teléfono"
+              value={quotation.phone || "Sin teléfono"}
+              icon={<RiPhoneLine size={16} className="text-[#D9A72A]" />}
+            />
+            <ReadonlyCard
+              label="Provincia"
+              value={quotation.province || "Sin definir"}
               icon={<RiMapPin2Line size={16} className="text-[#D9A72A]" />}
             />
             <ReadonlyCard
-              label="Representante"
-              value={quotation.representative?.name || "Sin representante"}
-              icon={<RiUser3Line size={16} className="text-[#D9A72A]" />}
+              label="Cantón"
+              value={quotation.city || "Sin definir"}
+            />
+            <ReadonlyCard
+              label="Distrito"
+              value={quotation.district || "Sin definir"}
             />
           </div>
 
@@ -259,12 +278,8 @@ export default function QuotationDetailModal({
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
               <ReadonlyCard
-                label="Porcentaje de adelanto"
+                label="Regla de adelanto"
                 value={`${advancePercentage.toFixed(0)}%`}
-              />
-              <ReadonlyCard
-                label="Aplicar adelanto"
-                value={advancePercentage > 0 ? "Sí" : "No"}
               />
               <ReadonlyCard
                 label="Porcentaje de descuento"
@@ -328,7 +343,7 @@ export default function QuotationDetailModal({
                 highlight
               />
               <ReadonlyCard
-                label={`Adelanto (${advancePercentage.toFixed(0)}%)`}
+                label={`Adelanto automático (${advancePercentage.toFixed(0)}%)`}
                 value={formatCurrency(quotation.advancePayment, "CRC 0")}
                 highlight
               />

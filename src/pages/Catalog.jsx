@@ -7,7 +7,6 @@ import {
 } from "react";
 
 import CatalogHeader from "../components/catalog/CatalogHeader";
-import CatalogSwitcher from "../components/catalog/CatalogSwitcher";
 import CatalogFilters from "../components/catalog/CatalogFilters";
 import { EMPTY_CATALOG_FILTERS } from "../components/catalog/catalogFilterDefaults.js";
 import CatalogGrid from "../components/catalog/CatalogGrid";
@@ -51,9 +50,13 @@ import { resolveSelectedVariant } from "../utils/variantSelection.js";
 import {
   createBusinessQuotation,
   getPaymentMethods,
+  getPaymentConditions,
   getQuotationClientByLegalId,
   getQuotationCompanies,
 } from "../services/quotationService.js";
+import { lookupCostaRicaTaxpayerByIdentification } from "../services/haciendaTaxpayerService.js";
+import { createSalesProductionOrderFromQuotation } from "../services/orderService.js";
+import { getBusinessClients } from "../services/clientService.js";
 import { useAuth } from "../context/AuthContext.js";
 import { hasCatalogPurchaseAccess } from "../utils/roles.js";
 import {
@@ -64,6 +67,10 @@ import {
   getCartItemNameWithSize,
   getInventorySizeLabel,
 } from "../utils/inventorySizes.js";
+import {
+  getQuotationAdvancePercentageForItems,
+  getQuotationAdvanceRuleLabel,
+} from "../utils/quotationAdvanceRules.js";
 
 const PAGE_SIZE = 8;
 const CART_STORAGE_KEY = "gv-ecommerce:quotation-cart:v2";
@@ -88,6 +95,7 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   ownerName: "",
   businessName: "",
   activityCode: "",
+  taxStatus: "",
   businessEmail: "",
   businessPhone: "",
   branchProvince: "",
@@ -102,19 +110,56 @@ const EMPTY_QUOTATION_CLIENT_FORM = {
   representativeEmail: "",
   representativeUserId: null,
   notes: "",
-  earlyDelivery: false,
-  earlyDeliveryDate: "",
   methodId: "",
-  advancePercentage: "50",
+  conditionId: "",
 };
 
-function getTodayInputDate() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+const QUOTATION_CLIENT_TABS = {
+  NEW: "new",
+  EXISTING: "existing",
+};
 
-  return `${year}-${month}-${day}`;
+const CART_ACTIONS = {
+  QUOTE: "quote",
+  SALE: "sale",
+};
+
+function buildExistingClientQuotationForm(client, currentForm) {
+  return {
+    ...EMPTY_QUOTATION_CLIENT_FORM,
+    businessId: client.businessId || client.id || "",
+    companyId: client.companyId || "",
+    identificationType:
+      client.identificationType === "personal" ? "personal" : "legal",
+    legalId: client.legalId || "",
+    legalName: client.legalName || "",
+    ownerName: client.ownerName || "",
+    businessName: client.name || "",
+    activityCode: client.activityCode || "",
+    taxStatus: client.taxStatus || "",
+    businessEmail: client.email || "",
+    businessPhone: client.phone || "",
+    branchProvince: client.province || "",
+    branchCity: client.city || "",
+    branchDistrict: client.district || "",
+    branchAddress: client.address || "",
+    branchPhone: client.phone || "",
+    branchLatitude:
+      client.latitude === null || client.latitude === undefined
+        ? ""
+        : String(client.latitude),
+    branchLongitude:
+      client.longitude === null || client.longitude === undefined
+        ? ""
+        : String(client.longitude),
+    branchLocationAccuracy:
+      client.locationAccuracy === null || client.locationAccuracy === undefined
+        ? ""
+        : String(client.locationAccuracy),
+    notes: currentForm.notes,
+    methodId: currentForm.methodId,
+    conditionId: currentForm.conditionId,
+  };
 }
 
 function getCartProductId(product) {
@@ -192,9 +237,7 @@ export default function Catalog() {
   const catalogRequestRef = useRef(0);
   const cartConfirmationTimerRef = useRef(null);
 
-  const [activeCatalog, setActiveCatalog] = useState(
-    CATALOG_TYPES.TEXTILE_PRODUCTS,
-  );
+  const activeCatalog = CATALOG_TYPES.TEXTILE_PRODUCTS;
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -218,17 +261,26 @@ export default function Catalog() {
   const [branchLocationError, setBranchLocationError] = useState("");
   const [quotationCompanies, setQuotationCompanies] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentConditions, setPaymentConditions] = useState([]);
   const [quotationClientForm, setQuotationClientForm] = useState(
     EMPTY_QUOTATION_CLIENT_FORM,
   );
   const [quotationError, setQuotationError] = useState("");
   const [quotationSuccess, setQuotationSuccess] = useState("");
   const [quotationSubmitting, setQuotationSubmitting] = useState(false);
+  const [cartAction, setCartAction] = useState(CART_ACTIONS.QUOTE);
   const [accessError, setAccessError] = useState("");
   const [clientLookupLoading, setClientLookupLoading] = useState(false);
   const [clientLookupMessage, setClientLookupMessage] = useState("");
   const [clientBranches, setClientBranches] = useState([]);
   const [showNewBranchForm, setShowNewBranchForm] = useState(false);
+  const [quotationClientTab, setQuotationClientTab] = useState(
+    QUOTATION_CLIENT_TABS.NEW,
+  );
+  const [existingClients, setExistingClients] = useState([]);
+  const [existingClientsLoading, setExistingClientsLoading] = useState(false);
+  const [existingClientsError, setExistingClientsError] = useState("");
+  const [existingClientSearch, setExistingClientSearch] = useState("");
 
   useEffect(() => {
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
@@ -343,6 +395,56 @@ export default function Catalog() {
         console.error("Payment methods loading error:", error);
       });
 
+    getPaymentConditions()
+      .then((conditions) => {
+        if (isMounted) {
+          setPaymentConditions(conditions || []);
+        }
+      })
+      .catch((error) => {
+        console.error("Payment conditions loading error:", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadExistingClients = async () => {
+      try {
+        setExistingClientsLoading(true);
+        setExistingClientsError("");
+
+        const customers = await getBusinessClients();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setExistingClients(
+          (customers || []).filter(
+            (client) => client.status !== "Inactivo",
+          ),
+        );
+      } catch (error) {
+        if (isMounted) {
+          console.error("Existing clients loading error:", error);
+          setExistingClientsError(
+            error?.message || "No fue posible cargar los clientes registrados.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setExistingClientsLoading(false);
+        }
+      }
+    };
+
+    loadExistingClients();
+
     return () => {
       isMounted = false;
     };
@@ -355,6 +457,50 @@ export default function Catalog() {
 
     return selectedMethod?.description || "";
   }, [paymentMethods, quotationClientForm.methodId]);
+
+  const selectedPaymentConditionDescription = useMemo(() => {
+    const selectedCondition = paymentConditions.find(
+      (condition) => condition.condition_id === quotationClientForm.conditionId,
+    );
+
+    return selectedCondition?.description || "";
+  }, [paymentConditions, quotationClientForm.conditionId]);
+
+  const filteredExistingClients = useMemo(() => {
+    const normalizedSearch = existingClientSearch.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return existingClients;
+    }
+
+    return existingClients.filter((client) =>
+      [
+        client.name,
+        client.company,
+        client.legalId,
+        client.legalName,
+        client.province,
+        client.city,
+        client.district,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch),
+    );
+  }, [existingClients, existingClientSearch]);
+
+  const selectedExistingClient = useMemo(() => {
+    if (!quotationClientForm.businessId) {
+      return null;
+    }
+
+    return (
+      existingClients.find(
+        (client) => client.businessId === quotationClientForm.businessId,
+      ) || null
+    );
+  }, [existingClients, quotationClientForm.businessId]);
 
   const categories = useMemo(() => {
     const uniqueCategories = new Map();
@@ -728,31 +874,13 @@ export default function Catalog() {
     0,
   );
   const cartEstimatedTotal = cartSubtotal + cartTaxes;
-  const cartAdvancePercentage = Math.min(
-    100,
-    Math.max(0, Number(quotationClientForm.advancePercentage) || 0),
-  );
+  const cartAdvancePercentage = getQuotationAdvancePercentageForItems(cartItems);
   const cartAdvancePayment =
     cartEstimatedTotal * (cartAdvancePercentage / 100);
   const cartPendingBalance = Math.max(
     0,
     cartEstimatedTotal - cartAdvancePayment,
   );
-
-  const handleCatalogChange = (nextCatalog) => {
-    if (
-      !nextCatalog ||
-      nextCatalog === activeCatalog
-    ) {
-      return;
-    }
-
-    setActiveCatalog(nextCatalog);
-    setFilters(EMPTY_CATALOG_FILTERS);
-    setCurrentPage(1);
-    setSelectedProductDetails(null);
-    scrollCatalogToTop();
-  };
 
   const handleProductCategoryChange = (categoryId) => {
     const nextCategoryId = categoryId || "";
@@ -917,6 +1045,7 @@ export default function Catalog() {
           gtin: selectedVariant?.gtin || null,
           catalogType: getCartProductType(product),
           catalogTypeLabel: getCartProductTypeLabel(product),
+          categoryName: product?.category?.category_name || "",
           quantity: safeQuantity,
           productId,
           variantId,
@@ -996,6 +1125,13 @@ export default function Catalog() {
     setCartItems([]);
   };
 
+  const handleChangeQuotationClientTab = (nextTab) => {
+    setQuotationClientTab(nextTab);
+    setQuotationError("");
+    setQuotationSuccess("");
+    setAccessError("");
+  };
+
   const handleQuotationClientFormChange = (fieldName, value) => {
     const branchAddressChanged = [
       "branchProvince",
@@ -1015,9 +1151,6 @@ export default function Catalog() {
         : {}),
       ...(fieldName === "identificationType"
         ? { legalId: "", legalName: "", ownerName: "" }
-        : {}),
-      ...(fieldName === "earlyDelivery" && !value
-        ? { earlyDeliveryDate: "" }
         : {}),
       ...(branchAddressChanged && currentForm[fieldName] !== value
         ? {
@@ -1060,8 +1193,36 @@ export default function Catalog() {
       const existingClient = await getQuotationClientByLegalId(legalId);
 
       if (!existingClient) {
+        const taxpayer = await lookupCostaRicaTaxpayerByIdentification(
+          legalId,
+        );
+
+        if (!taxpayer) {
+          setClientLookupMessage(
+            "No se encontró un cliente interno ni datos en Hacienda para esta identificación.",
+          );
+          return;
+        }
+
+        setQuotationClientForm((currentForm) => ({
+          ...currentForm,
+          legalName:
+            currentForm.identificationType === "legal"
+              ? taxpayer.legalName || currentForm.legalName
+              : "",
+          ownerName:
+            currentForm.identificationType === "personal"
+              ? taxpayer.ownerName || currentForm.ownerName
+              : "",
+          activityCode: taxpayer.activityCode || currentForm.activityCode,
+          taxStatus: taxpayer.taxStatus || currentForm.taxStatus,
+          businessName: currentForm.businessName || taxpayer.name || "",
+        }));
+
+        setClientBranches([]);
+        setShowNewBranchForm(true);
         setClientLookupMessage(
-          "No se encontró un cliente registrado con esta identificación.",
+          "Datos tributarios cargados desde Hacienda. Completa los datos faltantes del cliente.",
         );
         return;
       }
@@ -1072,8 +1233,8 @@ export default function Catalog() {
         ...currentForm,
         ...clientFields,
         notes: currentForm.notes,
-        earlyDelivery: currentForm.earlyDelivery,
-        earlyDeliveryDate: currentForm.earlyDeliveryDate,
+        methodId: currentForm.methodId,
+        conditionId: currentForm.conditionId,
       }));
 
       setClientBranches(branches);
@@ -1136,6 +1297,20 @@ export default function Catalog() {
     setBranchLocationError("");
   };
 
+  const handleSelectExistingClient = (client) => {
+    setQuotationClientTab(QUOTATION_CLIENT_TABS.EXISTING);
+    setQuotationError("");
+    setQuotationSuccess("");
+    setAccessError("");
+    setClientLookupMessage("");
+    setClientBranches([]);
+    setShowNewBranchForm(false);
+    setBranchLocationError("");
+    setQuotationClientForm((currentForm) =>
+      buildExistingClientQuotationForm(client, currentForm),
+    );
+  };
+
   const handleUseCurrentLocation = () => {
     if (!navigator.geolocation) {
       setBranchLocationError(
@@ -1180,7 +1355,7 @@ export default function Catalog() {
     );
   };
 
-  const handleSaveCartQuotation = async (status) => {
+  const handleSaveCartQuotation = async () => {
     try {
       setQuotationSubmitting(true);
       setQuotationError("");
@@ -1202,8 +1377,8 @@ export default function Catalog() {
             ...existingClient,
             companyId: selectedCompanyId || existingClient.companyId,
             notes: clientForm.notes,
-            earlyDelivery: clientForm.earlyDelivery,
-            earlyDeliveryDate: clientForm.earlyDeliveryDate,
+            methodId: clientForm.methodId,
+            conditionId: clientForm.conditionId,
           };
           setQuotationClientForm(clientForm);
           setClientLookupMessage(
@@ -1212,22 +1387,26 @@ export default function Catalog() {
         }
       }
 
-      if (clientForm.earlyDelivery && !clientForm.earlyDeliveryDate) {
-        setQuotationError(
-          "Selecciona la fecha solicitada para la entrega anticipada.",
-        );
-        return;
-      }
-
       const quotation = await createBusinessQuotation({
         client: clientForm,
         items: cartItems,
-        status,
       });
 
-      const baseSuccessMessage = quotation.earlyDelivery
-        ? `Cotizacion guardada: ${quotation.quotationNumber}. Entrega anticipada registrada el ${quotation.earlyDeliveryDate}.`
-        : `Cotizacion guardada: ${quotation.quotationNumber}`;
+      let baseSuccessMessage = `Cotizacion guardada: ${quotation.quotationNumber}`;
+
+      if (cartAction === CART_ACTIONS.SALE) {
+        const productionOrder = await createSalesProductionOrderFromQuotation(
+          quotation.quotationId,
+        );
+
+        if (!productionOrder?.productionOrderId) {
+          throw new Error(
+            "La cotizacion se creo, pero no fue posible generar la orden de produccion para registrar la venta.",
+          );
+        }
+
+        baseSuccessMessage = `Venta registrada: ${quotation.quotationNumber} -> ${productionOrder.productionOrderCode || "Orden creada"}`;
+      }
 
       setQuotationSuccess(
         quotation.representativeAccessMessage
@@ -1241,6 +1420,9 @@ export default function Catalog() {
 
       setCartItems([]);
       setQuotationClientForm(EMPTY_QUOTATION_CLIENT_FORM);
+      setQuotationClientTab(QUOTATION_CLIENT_TABS.NEW);
+      setCartAction(CART_ACTIONS.QUOTE);
+      setExistingClientSearch("");
       setClientLookupMessage("");
       setClientBranches([]);
       setShowNewBranchForm(false);
@@ -1256,12 +1438,561 @@ export default function Catalog() {
   };
 
   const handleQuoteCart = () => {
-    handleSaveCartQuotation("pending");
+    handleSaveCartQuotation();
   };
 
   const handleRefreshCatalog = () => {
     loadCatalog();
   };
+
+  const renderLocationCard = () => (
+    <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#091A31] text-[#E9BC2D]">
+            <MapPin className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-extrabold text-white">
+              Ubicación del cliente
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">
+              Obtén las coordenadas precisas desde este dispositivo.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleUseCurrentLocation}
+          disabled={branchLocationLoading || quotationSubmitting}
+          className="inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-[#D7A91D]/45 bg-[#D7A91D]/10 px-4 text-sm font-bold text-[#E9BC2D] transition hover:border-[#D7A91D] hover:bg-[#D7A91D]/15 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {branchLocationLoading ? (
+            <RiLoader4Line className="h-4 w-4 animate-spin" />
+          ) : (
+            <LocateFixed className="h-4 w-4" />
+          )}
+          {branchLocationLoading
+            ? "Obteniendo ubicación..."
+            : "Obtener mi ubicación actual"}
+        </button>
+      </div>
+
+      {quotationClientForm.branchLatitude !== "" &&
+      quotationClientForm.branchLongitude !== "" ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+              Latitud
+            </span>
+            <span className="mt-1 block font-mono text-sm text-white">
+              {quotationClientForm.branchLatitude}
+            </span>
+          </div>
+          <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+              Longitud
+            </span>
+            <span className="mt-1 block font-mono text-sm text-white">
+              {quotationClientForm.branchLongitude}
+            </span>
+          </div>
+          <p className="text-xs text-emerald-200 sm:col-span-2">
+            Ubicación capturada
+            {quotationClientForm.branchLocationAccuracy !== ""
+              ? ` con una precisión aproximada de ${quotationClientForm.branchLocationAccuracy} m.`
+              : "."}
+          </p>
+        </div>
+      ) : (
+        <p className="mt-4 text-xs text-amber-200">
+          Aún no se han registrado coordenadas para este cliente.
+        </p>
+      )}
+
+      {branchLocationError && (
+        <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+          {branchLocationError}
+        </p>
+      )}
+    </div>
+  );
+
+  const renderNewClientFields = (branchSelectionName) => (
+    <>
+      <label className="md:col-span-2">
+        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+          Empresa del grupo
+        </span>
+        <select
+          value={quotationClientForm.companyId}
+          onChange={(event) =>
+            handleQuotationClientFormChange(
+              "companyId",
+              event.target.value,
+            )
+          }
+          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+        >
+          <option value="">Seleccionar empresa</option>
+          {quotationCompanies.map((company) => (
+            <option
+              key={company.company_id}
+              value={company.company_id}
+            >
+              {company.commercial_name ||
+                company.company_name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <QuotationClientIdentityFields
+        form={quotationClientForm}
+        lookupLoading={clientLookupLoading}
+        lookupMessage={clientLookupMessage}
+        onChange={handleQuotationClientFormChange}
+        onLookup={handleLookupClientByLegalId}
+      />
+
+      <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
+        <p className="text-sm font-extrabold text-white">Ubicación del cliente</p>
+        {clientBranches.length > 0 && (
+          <p className="mt-1 text-xs text-slate-400">
+            Selecciona una ubicación registrada o agrega una nueva.
+          </p>
+        )}
+      </div>
+
+      {clientBranches.length > 0 && (
+        <div className="md:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {clientBranches.map((branch) => {
+            const isSelected =
+              quotationClientForm.branchId === branch.branch_id;
+            return (
+              <label
+                key={branch.branch_id}
+                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${
+                  isSelected
+                    ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                    : "border-[#35547E] bg-[#102441] hover:border-[#5a8abf]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={branchSelectionName}
+                  value={branch.branch_id}
+                  checked={isSelected}
+                  onChange={() => handleSelectBranch(branch)}
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#D7A91D]"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">
+                    {[branch.province, branch.city, branch.district]
+                      .filter(Boolean)
+                      .join(", ") || "Ubicación registrada"}
+                  </p>
+                  {branch.address && (
+                    <p className="mt-0.5 truncate text-xs text-slate-400">
+                      {branch.address}
+                    </p>
+                  )}
+                  {branch.branchPhone && (
+                    <p className="mt-0.5 text-xs text-[#9BB3D3]">
+                      {branch.branchPhone}
+                    </p>
+                  )}
+                </div>
+              </label>
+            );
+          })}
+          <label
+            className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-3 transition ${
+              showNewBranchForm
+                ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                : "border-[#35547E] hover:border-[#5a8abf]"
+            }`}
+          >
+            <input
+              type="radio"
+              name={branchSelectionName}
+              value="new"
+              checked={showNewBranchForm}
+              onChange={handleSelectNewBranch}
+              className="sr-only"
+            />
+            <Plus className="h-5 w-5 text-[#D7A91D]" />
+            <span className="text-sm font-semibold text-[#9BB3D3]">
+              Nueva ubicación
+            </span>
+          </label>
+        </div>
+      )}
+
+      {(clientBranches.length === 0 || showNewBranchForm) && (
+        <>
+          <label>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+              Provincia
+            </span>
+            <input
+              value={quotationClientForm.branchProvince}
+              onChange={(event) =>
+                handleQuotationClientFormChange(
+                  "branchProvince",
+                  event.target.value,
+                )
+              }
+              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+              placeholder="Ej. San Jose"
+            />
+          </label>
+          <label>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+              Cantón
+            </span>
+            <input
+              value={quotationClientForm.branchCity}
+              onChange={(event) =>
+                handleQuotationClientFormChange(
+                  "branchCity",
+                  event.target.value,
+                )
+              }
+              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+              placeholder="Ej. Central"
+            />
+          </label>
+          <label>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+              Distrito
+            </span>
+            <input
+              value={quotationClientForm.branchDistrict}
+              onChange={(event) =>
+                handleQuotationClientFormChange(
+                  "branchDistrict",
+                  event.target.value,
+                )
+              }
+              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+              placeholder="Ej. Carmen"
+            />
+          </label>
+          <label>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+              Direccion
+            </span>
+            <input
+              value={quotationClientForm.branchAddress}
+              onChange={(event) =>
+                handleQuotationClientFormChange(
+                  "branchAddress",
+                  event.target.value,
+                )
+              }
+              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+              placeholder="Direccion exacta"
+            />
+          </label>
+          <label>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+              Teléfono del cliente
+            </span>
+            <input
+              value={quotationClientForm.branchPhone}
+              onChange={(event) =>
+                handleQuotationClientFormChange(
+                  "branchPhone",
+                  event.target.value,
+                )
+              }
+              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+              placeholder="Ej. 22223333"
+            />
+          </label>
+        </>
+      )}
+
+      {renderLocationCard()}
+    </>
+  );
+
+  const renderExistingClientFields = () => (
+    <>
+      <div className="md:col-span-2 grid gap-3">
+        <label>
+          <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+            Buscar cliente existente
+          </span>
+          <input
+            value={existingClientSearch}
+            onChange={(event) => setExistingClientSearch(event.target.value)}
+            className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+            placeholder="Nombre, empresa, cédula o ubicación"
+          />
+        </label>
+
+        {existingClientsError && (
+          <div className="rounded-xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+            {existingClientsError}
+          </div>
+        )}
+
+        {existingClientsLoading ? (
+          <div className="flex min-h-[160px] items-center justify-center rounded-xl border border-[#35547E] bg-[#102441]/60 text-[#9BB3D3]">
+            <RiLoader4Line className="h-5 w-5 animate-spin" />
+          </div>
+        ) : filteredExistingClients.length > 0 ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {filteredExistingClients.map((client) => {
+              const isSelected =
+                quotationClientForm.businessId === client.businessId;
+
+              return (
+                <button
+                  key={client.businessId}
+                  type="button"
+                  onClick={() => handleSelectExistingClient(client)}
+                  className={`rounded-xl border p-4 text-left transition ${
+                    isSelected
+                      ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                      : "border-[#35547E] bg-[#102441] hover:border-[#5a8abf]"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-white">
+                        {client.name}
+                      </p>
+                      <p className="mt-1 text-xs text-[#9BB3D3]">
+                        {client.company}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <span className="rounded-full border border-[#D7A91D]/50 bg-[#D7A91D]/15 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#E9BC2D]">
+                        Seleccionado
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 space-y-1 text-xs text-slate-400">
+                    <p>{client.legalId || "Sin cédula registrada"}</p>
+                    <p>
+                      {[client.province, client.city, client.district]
+                        .filter(Boolean)
+                        .join(", ") || "Sin ubicación general"}
+                    </p>
+                    <p>{client.phone || client.email || "Sin contacto principal"}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-4 py-5 text-sm text-slate-400">
+            No se encontraron clientes registrados con ese criterio.
+          </div>
+        )}
+      </div>
+
+      {selectedExistingClient ? (
+        <>
+          <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-sm font-extrabold text-white">
+                  Cliente seleccionado
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  La cotización se asociará a este cliente ya registrado.
+                </p>
+              </div>
+              <span className="self-start rounded-full border border-[#35547E] bg-[#091A31] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                {selectedExistingClient.legalId || "Sin cédula"}
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-[#35547E] bg-[#091A31]/70 px-3 py-2.5">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                  Nombre comercial
+                </span>
+                <span className="mt-1 block text-sm text-white">
+                  {selectedExistingClient.name}
+                </span>
+              </div>
+              <div className="rounded-lg border border-[#35547E] bg-[#091A31]/70 px-3 py-2.5">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                  Empresa del grupo
+                </span>
+                <span className="mt-1 block text-sm text-white">
+                  {selectedExistingClient.company}
+                </span>
+              </div>
+              <div className="rounded-lg border border-[#35547E] bg-[#091A31]/70 px-3 py-2.5 md:col-span-2">
+                <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                  Ubicación
+                </span>
+                <span className="mt-1 block text-sm text-white">
+                  {[selectedExistingClient.province, selectedExistingClient.city, selectedExistingClient.district]
+                    .filter(Boolean)
+                    .join(", ") || "Sin ubicación general"}
+                </span>
+                <span className="mt-1 block text-xs text-slate-400">
+                  {selectedExistingClient.address || "Sin dirección exacta"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {renderLocationCard()}
+        </>
+      ) : (
+        <div className="md:col-span-2 rounded-xl border border-dashed border-[#35547E] bg-[#091A31]/60 px-4 py-5 text-sm text-slate-400">
+          Selecciona un cliente existente para continuar con la cotización.
+        </div>
+      )}
+    </>
+  );
+
+  const renderQuotationClientFields = (branchSelectionName) => (
+    <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div className="md:col-span-2">
+        <div className="inline-flex rounded-2xl border border-[#35547E] bg-[#091A31]/80 p-1">
+          {[
+            [QUOTATION_CLIENT_TABS.NEW, "Nuevo cliente"],
+            [QUOTATION_CLIENT_TABS.EXISTING, "Cliente existente"],
+          ].map(([tabValue, label]) => {
+            const isActive = quotationClientTab === tabValue;
+
+            return (
+              <button
+                key={tabValue}
+                type="button"
+                onClick={() => handleChangeQuotationClientTab(tabValue)}
+                className={`rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                  isActive
+                    ? "bg-[#102441] text-white shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
+                    : "text-[#8BA4C8] hover:text-white"
+                }`}
+                style={
+                  isActive
+                    ? {
+                        border: "1px solid rgba(215, 169, 29, 0.45)",
+                        boxShadow: "0 0 0 1px rgba(215, 169, 29, 0.08)",
+                      }
+                    : undefined
+                }
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {quotationClientTab === QUOTATION_CLIENT_TABS.NEW
+        ? renderNewClientFields(branchSelectionName)
+        : renderExistingClientFields()}
+
+      <label className="md:col-span-2">
+        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+          Notas
+        </span>
+        <textarea
+          value={quotationClientForm.notes}
+          onChange={(event) =>
+            handleQuotationClientFormChange(
+              "notes",
+              event.target.value,
+            )
+          }
+          rows={3}
+          className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
+          placeholder="Observaciones para la cotizacion"
+        />
+      </label>
+
+      <label className="md:col-span-2">
+        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+          Metodo de pago
+        </span>
+        <select
+          value={quotationClientForm.methodId}
+          onChange={(event) =>
+            handleQuotationClientFormChange(
+              "methodId",
+              event.target.value,
+            )
+          }
+          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+        >
+          <option value="">Seleccionar metodo de pago</option>
+          {paymentMethods.map((method) => (
+            <option
+              key={method.method_id}
+              value={method.method_id}
+            >
+              {method.method_name}
+            </option>
+          ))}
+        </select>
+        {selectedPaymentMethodDescription ? (
+          <p className="mt-2 rounded-xl border border-[#35547E] bg-[#091A31]/60 px-3 py-2 text-xs leading-5 text-slate-400">
+            {selectedPaymentMethodDescription}
+          </p>
+        ) : null}
+      </label>
+
+      <label className="md:col-span-2">
+        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+          Condicion de pago
+        </span>
+        <select
+          value={quotationClientForm.conditionId}
+          onChange={(event) =>
+            handleQuotationClientFormChange(
+              "conditionId",
+              event.target.value,
+            )
+          }
+          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
+        >
+          <option value="">Seleccionar condicion de pago</option>
+          {paymentConditions.map((condition) => (
+            <option
+              key={condition.condition_id}
+              value={condition.condition_id}
+            >
+              {condition.condition_name}
+            </option>
+          ))}
+        </select>
+        {selectedPaymentConditionDescription ? (
+          <p className="mt-2 rounded-xl border border-[#35547E] bg-[#091A31]/60 px-3 py-2 text-xs leading-5 text-slate-400">
+            {selectedPaymentConditionDescription}
+          </p>
+        ) : null}
+      </label>
+
+      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#091A31] text-[#E9BC2D]">
+            <FileText className="h-5 w-5" />
+          </div>
+          <div>
+            <span className="block text-sm font-bold text-white">
+              {getQuotationAdvanceRuleLabel(cartItems)}
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-slate-400">
+              El adelanto se calcula automáticamente según la categoría de los artículos del carrito.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -1274,13 +2005,6 @@ export default function Catalog() {
             loading ? 0 : filteredProducts.length
           }
         />
-
-        <CatalogSwitcher
-          activeCatalog={activeCatalog}
-          onChange={handleCatalogChange}
-        />
-
-        {shouldShowPetNotice && <PetCostumeNotice />}
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
@@ -1325,12 +2049,15 @@ export default function Catalog() {
         ) : (
           <>
             {isTextileProductsCatalog && (
-              <ProductCategorySwitcher
-                categories={productCategories}
-                totalProducts={products.length}
-                activeCategoryId={filters.categoryId}
-                onChange={handleProductCategoryChange}
-              />
+              <>
+                <ProductCategorySwitcher
+                  categories={productCategories}
+                  totalProducts={products.length}
+                  activeCategoryId={filters.categoryId}
+                  onChange={handleProductCategoryChange}
+                />
+                {shouldShowPetNotice && <PetCostumeNotice />}
+              </>
             )}
 
             <CatalogFilters
@@ -1564,396 +2291,7 @@ export default function Catalog() {
                       </div>
                     )}
 
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Empresa del grupo
-                        </span>
-                        <select
-                          value={quotationClientForm.companyId}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "companyId",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
-                        >
-                          <option value="">Seleccionar empresa</option>
-                          {quotationCompanies.map((company) => (
-                            <option
-                              key={company.company_id}
-                              value={company.company_id}
-                            >
-                              {company.commercial_name ||
-                                company.company_name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <QuotationClientIdentityFields
-                        form={quotationClientForm}
-                        lookupLoading={clientLookupLoading}
-                        lookupMessage={clientLookupMessage}
-                        onChange={handleQuotationClientFormChange}
-                        onLookup={handleLookupClientByLegalId}
-                      />
-
-                      <div className="md:col-span-2 mt-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">Ubicación del cliente</p>
-                        {clientBranches.length > 0 && (
-                          <p className="mt-1 text-xs text-slate-400">
-                            Selecciona una ubicación registrada o agrega una nueva.
-                          </p>
-                        )}
-                      </div>
-
-                      {clientBranches.length > 0 && (
-                        <div className="md:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {clientBranches.map((branch) => {
-                            const isSelected =
-                              quotationClientForm.branchId === branch.branch_id;
-                            return (
-                              <label
-                                key={branch.branch_id}
-                                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${
-                                  isSelected
-                                    ? "border-[#D7A91D] bg-[#D7A91D]/10"
-                                    : "border-[#35547E] bg-[#102441] hover:border-[#5a8abf]"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="branch-select-panel"
-                                  value={branch.branch_id}
-                                  checked={isSelected}
-                                  onChange={() => handleSelectBranch(branch)}
-                                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#D7A91D]"
-                                />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-white">
-                                    {[branch.province, branch.city, branch.district]
-                                      .filter(Boolean)
-                                      .join(", ") || "Ubicación registrada"}
-                                  </p>
-                                  {branch.address && (
-                                    <p className="mt-0.5 truncate text-xs text-slate-400">
-                                      {branch.address}
-                                    </p>
-                                  )}
-                                  {branch.branchPhone && (
-                                    <p className="mt-0.5 text-xs text-[#9BB3D3]">
-                                      {branch.branchPhone}
-                                    </p>
-                                  )}
-                                </div>
-                              </label>
-                            );
-                          })}
-                          <label
-                            className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-3 transition ${
-                              showNewBranchForm
-                                ? "border-[#D7A91D] bg-[#D7A91D]/10"
-                                : "border-[#35547E] hover:border-[#5a8abf]"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="branch-select-panel"
-                              value="new"
-                              checked={showNewBranchForm}
-                              onChange={handleSelectNewBranch}
-                              className="sr-only"
-                            />
-                            <Plus className="h-5 w-5 text-[#D7A91D]" />
-                            <span className="text-sm font-semibold text-[#9BB3D3]">
-                              Nueva ubicación
-                            </span>
-                          </label>
-                        </div>
-                      )}
-
-                      {(clientBranches.length === 0 || showNewBranchForm) && (
-                        <>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Provincia
-                            </span>
-                            <input
-                              value={quotationClientForm.branchProvince}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchProvince",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. San Jose"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Cantón
-                            </span>
-                            <input
-                              value={quotationClientForm.branchCity}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchCity",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Central"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Distrito
-                            </span>
-                            <input
-                              value={quotationClientForm.branchDistrict}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchDistrict",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Carmen"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Direccion
-                            </span>
-                            <input
-                              value={quotationClientForm.branchAddress}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchAddress",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Direccion exacta"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Teléfono del cliente
-                            </span>
-                            <input
-                              value={quotationClientForm.branchPhone}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchPhone",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. 22223333"
-                            />
-                          </label>
-                        </>
-                      )}
-
-                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#091A31] text-[#E9BC2D]">
-                              <MapPin className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-extrabold text-white">
-                                Ubicación del cliente
-                              </p>
-                              <p className="mt-1 text-xs leading-5 text-slate-400">
-                                Obtén las coordenadas precisas desde este dispositivo.
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={handleUseCurrentLocation}
-                            disabled={branchLocationLoading || quotationSubmitting}
-                            className="inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-[#D7A91D]/45 bg-[#D7A91D]/10 px-4 text-sm font-bold text-[#E9BC2D] transition hover:border-[#D7A91D] hover:bg-[#D7A91D]/15 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {branchLocationLoading ? (
-                              <RiLoader4Line className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <LocateFixed className="h-4 w-4" />
-                            )}
-                            {branchLocationLoading
-                              ? "Obteniendo ubicación..."
-                              : "Obtener mi ubicación actual"}
-                          </button>
-                        </div>
-
-                        {quotationClientForm.branchLatitude !== "" &&
-                        quotationClientForm.branchLongitude !== "" ? (
-                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
-                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
-                                Latitud
-                              </span>
-                              <span className="mt-1 block font-mono text-sm text-white">
-                                {quotationClientForm.branchLatitude}
-                              </span>
-                            </div>
-                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
-                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
-                                Longitud
-                              </span>
-                              <span className="mt-1 block font-mono text-sm text-white">
-                                {quotationClientForm.branchLongitude}
-                              </span>
-                            </div>
-                            <p className="text-xs text-emerald-200 sm:col-span-2">
-                              Ubicación capturada
-                              {quotationClientForm.branchLocationAccuracy !== ""
-                                ? ` con una precisión aproximada de ${quotationClientForm.branchLocationAccuracy} m.`
-                                : "."}
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="mt-4 text-xs text-amber-200">
-                            Aún no se han registrado coordenadas para este cliente.
-                          </p>
-                        )}
-
-                        {branchLocationError && (
-                          <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
-                            {branchLocationError}
-                          </p>
-                        )}
-                      </div>
-
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Notas
-                        </span>
-                        <textarea
-                          value={quotationClientForm.notes}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "notes",
-                              event.target.value,
-                            )
-                          }
-                          rows={3}
-                          className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Observaciones para la cotizacion"
-                        />
-                      </label>
-
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Metodo de pago
-                        </span>
-                        <select
-                          value={quotationClientForm.methodId}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "methodId",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
-                        >
-                          <option value="">Seleccionar metodo de pago</option>
-                          {paymentMethods.map((method) => (
-                            <option
-                              key={method.method_id}
-                              value={method.method_id}
-                            >
-                              {method.method_name}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedPaymentMethodDescription ? (
-                          <p className="mt-2 rounded-xl border border-[#35547E] bg-[#091A31]/60 px-3 py-2 text-xs leading-5 text-slate-400">
-                            {selectedPaymentMethodDescription}
-                          </p>
-                        ) : null}
-                      </label>
-
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Porcentaje de adelanto
-                        </span>
-                        <div className="mt-2 relative">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={quotationClientForm.advancePercentage}
-                            onChange={(event) =>
-                              handleQuotationClientFormChange(
-                                "advancePercentage",
-                                event.target.value,
-                              )
-                            }
-                            className="h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 pr-10 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                            placeholder="50"
-                          />
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-bold text-[#9BB3D3]">
-                            %
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-slate-400">
-                          Define el porcentaje del total que se solicitará como adelanto al aprobar la cotización.
-                        </p>
-                      </label>
-
-                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
-                        <label className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={quotationClientForm.earlyDelivery}
-                            onChange={(event) =>
-                              handleQuotationClientFormChange(
-                                "earlyDelivery",
-                                event.target.checked,
-                              )
-                            }
-                            className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
-                          />
-
-                          <span>
-                            <span className="block text-sm font-bold text-white">
-                              Entrega anticipada
-                            </span>
-                            <span className="mt-1 block text-xs leading-5 text-slate-400">
-                              Marca esta opcion si el cliente solicita una fecha de entrega especifica.
-                            </span>
-                          </span>
-                        </label>
-
-                        {quotationClientForm.earlyDelivery ? (
-                          <label className="mt-4 block">
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Fecha solicitada
-                            </span>
-                            <input
-                              type="date"
-                              value={quotationClientForm.earlyDeliveryDate}
-                              min={getTodayInputDate()}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "earlyDeliveryDate",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#091A31] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
-                            />
-                          </label>
-                        ) : null}
-                      </div>
-                    </div>
+                    {renderQuotationClientFields("branch-select-panel")}
                   </div>
                 </div>
 
@@ -2201,8 +2539,67 @@ export default function Catalog() {
                         Datos del cliente
                       </h3>
                       <p className="mt-1 text-sm text-slate-400">
-                        Complete la información para guardar la cotización.
+                        {cartAction === CART_ACTIONS.SALE
+                          ? "Complete la información para registrar la venta."
+                          : "Complete la información para guardar la cotización."}
                       </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
+                        Tipo de registro
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                            cartAction === CART_ACTIONS.QUOTE
+                              ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                              : "border-[#35547E] bg-[#091A31]/70 hover:border-[#5a8abf]"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="cart-action"
+                            value={CART_ACTIONS.QUOTE}
+                            checked={cartAction === CART_ACTIONS.QUOTE}
+                            onChange={() => setCartAction(CART_ACTIONS.QUOTE)}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-[#D7A91D]"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-white">
+                              Crear cotización
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-slate-400">
+                              Guarda únicamente la cotización para seguimiento comercial.
+                            </p>
+                          </div>
+                        </label>
+
+                        <label
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition ${
+                            cartAction === CART_ACTIONS.SALE
+                              ? "border-[#D7A91D] bg-[#D7A91D]/10"
+                              : "border-[#35547E] bg-[#091A31]/70 hover:border-[#5a8abf]"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="cart-action"
+                            value={CART_ACTIONS.SALE}
+                            checked={cartAction === CART_ACTIONS.SALE}
+                            onChange={() => setCartAction(CART_ACTIONS.SALE)}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-[#D7A91D]"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-white">
+                              Registrar venta
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-slate-400">
+                              Crea la cotización y de inmediato genera la orden de producción para registrar la venta.
+                            </p>
+                          </div>
+                        </label>
                       </div>
                     </div>
 
@@ -2224,396 +2621,7 @@ export default function Catalog() {
                       </div>
                     )}
 
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Empresa del grupo
-                        </span>
-                        <select
-                          value={quotationClientForm.companyId}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "companyId",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
-                        >
-                          <option value="">Seleccionar empresa</option>
-                          {quotationCompanies.map((company) => (
-                            <option
-                              key={company.company_id}
-                              value={company.company_id}
-                            >
-                              {company.commercial_name ||
-                                company.company_name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <QuotationClientIdentityFields
-                        form={quotationClientForm}
-                        lookupLoading={clientLookupLoading}
-                        lookupMessage={clientLookupMessage}
-                        onChange={handleQuotationClientFormChange}
-                        onLookup={handleLookupClientByLegalId}
-                      />
-
-                      <div className="md:col-span-2 border-t border-[#29466F] pt-4">
-                        <p className="text-sm font-extrabold text-white">Ubicación del cliente</p>
-                        {clientBranches.length > 0 && (
-                          <p className="mt-1 text-xs text-slate-400">
-                            Selecciona una ubicación registrada o agrega una nueva.
-                          </p>
-                        )}
-                      </div>
-
-                      {clientBranches.length > 0 && (
-                        <div className="md:col-span-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          {clientBranches.map((branch) => {
-                            const isSelected =
-                              quotationClientForm.branchId === branch.branch_id;
-                            return (
-                              <label
-                                key={branch.branch_id}
-                                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition ${
-                                  isSelected
-                                    ? "border-[#D7A91D] bg-[#D7A91D]/10"
-                                    : "border-[#35547E] bg-[#102441] hover:border-[#5a8abf]"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="branch-select-modal"
-                                  value={branch.branch_id}
-                                  checked={isSelected}
-                                  onChange={() => handleSelectBranch(branch)}
-                                  className="mt-0.5 h-4 w-4 flex-shrink-0 accent-[#D7A91D]"
-                                />
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-white">
-                                    {[branch.province, branch.city, branch.district]
-                                      .filter(Boolean)
-                                      .join(", ") || "Ubicación registrada"}
-                                  </p>
-                                  {branch.address && (
-                                    <p className="mt-0.5 truncate text-xs text-slate-400">
-                                      {branch.address}
-                                    </p>
-                                  )}
-                                  {branch.branchPhone && (
-                                    <p className="mt-0.5 text-xs text-[#9BB3D3]">
-                                      {branch.branchPhone}
-                                    </p>
-                                  )}
-                                </div>
-                              </label>
-                            );
-                          })}
-                          <label
-                            className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed p-3 transition ${
-                              showNewBranchForm
-                                ? "border-[#D7A91D] bg-[#D7A91D]/10"
-                                : "border-[#35547E] hover:border-[#5a8abf]"
-                            }`}
-                          >
-                            <input
-                              type="radio"
-                              name="branch-select-modal"
-                              value="new"
-                              checked={showNewBranchForm}
-                              onChange={handleSelectNewBranch}
-                              className="sr-only"
-                            />
-                            <Plus className="h-5 w-5 text-[#D7A91D]" />
-                            <span className="text-sm font-semibold text-[#9BB3D3]">
-                              Nueva ubicación
-                            </span>
-                          </label>
-                        </div>
-                      )}
-
-                      {(clientBranches.length === 0 || showNewBranchForm) && (
-                        <>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Provincia
-                            </span>
-                            <input
-                              value={quotationClientForm.branchProvince}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchProvince",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. San Jose"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Cantón
-                            </span>
-                            <input
-                              value={quotationClientForm.branchCity}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchCity",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Central"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Distrito
-                            </span>
-                            <input
-                              value={quotationClientForm.branchDistrict}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchDistrict",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. Carmen"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Direccion
-                            </span>
-                            <input
-                              value={quotationClientForm.branchAddress}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchAddress",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Direccion exacta"
-                            />
-                          </label>
-                          <label>
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Teléfono del cliente
-                            </span>
-                            <input
-                              value={quotationClientForm.branchPhone}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "branchPhone",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                              placeholder="Ej. 22223333"
-                            />
-                          </label>
-                        </>
-                      )}
-
-                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#091A31] text-[#E9BC2D]">
-                              <MapPin className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-extrabold text-white">
-                                Ubicación del cliente
-                              </p>
-                              <p className="mt-1 text-xs leading-5 text-slate-400">
-                                Obtén las coordenadas precisas desde este dispositivo.
-                              </p>
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={handleUseCurrentLocation}
-                            disabled={branchLocationLoading || quotationSubmitting}
-                            className="inline-flex h-11 flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-[#D7A91D]/45 bg-[#D7A91D]/10 px-4 text-sm font-bold text-[#E9BC2D] transition hover:border-[#D7A91D] hover:bg-[#D7A91D]/15 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {branchLocationLoading ? (
-                              <RiLoader4Line className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <LocateFixed className="h-4 w-4" />
-                            )}
-                            {branchLocationLoading
-                              ? "Obteniendo ubicación..."
-                              : "Obtener mi ubicación actual"}
-                          </button>
-                        </div>
-
-                        {quotationClientForm.branchLatitude !== "" &&
-                        quotationClientForm.branchLongitude !== "" ? (
-                          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
-                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
-                                Latitud
-                              </span>
-                              <span className="mt-1 block font-mono text-sm text-white">
-                                {quotationClientForm.branchLatitude}
-                              </span>
-                            </div>
-                            <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5">
-                              <span className="block text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-300">
-                                Longitud
-                              </span>
-                              <span className="mt-1 block font-mono text-sm text-white">
-                                {quotationClientForm.branchLongitude}
-                              </span>
-                            </div>
-                            <p className="text-xs text-emerald-200 sm:col-span-2">
-                              Ubicación capturada
-                              {quotationClientForm.branchLocationAccuracy !== ""
-                                ? ` con una precisión aproximada de ${quotationClientForm.branchLocationAccuracy} m.`
-                                : "."}
-                            </p>
-                          </div>
-                        ) : (
-                          <p className="mt-4 text-xs text-amber-200">
-                            Aún no se han registrado coordenadas para este cliente.
-                          </p>
-                        )}
-
-                        {branchLocationError && (
-                          <p className="mt-3 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs text-red-100">
-                            {branchLocationError}
-                          </p>
-                        )}
-                      </div>
-
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Notas
-                        </span>
-                        <textarea
-                          value={quotationClientForm.notes}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "notes",
-                              event.target.value,
-                            )
-                          }
-                          rows={3}
-                          className="mt-2 w-full resize-none rounded-xl border border-[#35547E] bg-[#102441] px-3 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                          placeholder="Observaciones para la cotizacion"
-                        />
-                      </label>
-
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Metodo de pago
-                        </span>
-                        <select
-                          value={quotationClientForm.methodId}
-                          onChange={(event) =>
-                            handleQuotationClientFormChange(
-                              "methodId",
-                              event.target.value,
-                            )
-                          }
-                          className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
-                        >
-                          <option value="">Seleccionar metodo de pago</option>
-                          {paymentMethods.map((method) => (
-                            <option
-                              key={method.method_id}
-                              value={method.method_id}
-                            >
-                              {method.method_name}
-                            </option>
-                          ))}
-                        </select>
-                        {selectedPaymentMethodDescription ? (
-                          <p className="mt-2 rounded-xl border border-[#35547E] bg-[#091A31]/60 px-3 py-2 text-xs leading-5 text-slate-400">
-                            {selectedPaymentMethodDescription}
-                          </p>
-                        ) : null}
-                      </label>
-
-                      <label className="md:col-span-2">
-                        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                          Porcentaje de adelanto
-                        </span>
-                        <div className="mt-2 relative">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={quotationClientForm.advancePercentage}
-                            onChange={(event) =>
-                              handleQuotationClientFormChange(
-                                "advancePercentage",
-                                event.target.value,
-                              )
-                            }
-                            className="h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 pr-10 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-                            placeholder="50"
-                          />
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm font-bold text-[#9BB3D3]">
-                            %
-                          </span>
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-slate-400">
-                          Define el porcentaje del total que se solicitará como adelanto al aprobar la cotización.
-                        </p>
-                      </label>
-
-                      <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 px-4 py-3">
-                        <label className="flex items-start gap-3">
-                          <input
-                            type="checkbox"
-                            checked={quotationClientForm.earlyDelivery}
-                            onChange={(event) =>
-                              handleQuotationClientFormChange(
-                                "earlyDelivery",
-                                event.target.checked,
-                              )
-                            }
-                            className="mt-1 h-4 w-4 rounded border-[#35547E] bg-[#091A31] accent-[#D7A91D]"
-                          />
-
-                          <span>
-                            <span className="block text-sm font-bold text-white">
-                              Entrega anticipada
-                            </span>
-                            <span className="mt-1 block text-xs leading-5 text-slate-400">
-                              Marca esta opcion si el cliente solicita una fecha de entrega especifica.
-                            </span>
-                          </span>
-                        </label>
-
-                        {quotationClientForm.earlyDelivery ? (
-                          <label className="mt-4 block">
-                            <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
-                              Fecha solicitada
-                            </span>
-                            <input
-                              type="date"
-                              value={quotationClientForm.earlyDeliveryDate}
-                              min={getTodayInputDate()}
-                              onChange={(event) =>
-                                handleQuotationClientFormChange(
-                                  "earlyDeliveryDate",
-                                  event.target.value,
-                                )
-                              }
-                              className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#091A31] px-3 text-sm text-white outline-none transition focus:border-[#D7A91D]"
-                            />
-                          </label>
-                        ) : null}
-                      </div>
-                    </div>
+                    {renderQuotationClientFields("branch-select-modal")}
                   </div>
                 </div>
 
@@ -2649,7 +2657,7 @@ export default function Catalog() {
                       </div>
                       <div className="flex items-center justify-between gap-4">
                         <dt className="text-slate-300">
-                          Adelanto ({cartAdvancePercentage}%)
+                          {getQuotationAdvanceRuleLabel(cartItems)}
                         </dt>
                         <dd className="font-bold text-white">
                           {formatCartCurrency(cartAdvancePayment)}
@@ -2666,7 +2674,9 @@ export default function Catalog() {
                     <div className="mt-6 flex gap-3 rounded-xl border border-[#D7A91D]/35 bg-[#071A31]/70 p-4 text-sm leading-5 text-[#B6C7DD]">
                       <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-[#9BB3D3]" />
                       <p>
-                        Este es un estimado. Los precios finales pueden variar al generar la cotización.
+                        {cartAction === CART_ACTIONS.SALE
+                          ? "Este es un estimado. Los precios finales pueden variar al registrar la venta."
+                          : "Este es un estimado. Los precios finales pueden variar al generar la cotización."}
                       </p>
                     </div>
 
@@ -2722,7 +2732,13 @@ export default function Catalog() {
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#E9BC2D] bg-[#E9BC2D] px-6 py-3 text-sm font-extrabold text-[#071426] shadow-[0_8px_24px_rgba(233,188,45,0.18)] transition hover:border-[#F5D875] hover:bg-[#F5D875] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <FileText className="h-4 w-4" />
-                  {quotationSubmitting ? "Guardando..." : "Cotizar pedido"}
+                  {quotationSubmitting
+                    ? cartAction === CART_ACTIONS.SALE
+                      ? "Registrando..."
+                      : "Guardando..."
+                    : cartAction === CART_ACTIONS.SALE
+                      ? "Registrar venta"
+                      : "Cotizar pedido"}
                 </button>
 
               </div>

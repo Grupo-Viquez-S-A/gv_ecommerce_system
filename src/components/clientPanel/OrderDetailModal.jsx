@@ -16,26 +16,6 @@ import DetailInfoCard from "./DetailInfoCard.jsx";
 import DetailProductsTable from "./DetailProductsTable.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 
-const PRODUCTION_STATUS_OPTIONS = [
-  { value: "pendiente", label: "Pendiente" },
-  { value: "en_proceso", label: "En proceso" },
-  { value: "pausada", label: "Pausada" },
-  { value: "finalizada", label: "Finalizada" },
-  { value: "cancelada", label: "Cancelada" },
-];
-
-function openNativeDatePicker(event) {
-  const input = event.currentTarget;
-
-  if (typeof input.showPicker === "function") {
-    try {
-      input.showPicker();
-    } catch {
-      // Some browsers only allow showPicker from a direct pointer action.
-    }
-  }
-}
-
 function formatDate(dateValue) {
   if (!dateValue) {
     return "Sin fecha";
@@ -47,13 +27,12 @@ function formatDate(dateValue) {
 }
 
 function formatStatusLabel(status) {
-  return PRODUCTION_STATUS_OPTIONS.find((option) => option.value === status)?.label
-    || String(status || "Sin estado")
-      .replaceAll("_", " ")
-      .split(" ")
-      .filter(Boolean)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
+  return String(status || "Sin estado")
+    .replaceAll("_", " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
 export default function OrderDetailModal({
@@ -71,13 +50,6 @@ export default function OrderDetailModal({
   onOpenPaymentForm,
   onBackFromPaymentForm,
   onSubmitPayment,
-  manageProduction = false,
-  productionOrderForm = {},
-  onProductionOrderFieldChange,
-  onSaveProductionOrder,
-  productionOrderSaving = false,
-  productionOrderSaveError = "",
-  productionOrderSaveSuccess = "",
 }) {
   return (
     <ClientDetailModal
@@ -170,15 +142,6 @@ export default function OrderDetailModal({
               value={formatCurrency(order.total, "CRC 0")}
               icon={<RiMoneyDollarCircleFill size={20} />}
             />
-            <DetailInfoCard
-              label="Entrega anticipada"
-              value={
-                order.earlyDelivery
-                  ? `Si${order.earlyDeliveryDate ? ` - ${formatDate(order.earlyDeliveryDate)}` : ""}`
-                  : "No"
-              }
-              icon={<RiCalendarCheckFill size={20} />}
-            />
           </div>
 
           {(order.paymentStatus === "parcial" || order.paymentStatus === "pagado") && (
@@ -235,6 +198,11 @@ export default function OrderDetailModal({
               value={order.paymentMethod}
               icon={<RiWallet3Fill size={20} />}
             />
+            <DetailInfoCard
+              label="Condicion de pago"
+              value={order.paymentCondition || "No definida"}
+              icon={<RiWallet3Fill size={20} />}
+            />
             {order.nextPaymentDate && (
               <DetailInfoCard
                 label="Proximo pago"
@@ -255,205 +223,6 @@ export default function OrderDetailModal({
               icon={<RiStore2Fill size={20} />}
             />
           </div>
-
-          <section className="rounded-lg border border-[#2a3550] bg-[#10192b] p-4">
-            <div className="mb-4">
-              <h3 className="text-base font-bold text-white">
-                Fechas y estado de la orden
-              </h3>
-              <p className="text-sm text-gray-500">
-                {manageProduction
-                  ? "Actualiza las fechas operativas y el estado de produccion."
-                  : "Informacion operativa de solo lectura."}
-              </p>
-            </div>
-
-            {manageProduction &&
-              productionOrderForm.productionStatus !== order.productionStatus && (
-                <label className="mt-4 block space-y-2">
-                  <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
-                    Nota del cambio de estado *
-                  </span>
-                  <textarea
-                    value={productionOrderForm.statusChangeNote || ""}
-                    onChange={(event) =>
-                      onProductionOrderFieldChange?.(
-                        "statusChangeNote",
-                        event.target.value,
-                      )
-                    }
-                    maxLength={1000}
-                    rows={3}
-                    required
-                    placeholder="Explica el motivo o contexto del cambio de estado..."
-                    className="w-full resize-y rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-[#C9A227]"
-                  />
-                </label>
-              )}
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-              {manageProduction ? (
-                <>
-                  <label className="space-y-2">
-                    <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
-                      Fecha compromiso
-                    </span>
-                    <input
-                      type="date"
-                      value={productionOrderForm.committedDeliveryDate || ""}
-                      onPointerDown={openNativeDatePicker}
-                      onClick={openNativeDatePicker}
-                      onFocus={openNativeDatePicker}
-                      onChange={(event) =>
-                        onProductionOrderFieldChange?.(
-                          "committedDeliveryDate",
-                          event.target.value,
-                        )
-                      }
-                      className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
-                    />
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
-                      Fecha imprevisto
-                    </span>
-                    <input
-                      type="date"
-                      value={productionOrderForm.unexpectedDeliveryDate || ""}
-                      onPointerDown={openNativeDatePicker}
-                      onClick={openNativeDatePicker}
-                      onFocus={openNativeDatePicker}
-                      onChange={(event) =>
-                        onProductionOrderFieldChange?.(
-                          "unexpectedDeliveryDate",
-                          event.target.value,
-                        )
-                      }
-                      className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
-                    />
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
-                      Próxima fecha de pago
-                    </span>
-                    <input
-                      type="date"
-                      value={productionOrderForm.nextPaymentDate || ""}
-                      onPointerDown={openNativeDatePicker}
-                      onClick={openNativeDatePicker}
-                      onFocus={openNativeDatePicker}
-                      onChange={(event) =>
-                        onProductionOrderFieldChange?.(
-                          "nextPaymentDate",
-                          event.target.value,
-                        )
-                      }
-                      className="w-full cursor-pointer rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition [color-scheme:dark] focus:border-[#C9A227]"
-                    />
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
-                      Estado de la orden
-                    </span>
-                    <select
-                      value={productionOrderForm.productionStatus || "pendiente"}
-                      onChange={(event) =>
-                        onProductionOrderFieldChange?.(
-                          "productionStatus",
-                          event.target.value,
-                        )
-                      }
-                      className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227]"
-                    >
-                      {PRODUCTION_STATUS_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="block text-xs font-semibold uppercase tracking-wider text-[#9BB3D3]">
-                      Penalización (%)
-                    </span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={productionOrderForm.penaltyPercentage || ""}
-                      onChange={(event) =>
-                        onProductionOrderFieldChange?.(
-                          "penaltyPercentage",
-                          event.target.value,
-                        )
-                      }
-                      className="w-full rounded-lg border border-[#35547E] bg-[#0B1A2E] px-3 py-2 text-sm text-white outline-none transition focus:border-[#C9A227]"
-                    />
-                  </label>
-                </>
-              ) : (
-                <>
-                  <DetailInfoCard
-                    label="Fecha compromiso"
-                    value={formatDate(order.committedDeliveryDate)}
-                  />
-                  <DetailInfoCard
-                    label="Fecha imprevisto"
-                    value={formatDate(order.unexpectedDeliveryDate)}
-                  />
-                  <DetailInfoCard
-                    label="Próxima fecha de pago"
-                    value={formatDate(order.nextPaymentDate)}
-                  />
-                  <DetailInfoCard
-                    label="Estado de la orden"
-                    value={<StatusBadge status={order.productionStatus} />}
-                  />
-                  <DetailInfoCard
-                    label="Penalización (%)"
-                    value={`${order.penaltyPercentage ?? 0}%`}
-                  />
-                </>
-              )}
-            </div>
-
-            {(productionOrderSaveError || productionOrderSaveSuccess) && (
-              <div className="mt-4">
-                {productionOrderSaveError && (
-                  <p className="rounded-lg border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-                    {productionOrderSaveError}
-                  </p>
-                )}
-                {productionOrderSaveSuccess && (
-                  <p className="rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-2 text-sm text-green-200">
-                    {productionOrderSaveSuccess}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {manageProduction && (
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={onSaveProductionOrder}
-                  disabled={
-                    productionOrderSaving ||
-                    (productionOrderForm.productionStatus !== order.productionStatus &&
-                      !productionOrderForm.statusChangeNote?.trim())
-                  }
-                  className="rounded-lg border border-[#C9A227]/50 bg-[#C9A227]/15 px-4 py-2 text-sm font-semibold text-[#F5D875] transition hover:bg-[#C9A227]/25 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {productionOrderSaving ? "Guardando..." : "Guardar cambios"}
-                </button>
-              </div>
-            )}
-          </section>
 
           {order.statusHistory?.length > 0 && (
             <section className="rounded-lg border border-[#2a3550] bg-[#10192b] p-4">

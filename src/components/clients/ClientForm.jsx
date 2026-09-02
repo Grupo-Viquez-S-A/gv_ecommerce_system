@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
+import { useCallback, useRef } from "react";
 import {
   RiAddLine,
   RiBuilding2Fill,
@@ -9,6 +10,10 @@ import {
 } from "react-icons/ri";
 
 import { supabase } from "../../services/primarySupabaseClient.js";
+import {
+  isValidCostaRicaIdentificationForHacienda,
+  lookupCostaRicaTaxpayerByIdentification,
+} from "../../services/haciendaTaxpayerService.js";
 import {
   createEmptyBranch,
   createEmptyPhone,
@@ -135,6 +140,7 @@ function normalizeForm(form = {}) {
     legalName: form.legalName || "",
     ownerName: form.ownerName || "",
     activityCode: form.activityCode || "",
+    taxStatus: form.taxStatus || "",
     companyId: form.companyId || "",
     email: form.email || "",
     status: form.status === "Inactivo" ? "Inactivo" : "Activo",
@@ -299,6 +305,9 @@ export default function ClientForm({
   const [companiesError, setCompaniesError] = useState("");
   const [customerLocationLoading, setCustomerLocationLoading] = useState(false);
   const [customerLocationError, setCustomerLocationError] = useState("");
+  const [taxpayerLookupLoading, setTaxpayerLookupLoading] = useState(false);
+  const [taxpayerLookupMessage, setTaxpayerLookupMessage] = useState("");
+  const lastTaxpayerLookupKeyRef = useRef("");
 
   const currentForm = useMemo(() => normalizeForm(form), [form]);
   const isLocationOnlyEdit =
@@ -367,7 +376,7 @@ export default function ClientForm({
     );
   }, [companies, currentForm.companyId]);
 
-  const updateForm = (updates) => {
+  const updateForm = useCallback((updates) => {
     if (typeof onChange !== "function") {
       return;
     }
@@ -376,7 +385,7 @@ export default function ClientForm({
       ...currentForm,
       ...updates,
     });
-  };
+  }, [currentForm, onChange]);
 
   const updateField = (field, value) => {
     updateForm({
@@ -482,6 +491,85 @@ export default function ClientForm({
   const updateCustomerLocationField = (field, value) => {
     updateBranch(0, field, value);
   };
+
+  useEffect(() => {
+    if (mode === "view" || fieldsDisabled) {
+      return undefined;
+    }
+
+    const lookupKey = `${currentForm.identificationType}:${currentForm.legalId || ""}`;
+
+    if (!isValidCostaRicaIdentificationForHacienda(currentForm.legalId)) {
+      lastTaxpayerLookupKeyRef.current = "";
+      Promise.resolve().then(() => {
+        setTaxpayerLookupLoading(false);
+        setTaxpayerLookupMessage("");
+      });
+      return undefined;
+    }
+
+    if (lastTaxpayerLookupKeyRef.current === lookupKey) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setTaxpayerLookupLoading(true);
+        setTaxpayerLookupMessage("");
+
+        const taxpayer = await lookupCostaRicaTaxpayerByIdentification(
+          currentForm.legalId,
+        );
+
+        lastTaxpayerLookupKeyRef.current = lookupKey;
+
+        if (!taxpayer) {
+          setTaxpayerLookupMessage(
+            "No se encontraron datos en Hacienda para esta identificación.",
+          );
+          return;
+        }
+
+        updateForm({
+          legalName:
+            currentForm.identificationType === "legal"
+              ? taxpayer.legalName || currentForm.legalName
+              : "",
+          ownerName:
+            currentForm.identificationType === "personal"
+              ? taxpayer.ownerName || currentForm.ownerName
+              : "",
+          activityCode: taxpayer.activityCode || currentForm.activityCode,
+          taxStatus: taxpayer.taxStatus || currentForm.taxStatus,
+          name: currentForm.name || taxpayer.name || "",
+        });
+
+        setTaxpayerLookupMessage(
+          "Datos tributarios cargados desde Hacienda.",
+        );
+      } catch (error) {
+        console.error("Taxpayer lookup error:", error);
+        setTaxpayerLookupMessage(
+          error?.message || "No fue posible consultar Hacienda.",
+        );
+      } finally {
+        setTaxpayerLookupLoading(false);
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    currentForm.activityCode,
+    currentForm.identificationType,
+    currentForm.legalId,
+    currentForm.legalName,
+    currentForm.name,
+    currentForm.ownerName,
+    currentForm.taxStatus,
+    fieldsDisabled,
+    mode,
+    updateForm,
+  ]);
 
   const handleUseCurrentCustomerLocation = () => {
     if (!navigator.geolocation) {
@@ -650,6 +738,13 @@ export default function ClientForm({
                   placeholder="Ej. 3101123456"
                   className={inputClassName}
                 />
+                {(taxpayerLookupLoading || taxpayerLookupMessage) && (
+                  <p className="mt-2 text-xs text-gray-400">
+                    {taxpayerLookupLoading
+                      ? "Consultando Hacienda..."
+                      : taxpayerLookupMessage}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -702,24 +797,48 @@ export default function ClientForm({
                   placeholder="Ej. 1-1234-5678"
                   className={inputClassName}
                 />
+                {(taxpayerLookupLoading || taxpayerLookupMessage) && (
+                  <p className="mt-2 text-xs text-gray-400">
+                    {taxpayerLookupLoading
+                      ? "Consultando Hacienda..."
+                      : taxpayerLookupMessage}
+                  </p>
+                )}
               </div>
             </>
           )}
 
-          <div>
-            <FieldLabel required>Código de actividad</FieldLabel>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <FieldLabel required>Código de actividad</FieldLabel>
 
-            <input
-              type="text"
-              value={currentForm.activityCode}
-              disabled={fieldsDisabled}
-              onChange={(event) =>
-                updateField("activityCode", event.target.value)
-              }
-              required
-              placeholder="Ej. 551001"
-              className={inputClassName}
-            />
+              <input
+                type="text"
+                value={currentForm.activityCode}
+                disabled={fieldsDisabled}
+                onChange={(event) =>
+                  updateField("activityCode", event.target.value)
+                }
+                required
+                placeholder="Ej. 551001"
+                className={inputClassName}
+              />
+            </div>
+
+            <div>
+              <FieldLabel>Estado tributario</FieldLabel>
+
+              <input
+                type="text"
+                value={currentForm.taxStatus}
+                disabled={fieldsDisabled}
+                onChange={(event) =>
+                  updateField("taxStatus", event.target.value)
+                }
+                placeholder="Ej. Contribuyente activo"
+                className={inputClassName}
+              />
+            </div>
           </div>
 
           <div>

@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import textilesOccidenteLogo from "../assets/img/to_white_no_bg.png";
 import { formatDateCR as formatDateValue } from "./dateUtils.js";
+import { getQuotationAdvanceRuleLabel } from "./quotationAdvanceRules.js";
 
 const BRAND_NAVY = [7, 26, 59];
 const TEXTILES_GREEN = [18, 46, 35];
@@ -135,16 +136,11 @@ function getSublimationTotal(quotation) {
   );
 }
 
-function getEarlyDeliveryTotal(quotation) {
-  return Math.max(0, toNumber(quotation?.earlyDeliveryPrice, 0));
-}
-
 function getSubtotalBeforeDiscount(quotation) {
   return (
     getProductsSubtotal(quotation) +
     getEmbroideryTotal(quotation) +
-    getSublimationTotal(quotation) +
-    getEarlyDeliveryTotal(quotation)
+    getSublimationTotal(quotation)
   );
 }
 
@@ -413,11 +409,6 @@ function buildQuotationSummaryRows(quotation) {
     { label: "Sublimación", value: formatMoney(getSublimationTotal(quotation)) },
   ];
 
-  const earlyDeliveryTotal = getEarlyDeliveryTotal(quotation);
-  if (earlyDeliveryTotal > 0) {
-    rows.push({ label: "Entrega anticipada", value: formatMoney(earlyDeliveryTotal) });
-  }
-
   rows.push(
     {
       label: "Subtotal antes de descuento",
@@ -451,7 +442,15 @@ function buildQuotationSummaryRows(quotation) {
 function buildPaymentConditionsRows(quotation) {
   return [
     {
-      label: "Porcentaje de adelanto",
+      label: "Método de pago",
+      value: sanitize(quotation?.paymentMethod, "No definido"),
+    },
+    {
+      label: "Condición de pago",
+      value: sanitize(quotation?.paymentCondition, "No definida"),
+    },
+    {
+      label: getQuotationAdvanceRuleLabel(getItems(quotation)),
       value: `${getAdvancePercentage(quotation).toFixed(0)}%`,
     },
     {
@@ -544,13 +543,11 @@ export async function createQuotationProforma(quotation, { logoDataUrl } = {}) {
   doc.setFontSize(10);
   doc.text("Fecha", 142, 46);
   doc.text("Vigencia", 142, 59);
-  doc.text("Estado", 142, 72);
 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(20, 29, 45);
   doc.text(getDateLabel(quotation?.date), 168, 46);
   doc.text(getDateLabel(quotation?.validity), 168, 59);
-  doc.text(sanitize(quotation?.status, "Pendiente"), 168, 72);
 
   drawSectionTitle(doc, "Datos del cliente", 14, 88);
   let y = 104;
@@ -560,23 +557,14 @@ export async function createQuotationProforma(quotation, { logoDataUrl } = {}) {
   drawField(doc, "Cédula jurídica", quotation?.legalId, 134, y, 40);
 
   y += 24;
-  drawField(doc, "Sucursal", quotation?.branch?.address, 18, y, 54);
-  drawField(
-    doc,
-    "Ubicación",
-    [quotation?.branch?.province, quotation?.branch?.district].filter(Boolean).join(", "),
-    76,
-    y,
-    54,
-  );
-  drawField(
-    doc,
-    "Representante",
-    `${sanitize(quotation?.representative?.name, "Sin representante")}\n${sanitize(quotation?.representative?.email)}`,
-    134,
-    y,
-    54,
-  );
+  drawField(doc, "Correo", quotation?.email, 18, y, 54);
+  drawField(doc, "Teléfono", quotation?.phone, 76, y, 54);
+  drawField(doc, "Dirección", quotation?.branch?.address || quotation?.address, 134, y, 40);
+
+  y += 24;
+  drawField(doc, "Provincia", quotation?.province || quotation?.branch?.province, 18, y, 54);
+  drawField(doc, "Cantón", quotation?.city || quotation?.branch?.city, 76, y, 54);
+  drawField(doc, "Distrito", quotation?.district || quotation?.branch?.district, 134, y, 40);
 
   y += 28;
   y = drawProductsTable(doc, quotation, y);

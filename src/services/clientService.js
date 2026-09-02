@@ -1,4 +1,5 @@
 ﻿import { supabase } from "./primarySupabaseClient.js";
+import { getCurrentCustomerRouteAssignment } from "./customerRouteAssignmentService.js";
 
 const AVATAR_COLORS = [
   "#6366f1",
@@ -27,6 +28,9 @@ const BUSINESS_COLUMNS = `
   latitude,
   longitude,
   location_accuracy_meters,
+  assigned_sales_agent_user_id,
+  visit_route_day,
+  deleted_at,
   customer_code,
   tax_status,
   regime,
@@ -339,6 +343,7 @@ function normalizeClientPayload(client = {}) {
     activityCode: asNullableText(
       client.activityCode || client.activity_code,
     ),
+    taxStatus: asNullableText(client.taxStatus || client.tax_status),
     companyId,
     email: asNullableText(client.email),
     isActive: normalizeIsActive(client.status),
@@ -423,6 +428,15 @@ function createClientItem({
       business.identification_type === "personal" ? "personal" : "legal",
     ownerName: business.owner_name || "",
     activityCode: business.activity_code || "",
+    taxStatus: business.tax_status || "",
+    province: business.province || "",
+    city: business.city || "",
+    district: business.district || "",
+    address: business.address || "",
+    latitude: business.latitude ?? null,
+    longitude: business.longitude ?? null,
+    locationAccuracy: business.location_accuracy_meters ?? null,
+    location_accuracy_meters: business.location_accuracy_meters ?? null,
 
     email: getPrimaryValue(emails, "email"),
     phone: getPrimaryValue(clientPhones, "phone"),
@@ -432,6 +446,9 @@ function createClientItem({
     lastPurchase: "Sin compras",
     totalOrders: 0,
     totalQuotes: 0,
+    createdAt: business.created_at,
+    assignedSalesAgentUserId: business.assigned_sales_agent_user_id || null,
+    visitRouteDay: business.visit_route_day || null,
 
     status: normalizeStatus(business.is_active),
     branches: clientBranches,
@@ -485,6 +502,7 @@ export async function getBusinessClients() {
   const businessesResponse = await supabase
     .from("customers")
     .select(BUSINESS_COLUMNS)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   const businesses = throwIfError(
@@ -819,9 +837,13 @@ export async function createBusinessClient(clientForm) {
   let createdBusinessId = null;
 
   try {
+    const routeAssignment = await getCurrentCustomerRouteAssignment();
     const businessResponse = await supabase
       .from("customers")
-      .insert(buildBusinessPayload(client))
+      .insert({
+        ...buildBusinessPayload(client),
+        ...routeAssignment,
+      })
       .select("customer_id")
       .single();
 
@@ -971,6 +993,93 @@ export async function updateBusinessClientStatus(
   );
 }
 
+export async function saveCustomerRouteAssignments(assignments = []) {
+  const normalizedAssignments = assignments
+    .map((assignment) => ({
+      customerId:
+        assignment?.customerId ||
+        assignment?.businessId ||
+        assignment?.id ||
+        null,
+      targetAgentUserId:
+        assignment?.targetAgentUserId ||
+        assignment?.assignedSalesAgentUserId ||
+        null,
+    }))
+    .filter(
+      (assignment) =>
+        assignment.customerId && assignment.targetAgentUserId,
+    );
+
+  if (!normalizedAssignments.length) {
+    return [];
+  }
+
+  const customerIds = normalizedAssignments.map(
+    (assignment) => assignment.customerId,
+  );
+
+  const existingCustomersResponse = await supabase
+    .from("customers")
+    .select("customer_id")
+    .in("customer_id", customerIds);
+
+  const existingCustomers = throwIfError(
+    existingCustomersResponse,
+    "No fue posible validar los clientes a reasignar",
+  );
+
+  const existingCustomerIds = new Set(
+    (existingCustomers || []).map((customer) => customer.customer_id),
+  );
+
+  const missingCustomerIds = customerIds.filter(
+    (customerId) => !existingCustomerIds.has(customerId),
+  );
+
+  if (missingCustomerIds.length > 0) {
+    throw new Error(
+      "Uno o más clientes seleccionados ya no existen o no están disponibles para reasignación.",
+    );
+  }
+
+  const assignmentsByAgent = normalizedAssignments.reduce(
+    (groupedAssignments, assignment) => {
+      if (!groupedAssignments[assignment.targetAgentUserId]) {
+        groupedAssignments[assignment.targetAgentUserId] = [];
+      }
+
+      groupedAssignments[assignment.targetAgentUserId].push(
+        assignment.customerId,
+      );
+
+      return groupedAssignments;
+    },
+    {},
+  );
+
+  await Promise.all(
+    Object.entries(assignmentsByAgent).map(
+      async ([targetAgentUserId, groupedCustomerIds]) => {
+        const response = await supabase
+          .from("customers")
+          .update({
+            assigned_sales_agent_user_id: targetAgentUserId,
+            updated_at: new Date().toISOString(),
+          })
+          .in("customer_id", groupedCustomerIds);
+
+        throwIfError(
+          response,
+          "No fue posible guardar la reasignación de rutas",
+        );
+      },
+    ),
+  );
+
+  return normalizedAssignments;
+}
+
 export async function deleteBusinessClient(
   businessId,
 ) {
@@ -978,28 +1087,23 @@ export async function deleteBusinessClient(
     throw new Error("No se recibió el identificador del cliente.");
   }
 
-  const quotationUsageResponse = await supabase
-    .from("quotations")
-    .select("quotation_id", { count: "exact", head: true })
-    .eq("customer_id", businessId);
-
-  if (quotationUsageResponse.error) {
-    throw new Error(
-      `No fue posible validar el historial comercial del cliente: ${quotationUsageResponse.error.message}`,
-    );
-  }
-
-  if ((quotationUsageResponse.count || 0) > 0) {
-    throw new Error(
-      "No es posible eliminar este cliente porque tiene cotizaciones asociadas. Puedes desactivarlo si ya no debe usarse.",
-    );
-  }
+  await deleteRowsByIds(
+    "customer_visit_confirmations",
+    "customer_id",
+    [businessId],
+  );
 
   const response = await supabase
     .from("customers")
-    .delete()
+    .update({
+      is_active: false,
+      assigned_sales_agent_user_id: null,
+      visit_route_day: null,
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
     .eq("customer_id", businessId)
-    .select("customer_id")
+    .select("customer_id, deleted_at")
     .single();
 
   return throwIfError(

@@ -17,10 +17,11 @@ const baseClient = {
   branchLatitude: "9.9325",
   branchLongitude: "-84.0796",
   methodId: "method-1",
+  conditionId: "condition-1",
   advancePercentage: "35",
 };
 
-test("normaliza el payload del carrito usando variant_id y adelanto porcentual", () => {
+test("normaliza el payload del carrito usando variant_id y adelanto automático", () => {
   const payload = normalizeQuotationPayload(
     {
       client: baseClient,
@@ -34,6 +35,7 @@ test("normaliza el payload del carrito usando variant_id y adelanto porcentual",
           ivaAmount: 1625,
           hasSublimation: true,
           hasEmbroidery: false,
+          categoryName: "Uniformes",
         },
       ],
     },
@@ -42,7 +44,7 @@ test("normaliza el payload del carrito usando variant_id y adelanto porcentual",
     },
   );
 
-  assert.equal(payload.client.advancePercentage, 35);
+  assert.equal(payload.client.advancePercentage, 50);
   assert.deepEqual(payload.items, [
     {
       variant_id: "variant-1",
@@ -51,6 +53,7 @@ test("normaliza el payload del carrito usando variant_id y adelanto porcentual",
       iva_amount: 4875,
       has_sublimation: true,
       has_embroidery: false,
+      category_name: "Uniformes",
     },
   ]);
 });
