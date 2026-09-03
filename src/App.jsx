@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Routes, Route } from "react-router-dom";
+﻿import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
@@ -8,7 +8,6 @@ import Clients from "./pages/Clients";
 import VisitRoutes from "./pages/VisitRoutes";
 import Catalog from "./pages/Catalog";
 import PublicClientCatalog from "./pages/PublicClientCatalog";
-import AdminConfig from "./pages/adminConfig";
 import Agents from "./pages/Agents";
 import Quotations from "./pages/Quotations";
 import Sales from "./pages/Sales";
@@ -18,7 +17,6 @@ import MyQuotations from "./pages/MyQuotations";
 import ITSupportTickets from "./pages/ITSupportTickets";
 
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import AdminUsersRoute from "./components/AdminUsersRoute.jsx";
 import MainLayout from "./components/layouts/MainLayout.jsx";
 
 const routerBaseName =
@@ -149,9 +147,7 @@ function App() {
             path="/admin/usuarios"
             element={
               <ProtectedRoute>
-                <AdminUsersRoute>
-                  <AdminConfig />
-                </AdminUsersRoute>
+                <Navigate to="/dashboard" replace />
               </ProtectedRoute>
             }
           />

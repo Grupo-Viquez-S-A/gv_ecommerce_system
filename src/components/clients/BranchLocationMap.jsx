@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   RiExternalLinkLine,
   RiMapPinFill,
@@ -130,6 +130,7 @@ export default function BranchLocationMap({
   const tileLayerRef = useRef(null);
   const tileProviderIndexRef = useRef(0);
   const onChangeRef = useRef(onChange);
+  const coordinatesRef = useRef(null);
   const fallbackTimeoutRef = useRef(null);
   const coordinates = useMemo(
     () => getCoordinates(latitude, longitude),
@@ -140,6 +141,31 @@ export default function BranchLocationMap({
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+
+  useEffect(() => {
+    coordinatesRef.current = coordinates;
+  }, [coordinates]);
+
+  const emitCoordinatesChange = useCallback((nextLatitude, nextLongitude) => {
+    if (typeof onChangeRef.current !== "function") {
+      return;
+    }
+
+    onChangeRef.current({
+      latitude: nextLatitude.toFixed(7),
+      longitude: nextLongitude.toFixed(7),
+      locationAccuracy: 0,
+    });
+  }, []);
+
+  const handleMarkerDragEnd = useCallback(
+    (event) => {
+      const markerCoordinates = event.target.getLatLng();
+
+      emitCoordinatesChange(markerCoordinates.lat, markerCoordinates.lng);
+    },
+    [emitCoordinatesChange],
+  );
 
   useEffect(
     () => () => {
@@ -155,12 +181,14 @@ export default function BranchLocationMap({
       return undefined;
     }
 
-    const initialCenter = coordinates || DEFAULT_CENTER;
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
       attributionControl: false,
       scrollWheelZoom: editable,
     });
+
+    const initialCoordinates = coordinatesRef.current;
+    const initialCenter = initialCoordinates || DEFAULT_CENTER;
 
     mapRef.current = map;
     L.control.zoom({ position: "topright" }).addTo(map);
@@ -214,32 +242,22 @@ export default function BranchLocationMap({
 
     map.setView(
       [initialCenter.latitude, initialCenter.longitude],
-      coordinates ? FOCUSED_ZOOM : DEFAULT_ZOOM,
+      initialCoordinates ? FOCUSED_ZOOM : DEFAULT_ZOOM,
     );
 
-    if (coordinates) {
+    if (initialCoordinates) {
       markerRef.current = createMapMarker(map, editable);
       markerRef.current.setLatLng([
-        coordinates.latitude,
-        coordinates.longitude,
+        initialCoordinates.latitude,
+        initialCoordinates.longitude,
       ]);
+      markerRef.current.on("dragend", handleMarkerDragEnd);
     }
-
-    const emitCoordinatesChange = (nextLatitude, nextLongitude) => {
-      if (typeof onChangeRef.current !== "function") {
-        return;
-      }
-
-      onChangeRef.current({
-        latitude: nextLatitude.toFixed(7),
-        longitude: nextLongitude.toFixed(7),
-        locationAccuracy: 0,
-      });
-    };
 
     const ensureMarker = () => {
       if (!markerRef.current) {
         markerRef.current = createMapMarker(map, editable);
+        markerRef.current.on("dragend", handleMarkerDragEnd);
       }
 
       if (markerRef.current.dragging) {
@@ -251,12 +269,6 @@ export default function BranchLocationMap({
       }
 
       return markerRef.current;
-    };
-
-    const handleMarkerDragEnd = (event) => {
-      const markerCoordinates = event.target.getLatLng();
-
-      emitCoordinatesChange(markerCoordinates.lat, markerCoordinates.lng);
     };
 
     const handleMapClick = (event) => {
@@ -272,10 +284,6 @@ export default function BranchLocationMap({
 
     if (editable) {
       map.on("click", handleMapClick);
-    }
-
-    if (markerRef.current) {
-      markerRef.current.on("dragend", handleMarkerDragEnd);
     }
 
     window.requestAnimationFrame(() => {
@@ -303,7 +311,7 @@ export default function BranchLocationMap({
       tileLayerRef.current = null;
       tileProviderIndexRef.current = 0;
     };
-  }, [coordinates, editable]);
+  }, [editable, emitCoordinatesChange, handleMarkerDragEnd]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -315,6 +323,7 @@ export default function BranchLocationMap({
     if (coordinates) {
       if (!markerRef.current) {
         markerRef.current = createMapMarker(map, editable);
+        markerRef.current.on("dragend", handleMarkerDragEnd);
       }
 
       markerRef.current.setLatLng([
@@ -349,7 +358,7 @@ export default function BranchLocationMap({
     window.requestAnimationFrame(() => {
       map.invalidateSize();
     });
-  }, [coordinates, editable]);
+  }, [coordinates, editable, handleMarkerDragEnd]);
 
   const mapHeightClass = compact ? "h-32" : "h-64";
   const mapUrl = buildMapUrl(

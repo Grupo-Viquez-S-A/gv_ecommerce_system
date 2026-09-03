@@ -1,6 +1,10 @@
 ﻿import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import { isClientAccount, hasSystemAccess, isSalesAgent } from "../utils/roles.js";
+import {
+  hasAgentsPanelAccess,
+  isClientAccount,
+  isSalesAgent,
+} from "../utils/roles.js";
 
 const CLIENT_ALLOWED_ROUTES = [
   "/mis-pedidos",
@@ -10,14 +14,8 @@ const CLIENT_ALLOWED_ROUTES = [
   "/soporte-ti",
 ];
 
-const SYSTEM_ONLY_ROUTES = ["/admin/usuarios"];
 const SALES_AGENT_RESTRICTED_ROUTES = ["/ventas"];
-
-function isSystemOnlyRoute(pathname) {
-  return SYSTEM_ONLY_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`),
-  );
-}
+const AGENTS_PANEL_ROUTES = ["/agentes"];
 
 function isAllowedClientRoute(pathname) {
   return CLIENT_ALLOWED_ROUTES.some(
@@ -27,6 +25,12 @@ function isAllowedClientRoute(pathname) {
 
 function isSalesAgentRestrictedRoute(pathname) {
   return SALES_AGENT_RESTRICTED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
+function isAgentsPanelRoute(pathname) {
+  return AGENTS_PANEL_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 }
@@ -62,11 +66,7 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/cotizaciones" replace />;
   }
 
-  if (
-    !isClientAccount(user) &&
-    isSystemOnlyRoute(location.pathname) &&
-    !hasSystemAccess(user)
-  ) {
+  if (!isClientAccount(user) && isAgentsPanelRoute(location.pathname) && !hasAgentsPanelAccess(user)) {
     return <Navigate to="/dashboard" replace />;
   }
 

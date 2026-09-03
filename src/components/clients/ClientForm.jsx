@@ -41,6 +41,24 @@ const selectClassName =
 const labelClassName =
   "block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5";
 
+function isBlankCoordinate(value) {
+  return value === "" || value === null || value === undefined;
+}
+
+function isValidCoordinate(value, min, max) {
+  if (isBlankCoordinate(value)) {
+    return true;
+  }
+
+  const numericValue = Number(value);
+
+  return (
+    Number.isFinite(numericValue) &&
+    numericValue >= min &&
+    numericValue <= max
+  );
+}
+
 function normalizePhone(phone = {}, index = 0, prefix = "phone") {
   return {
     ...phone,
@@ -315,6 +333,23 @@ export default function ClientForm({
   const fieldsDisabled = isLocationOnlyEdit;
   const canEditBranchLocation = mode !== "view";
   const customerLocation = currentForm.branches[0] || createEmptyBranch();
+  const hasCoordinateInput =
+    !isBlankCoordinate(customerLocation.latitude) ||
+    !isBlankCoordinate(customerLocation.longitude);
+  const hasInvalidLatitude = !isValidCoordinate(
+    customerLocation.latitude,
+    -90,
+    90,
+  );
+  const hasInvalidLongitude = !isValidCoordinate(
+    customerLocation.longitude,
+    -180,
+    180,
+  );
+  const hasIncompleteCoordinates =
+    hasCoordinateInput &&
+    (isBlankCoordinate(customerLocation.latitude) ||
+      isBlankCoordinate(customerLocation.longitude));
 
   useEffect(() => {
     let isMounted = true;
@@ -490,6 +525,26 @@ export default function ClientForm({
 
   const updateCustomerLocationField = (field, value) => {
     updateBranch(0, field, value);
+  };
+
+  const updateCustomerCoordinateField = (field, value) => {
+    const normalizedValue = value.replace(",", ".").trim();
+
+    const nextBranches = currentForm.branches.map((branch, index) => {
+      if (index !== 0) {
+        return branch;
+      }
+
+      return {
+        ...branch,
+        [field]: normalizedValue,
+        locationAccuracy: "",
+      };
+    });
+
+    updateForm({
+      branches: nextBranches,
+    });
   };
 
   useEffect(() => {
@@ -955,6 +1010,64 @@ export default function ClientForm({
               className={`${inputClassName} resize-none`}
             />
           </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <FieldLabel>Latitud</FieldLabel>
+
+              <input
+                type="number"
+                inputMode="decimal"
+                min="-90"
+                max="90"
+                step="0.0000001"
+                value={customerLocation.latitude}
+                disabled={!canEditBranchLocation}
+                onChange={(event) =>
+                  updateCustomerCoordinateField(
+                    "latitude",
+                    event.target.value,
+                  )
+                }
+                placeholder="Ej. 10.087073"
+                className={`${inputClassName} font-mono ${
+                  hasInvalidLatitude ? "border-red-400" : ""
+                }`}
+              />
+            </div>
+
+            <div>
+              <FieldLabel>Longitud</FieldLabel>
+
+              <input
+                type="number"
+                inputMode="decimal"
+                min="-180"
+                max="180"
+                step="0.0000001"
+                value={customerLocation.longitude}
+                disabled={!canEditBranchLocation}
+                onChange={(event) =>
+                  updateCustomerCoordinateField(
+                    "longitude",
+                    event.target.value,
+                  )
+                }
+                placeholder="Ej. -84.371793"
+                className={`${inputClassName} font-mono ${
+                  hasInvalidLongitude ? "border-red-400" : ""
+                }`}
+              />
+            </div>
+          </div>
+
+          {(hasInvalidLatitude ||
+            hasInvalidLongitude ||
+            hasIncompleteCoordinates) && (
+            <p className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+              Ingresa latitud entre -90 y 90 y longitud entre -180 y 180 para actualizar el pin.
+            </p>
+          )}
 
           {canEditBranchLocation && (
             <button

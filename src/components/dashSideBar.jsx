@@ -3,7 +3,6 @@ import {
   RiGroupFill,
   RiUserFill,
   RiClipboardFill,
-  RiSettings4Fill,
   RiLogoutBoxLine,
   RiArrowLeftSLine,
   RiArrowRightSLine,
@@ -14,7 +13,11 @@ import {
 } from "react-icons/ri";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
-import { isClientAccount, hasSystemAccess, isSalesAgent } from "../utils/roles.js";
+import {
+  hasAgentsPanelAccess,
+  isClientAccount,
+  isSalesAgent,
+} from "../utils/roles.js";
 
 import GVLogo from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
 
@@ -119,7 +122,7 @@ function DashSideBar({
   const activeCompany = currentCompany || DEFAULT_COMPANY;
   const isClientUser = isClientAccount(user);
   const isSalesAgentUser = isSalesAgent(user);
-  const canAccessUserAdministration = !isClientUser && hasSystemAccess(user);
+  const canAccessAgentsPanel = !isClientUser && hasAgentsPanelAccess(user);
 
   const handleCloseMobileSidebar = () => {
     setSidebarOpen?.(false);
@@ -243,12 +246,14 @@ function DashSideBar({
             collapsed={sidebarCollapsed}
           />
 
-          <NavItem
-            icon={<RiUserFill size={18} />}
-            label="Agentes"
-            to="/agentes"
-            collapsed={sidebarCollapsed}
-          />
+          {canAccessAgentsPanel && (
+            <NavItem
+              icon={<RiUserFill size={18} />}
+              label="Agentes"
+              to="/agentes"
+              collapsed={sidebarCollapsed}
+            />
+          )}
 
           <NavItem
             icon={<RiClipboardFill size={18} />}
@@ -323,27 +328,6 @@ function DashSideBar({
             collapsed={sidebarCollapsed}
           />
 
-          {canAccessUserAdministration && (
-            <>
-              {/* SISTEMA */}
-              {!sidebarCollapsed ? (
-                <div className="px-4 pb-1 pt-4">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
-                    Sistema
-                  </span>
-                </div>
-              ) : (
-                <div className="mx-3 my-1 border-t border-[#2a3550]" />
-              )}
-
-              <NavItem
-                icon={<RiSettings4Fill size={18} />}
-                label="Administración de Usuarios"
-                to="/admin/usuarios"
-                collapsed={sidebarCollapsed}
-              />
-            </>
-          )}
         </nav>
 
         <div
@@ -497,12 +481,14 @@ function DashSideBar({
               collapsed={false}
             />
 
-            <NavItem
-              icon={<RiUserFill size={18} />}
-              label="Agentes"
-              to="/agentes"
-              collapsed={false}
-            />
+            {canAccessAgentsPanel && (
+              <NavItem
+                icon={<RiUserFill size={18} />}
+                label="Agentes"
+                to="/agentes"
+                collapsed={false}
+              />
+            )}
 
             <NavItem
               icon={<RiClipboardFill size={18} />}
@@ -572,23 +558,6 @@ function DashSideBar({
               onNavigate={handleCloseMobileSidebar}
             />
 
-            {canAccessUserAdministration && (
-              <>
-                {/* SISTEMA */}
-                <div className="px-4 pb-1 pt-4">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#C9A227]/70">
-                    Sistema
-                  </span>
-                </div>
-
-                <NavItem
-                  icon={<RiSettings4Fill size={18} />}
-                  label="Administración de Usuarios"
-                  to="/admin/usuarios"
-                  collapsed={false}
-                />
-              </>
-            )}
           </nav>
 
           <div className="border-t border-[#2a3550] p-4">

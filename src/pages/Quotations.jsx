@@ -235,7 +235,11 @@ export default function Quotations() {
   const companyOptions = useMemo(
     () => [
       "Todas",
-      ...new Set(quotations.map((quotation) => quotation.company).filter(Boolean)),
+      ...new Set(
+        quotations
+          .map((quotation) => quotation.issuerCompany || quotation.company)
+          .filter(Boolean),
+      ),
     ],
     [quotations],
   );
@@ -356,7 +360,8 @@ export default function Quotations() {
         normalizeSearchText(quotation.company).includes(normalizedSearch);
 
       const matchesCompany =
-        companyFilter === "Todas" || quotation.company === companyFilter;
+        companyFilter === "Todas" ||
+        (quotation.issuerCompany || quotation.company) === companyFilter;
 
       const matchesAgent =
         agentFilter === "Todos" || quotation.agent === agentFilter;
@@ -398,14 +403,52 @@ export default function Quotations() {
 
   const filteredProductionOrders = useMemo(() => {
     const normalizedSearch = normalizeSearchText(search);
+    const fromDate = dateFrom ? new Date(`${dateFrom}T00:00:00`) : null;
+    const toDate = dateTo ? new Date(`${dateTo}T23:59:59`) : null;
 
-    if (!normalizedSearch) return productionOrders;
+    return productionOrders.filter((order) => {
+      const orderDate = order.createdAt ? new Date(order.createdAt) : null;
+      const matchesSearch =
+        !normalizedSearch ||
+        [order.code, order.quotationNumber, order.client, order.company, order.agent]
+          .some((value) => normalizeSearchText(value).includes(normalizedSearch));
+      const matchesCompany =
+        companyFilter === "Todas" ||
+        order.company === companyFilter ||
+        order.client === companyFilter;
+      const matchesAgent =
+        agentFilter === "Todos" || order.agent === agentFilter;
+      const matchesClient =
+        clientFilter === "Todos" || order.client === clientFilter;
+      const matchesFrom =
+        !fromDate ||
+        (orderDate &&
+          !Number.isNaN(orderDate.getTime()) &&
+          orderDate >= fromDate);
+      const matchesTo =
+        !toDate ||
+        (orderDate &&
+          !Number.isNaN(orderDate.getTime()) &&
+          orderDate <= toDate);
 
-    return productionOrders.filter((order) =>
-      [order.code, order.quotationNumber, order.client, order.agent]
-        .some((value) => normalizeSearchText(value).includes(normalizedSearch)),
-    );
-  }, [productionOrders, search]);
+      return (
+        matchesSearch &&
+        matchesCompany &&
+        matchesAgent &&
+        matchesClient &&
+        matchesFrom &&
+        matchesTo
+      );
+    });
+  }, [
+    agentFilter,
+    clientFilter,
+    companyFilter,
+    dateFrom,
+    dateTo,
+    productionOrders,
+    search,
+  ]);
   const openQuotationModal = (quotation) => {
     setSelectedQuotation(quotation);
   };

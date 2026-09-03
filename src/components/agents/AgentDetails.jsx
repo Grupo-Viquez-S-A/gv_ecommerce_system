@@ -84,8 +84,8 @@ export default function AgentDetails({ agent }) {
           />
 
           <DetailItem
-            label="Ventas acumuladas"
-            value={agent.sales}
+            label="Ventas último mes"
+            value={agent.salesLastMonth || agent.sales}
             icon={<RiMoneyDollarCircleFill size={12} />}
           />
 

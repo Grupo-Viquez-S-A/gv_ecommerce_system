@@ -226,7 +226,7 @@ export async function getSalesOrders({
     ...new Set(orders.map((order) => order.quotation_id).filter(Boolean)),
   ];
 
-  const [quotations, payments] = await Promise.all([
+  const [quotations, quoteProducts, payments] = await Promise.all([
     throwIfError(
       await supabase
         .from("quotations")
@@ -235,6 +235,13 @@ export async function getSalesOrders({
         )
         .in("quotation_id", quotationIds),
       "No fue posible cargar las cotizaciones asociadas",
+    ),
+    throwIfError(
+      await supabase
+        .from("quote_products")
+        .select("quotation_id, quantity")
+        .in("quotation_id", quotationIds),
+      "No fue posible cargar los productos de las cotizaciones asociadas",
     ),
     throwIfError(
       await supabase
@@ -264,6 +271,7 @@ export async function getSalesOrders({
     visibleQuotationIds.has(order.quotation_id),
   );
   const quotationsById = indexRowsByKey(visibleQuotations, "quotation_id");
+  const quoteProductsByQuotationId = groupRowsByKey(quoteProducts, "quotation_id");
   const validPaymentsByOrderId = groupRowsByKey(payments, "production_order_id");
 
   const businessIds = [
@@ -342,9 +350,14 @@ export async function getSalesOrders({
       quotationId: order.quotation_id,
       quotationNumber: quotation?.quotation_number || "Sin cotizacion",
       client: clientName,
+      company: business?.legal_name || business?.business_name || "Sin empresa",
       branchLabel,
       agent: sellerName,
       avatar: getInitials(sellerName),
+      productCount: (quoteProductsByQuotationId[order.quotation_id] || []).reduce(
+        (sum, item) => sum + getNumber(item.quantity, 0),
+        0,
+      ),
       total,
       balance,
       amountPaid,

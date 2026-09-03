@@ -249,6 +249,10 @@ function normalizeQuotation({
   }));
 
   const itemsTotal = getQuotationTotal(items);
+  const productUnits = items.reduce(
+    (sum, item) => sum + getNumber(item.quantity, 0),
+    0,
+  );
   const subtotal = getNumber(quotation.subtotal, null);
   const ivaAmount = getNumber(quotation.iva_amount, null);
   const total = getNumber(quotation.total, null);
@@ -282,6 +286,12 @@ function normalizeQuotation({
 
     client: business?.business_name || business?.legal_name || "Sin cliente",
     company: business?.business_name || business?.legal_name || "Sin cliente",
+    issuerCompany:
+      groupCompany?.commercial_name ||
+      groupCompany?.company_name ||
+      business?.business_name ||
+      business?.legal_name ||
+      "Sin empresa",
     legalName: business?.legal_name || "",
     legalId: business?.legal_id || "",
     activityCode: business?.activity_code || "",
@@ -343,6 +353,8 @@ function normalizeQuotation({
     representative,
     seller,
     items,
+    productCount: productUnits,
+    productUnits,
   };
 }
 

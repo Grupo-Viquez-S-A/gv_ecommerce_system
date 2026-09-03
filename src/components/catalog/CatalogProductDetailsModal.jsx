@@ -13,8 +13,7 @@ import {
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
-import PetCostumeNotice from "./PetCostumeNotice";
-import { isPetCategoryProduct, shouldProductUseDimensions } from "./petCategoryUtils";
+import { shouldProductUseDimensions } from "./petCategoryUtils";
 import { formatCurrency } from "../../utils/formatCurrency.js";
 import { getInventorySizeLabel } from "../../utils/inventorySizes.js";
 
@@ -162,8 +161,6 @@ export default function CatalogProductDetailsModal({
     productKey: null,
     rows: {},
   });
-  const shouldShowPetNotice = isPetCategoryProduct(product);
-
   useEffect(() => {
     if (!product) {
       return undefined;
@@ -624,7 +621,6 @@ export default function CatalogProductDetailsModal({
                     </div>
                   )}
 
-                  {shouldShowPetNotice && <PetCostumeNotice />}
                 </>
               ) : (
                 <div className="grid gap-5 lg:grid-cols-2">

@@ -9,11 +9,15 @@ import {
   Route,
   Search,
   Users,
+  XCircle,
 } from "lucide-react";
 
 import { getBusinessClients, saveCustomerRouteAssignments } from "../../services/clientService.js";
 import { getSalesAgents } from "../../services/agentService.js";
-import { getCustomerVisitConfirmations } from "../../services/customerVisitConfirmationService.js";
+import {
+  getCustomerVisitConfirmations,
+  VISIT_STOP_STATUSES,
+} from "../../services/customerVisitConfirmationService.js";
 import { formatDateCR } from "../../utils/dateUtils.js";
 import {
   VISIT_ROUTE_DAYS,
@@ -299,23 +303,36 @@ export default function BrandManagerVisitRoutesView() {
         const routeItems = (customersByAgentId[agent.userId] || []).map((client) => ({
           ...client,
           visitConfirmation: visitConfirmationsByCustomerId.get(client.id) || null,
-          isVisited: visitConfirmationsByCustomerId.has(client.id),
         }));
-        const routeDistanceKm = calculateRouteDistance(routeItems);
-        const visitedCount = routeItems.filter((item) => item.isVisited).length;
-        const status = getAgentStatus(routeItems.length, visitedCount);
+        const decoratedRouteItems = routeItems.map((item) => ({
+          ...item,
+          hasVisitRecord: Boolean(item.visitConfirmation),
+          isVisited:
+            item.visitConfirmation?.visitStatus ===
+            VISIT_STOP_STATUSES.VISITED,
+          isNotVisited:
+            item.visitConfirmation?.visitStatus ===
+            VISIT_STOP_STATUSES.NOT_VISITED,
+        }));
+        const routeDistanceKm = calculateRouteDistance(decoratedRouteItems);
+        const visitedCount = decoratedRouteItems.filter((item) => item.isVisited).length;
+        const notVisitedCount = decoratedRouteItems.filter((item) => item.isNotVisited).length;
+        const recordedCount = decoratedRouteItems.filter((item) => item.hasVisitRecord).length;
+        const status = getAgentStatus(decoratedRouteItems.length, recordedCount);
 
         return {
           ...agent,
-          routeItems,
+          routeItems: decoratedRouteItems,
           routeDistanceKm,
           routeEstimatedMinutes: calculateEstimatedMinutes(
             routeDistanceKm,
-            routeItems.length,
+            decoratedRouteItems.length,
           ),
-          clientsCount: routeItems.length,
+          clientsCount: decoratedRouteItems.length,
           visitedCount,
-          pendingCount: Math.max(0, routeItems.length - visitedCount),
+          notVisitedCount,
+          recordedCount,
+          pendingCount: Math.max(0, decoratedRouteItems.length - recordedCount),
           routeStatus: status.label,
           routeStatusColor: status.color,
         };
@@ -423,6 +440,14 @@ export default function BrandManagerVisitRoutesView() {
   const totalAssignedClients = routedCustomersForDay.length;
   const totalVisitedClients = filteredAgents.reduce(
     (sum, agent) => sum + agent.visitedCount,
+    0,
+  );
+  const totalRecordedStops = filteredAgents.reduce(
+    (sum, agent) => sum + agent.recordedCount,
+    0,
+  );
+  const totalNotVisitedClients = filteredAgents.reduce(
+    (sum, agent) => sum + agent.notVisitedCount,
     0,
   );
   const routesProgrammedCount = filteredAgents.filter(
@@ -673,7 +698,7 @@ export default function BrandManagerVisitRoutesView() {
             icon: <CheckCircle2 size={22} />,
             label: "Visitas confirmadas",
             value: visitConfirmationsLoading ? "..." : totalVisitedClients,
-            description: `${Math.max(0, totalAssignedClients - totalVisitedClients)} pendientes`,
+            description: `${totalNotVisitedClients} no visitados, ${Math.max(0, totalAssignedClients - totalRecordedStops)} pendientes`,
           },
         ].map((item) => (
           <article
@@ -757,7 +782,7 @@ export default function BrandManagerVisitRoutesView() {
               />
             </div>
 
-            <div className="space-y-2.5">
+            <div className="max-h-[520px] space-y-2.5 overflow-y-auto pr-1">
               {filteredAgents.map((agent) => {
                 const isSelected = agent.userId === safeSelectedAgentId;
 
@@ -793,7 +818,7 @@ export default function BrandManagerVisitRoutesView() {
                         <p className="mt-1 text-[12px] text-[#9fb1cc]">
                           {agent.clientsCount} clientes
                           {" • "}
-                          {agent.visitedCount} visitados
+                          {agent.recordedCount} registrados
                         </p>
                       </div>
 
@@ -872,12 +897,12 @@ export default function BrandManagerVisitRoutesView() {
 
                 {selectedAgent && (
                   <span className="rounded-full border border-[#C9A227]/30 bg-[#C9A227]/10 px-3 py-1 text-[11px] font-bold text-[#E9BC2D]">
-                    {selectedAgent.visitedCount}/{selectedAgent.clientsCount} visitados
+                    {selectedAgent.recordedCount}/{selectedAgent.clientsCount} registrados
                   </span>
                 )}
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">
                 {selectedAgent?.routeItems?.length ? (
                   selectedAgent.routeItems.map((client, index) => (
                     <article
@@ -902,11 +927,26 @@ export default function BrandManagerVisitRoutesView() {
                             <CheckCircle2 size={12} />
                             Visitado
                           </span>
+                        ) : client.isNotVisited ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-red-400/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-100">
+                            <XCircle size={12} />
+                            No visitado
+                          </span>
                         ) : (
                           <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-100">
                             Pendiente
                           </span>
                         )}
+                      </div>
+
+                      <div className="mt-3 rounded-xl border border-[#2a3550] bg-[#101a2d] px-3 py-2">
+                        <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#7f8ea8]">
+                          Nota del agente
+                        </p>
+                        <p className="mt-1 text-[12px] leading-5 text-[#dbe6f7]">
+                          {client.visitConfirmation?.note ||
+                            "Sin nota registrada todavía."}
+                        </p>
                       </div>
                     </article>
                   ))

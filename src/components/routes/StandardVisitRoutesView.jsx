@@ -12,13 +12,14 @@ import {
   Route,
   Ruler,
   Store,
+  XCircle,
 } from "lucide-react";
 
 import { getBusinessClients } from "../../services/clientService.js";
 import {
-  confirmCustomerVisit,
   getCustomerVisitConfirmations,
-  removeCustomerVisitConfirmation,
+  saveCustomerVisitStatus,
+  VISIT_STOP_STATUSES,
 } from "../../services/customerVisitConfirmationService.js";
 import { formatDateCR } from "../../utils/dateUtils.js";
 import { hasSystemAccess, isSalesAgent } from "../../utils/roles.js";
@@ -173,6 +174,7 @@ export default function StandardVisitRoutesView({ user }) {
   const [visitConfirmations, setVisitConfirmations] = useState([]);
   const [visitConfirmationsLoading, setVisitConfirmationsLoading] = useState(false);
   const [visitActionIds, setVisitActionIds] = useState([]);
+  const [visitNotesByCustomerId, setVisitNotesByCustomerId] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedDay, setSelectedDay] = useState(() =>
@@ -306,17 +308,36 @@ export default function StandardVisitRoutesView({ user }) {
           confirmation.customerId,
           confirmation,
         ]),
-      ),
+    ),
     [visitConfirmations],
   );
-  const visitedCount = useMemo(
+  const completedVisitRecordsCount = useMemo(
     () =>
       selectedRouteItems.filter((item) =>
         visitConfirmationsByCustomerId.has(item.id),
       ).length,
     [selectedRouteItems, visitConfirmationsByCustomerId],
   );
-  const pendingCount = Math.max(0, selectedRouteItems.length - visitedCount);
+  const visitedCount = useMemo(
+    () =>
+      selectedRouteItems.filter((item) =>
+        visitConfirmationsByCustomerId.get(item.id)?.visitStatus ===
+        VISIT_STOP_STATUSES.VISITED,
+      ).length,
+    [selectedRouteItems, visitConfirmationsByCustomerId],
+  );
+  const notVisitedCount = useMemo(
+    () =>
+      selectedRouteItems.filter((item) =>
+        visitConfirmationsByCustomerId.get(item.id)?.visitStatus ===
+        VISIT_STOP_STATUSES.NOT_VISITED,
+      ).length,
+    [selectedRouteItems, visitConfirmationsByCustomerId],
+  );
+  const pendingCount = Math.max(
+    0,
+    selectedRouteItems.length - completedVisitRecordsCount,
+  );
 
   const loadVisitConfirmations = useCallback(async () => {
     const customerIds = selectedRouteItems.map((item) => item.id).filter(Boolean);
@@ -358,30 +379,40 @@ export default function StandardVisitRoutesView({ user }) {
     });
   };
 
-  const handleToggleVisitConfirmation = async (item) => {
+  const handleVisitNoteChange = (customerId, value) => {
+    setVisitNotesByCustomerId((currentNotes) => ({
+      ...currentNotes,
+      [customerId]: value,
+    }));
+  };
+
+  const handleSaveVisitStatus = async (item, visitStatus) => {
     if (!item?.id) {
       return;
     }
 
-    const currentConfirmation = visitConfirmationsByCustomerId.get(item.id);
+    const savedNote = visitConfirmationsByCustomerId.get(item.id)?.note || "";
+    const note = String(
+      visitNotesByCustomerId[item.id] ?? savedNote,
+    ).trim();
+
+    if (!note) {
+      setError("Debe registrar una nota antes de guardar la parada.");
+      return;
+    }
 
     try {
       setVisitActionIds((currentIds) => [...new Set([...currentIds, item.id])]);
       setError("");
 
-      if (currentConfirmation) {
-        await removeCustomerVisitConfirmation({
-          customerId: item.id,
-          visitDate: selectedVisitDate,
-        });
-      } else {
-        await confirmCustomerVisit({
-          customerId: item.id,
-          salesAgentUserId: user?.id,
-          visitDate: selectedVisitDate,
-          visitRouteDay: selectedDay,
-        });
-      }
+      await saveCustomerVisitStatus({
+        customerId: item.id,
+        salesAgentUserId: user?.id,
+        visitDate: selectedVisitDate,
+        visitRouteDay: selectedDay,
+        visitStatus,
+        note,
+      });
 
       await loadVisitConfirmations();
     } catch (actionError) {
@@ -537,12 +568,24 @@ export default function StandardVisitRoutesView({ user }) {
               </div>
             ) : selectedRouteItems.length > 0 ? (
               <>
-                <div className="divide-y divide-[#24314d] px-3 py-1.5">
+                <div className="max-h-[540px] divide-y divide-[#24314d] overflow-y-auto px-3 py-1.5 pr-2 xl:max-h-[calc(100vh-390px)]">
                   {selectedRouteItems.map((item, index) => {
                     const statusLabel = getRouteStopStatusLabel(
                       index,
                       selectedRouteItems.length,
                     );
+                    const visitConfirmation =
+                      visitConfirmationsByCustomerId.get(item.id) || null;
+                    const visitStatus = visitConfirmation?.visitStatus || "";
+                    const isVisited =
+                      visitStatus === VISIT_STOP_STATUSES.VISITED;
+                    const isNotVisited =
+                      visitStatus === VISIT_STOP_STATUSES.NOT_VISITED;
+                    const noteDraft =
+                      visitNotesByCustomerId[item.id] ??
+                      visitConfirmation?.note ??
+                      "";
+                    const noteIsEmpty = !noteDraft.trim();
 
                     return (
                       <article
@@ -578,10 +621,15 @@ export default function StandardVisitRoutesView({ user }) {
                                   {statusLabel}
                                 </span>
                               )}
-                              {visitConfirmationsByCustomerId.has(item.id) ? (
+                              {isVisited ? (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-200">
                                   <CheckCircle2 size={12} />
                                   Visitado
+                                </span>
+                              ) : isNotVisited ? (
+                                <span className="inline-flex items-center gap-1 rounded-full border border-red-400/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-bold text-red-100">
+                                  <XCircle size={12} />
+                                  No visitado
                                 </span>
                               ) : (
                                 <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-100">
@@ -600,32 +648,73 @@ export default function StandardVisitRoutesView({ user }) {
                           </p>
 
                           {item.assignedSalesAgentUserId === user?.id && (
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => void handleToggleVisitConfirmation(item)}
-                                disabled={visitActionIds.includes(item.id)}
-                                className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[12px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                                  visitConfirmationsByCustomerId.has(item.id)
-                                    ? "border border-red-400/25 bg-red-500/10 text-red-100 hover:bg-red-500/15"
-                                    : "border border-emerald-400/25 bg-emerald-500/10 text-emerald-100 hover:bg-emerald-500/15"
-                                }`}
-                              >
-                                {visitActionIds.includes(item.id) ? (
-                                  <LoaderCircle size={14} className="animate-spin" />
-                                ) : (
-                                  <CheckCircle2 size={14} />
-                                )}
-                                {visitConfirmationsByCustomerId.has(item.id)
-                                  ? "Marcar como no visitado"
-                                  : "Confirmar visita"}
-                              </button>
-
-                              {visitConfirmationsByCustomerId.has(item.id) && (
-                                <span className="text-[11px] text-[#8ea3c3]">
-                                  Confirmado por ti para esta fecha.
+                            <div className="mt-3 space-y-2.5">
+                              <label className="block">
+                                <span className="mb-1 block text-[11px] font-bold uppercase tracking-[0.08em] text-[#8ea3c3]">
+                                  Nota de la parada
                                 </span>
-                              )}
+                                <textarea
+                                  value={noteDraft}
+                                  onChange={(event) =>
+                                    handleVisitNoteChange(item.id, event.target.value)
+                                  }
+                                  rows={3}
+                                  placeholder="Escribe el resultado, motivo o seguimiento de esta parada..."
+                                  className="w-full resize-none rounded-xl border border-[#2a3550] bg-[#0f1a2e] px-3 py-2 text-[12px] leading-5 text-white placeholder-[#6f87ab] outline-none transition focus:border-[#D7A91D]"
+                                />
+                              </label>
+
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleSaveVisitStatus(
+                                      item,
+                                      VISIT_STOP_STATUSES.VISITED,
+                                    )
+                                  }
+                                  disabled={
+                                    visitActionIds.includes(item.id) ||
+                                    noteIsEmpty
+                                  }
+                                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-[12px] font-bold text-emerald-100 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {visitActionIds.includes(item.id) ? (
+                                    <LoaderCircle size={14} className="animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 size={14} />
+                                  )}
+                                  Guardar visitado
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleSaveVisitStatus(
+                                      item,
+                                      VISIT_STOP_STATUSES.NOT_VISITED,
+                                    )
+                                  }
+                                  disabled={
+                                    visitActionIds.includes(item.id) ||
+                                    noteIsEmpty
+                                  }
+                                  className="inline-flex items-center gap-2 rounded-xl border border-red-400/25 bg-red-500/10 px-3 py-2 text-[12px] font-bold text-red-100 transition-colors hover:bg-red-500/15 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {visitActionIds.includes(item.id) ? (
+                                    <LoaderCircle size={14} className="animate-spin" />
+                                  ) : (
+                                    <XCircle size={14} />
+                                  )}
+                                  Guardar no visitado
+                                </button>
+
+                                {visitConfirmation && (
+                                  <span className="text-[11px] text-[#8ea3c3]">
+                                    Registro guardado para esta fecha.
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -707,7 +796,7 @@ export default function StandardVisitRoutesView({ user }) {
                   {visitConfirmationsLoading ? "..." : `${visitedCount}/${selectedRouteItems.length}`}
                 </p>
                 <p className="mt-1 text-[12px] text-[#8ea3c3]">
-                  {pendingCount} pendientes para {selectedDayLabelLower}
+                  {notVisitedCount} no visitados, {pendingCount} pendientes para {selectedDayLabelLower}
                 </p>
               </div>
             </div>

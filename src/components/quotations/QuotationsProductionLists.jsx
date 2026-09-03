@@ -2,8 +2,12 @@ import { useEffect, useState } from "react";
 import { RiAddCircleLine, RiArrowDownSFill, RiArrowLeftSLine, RiArrowRightSFill, RiDeleteBinLine, RiDownloadFill, RiExportFill, RiEyeFill, RiLoader4Line, RiMailSendFill, RiMoreFill, RiSearchLine } from "react-icons/ri";
 import { QuotationPaginationButton as PagBtn, QuotationStatusBadge as StatusBadge, formatQuotationCurrency as formatCurrency, formatQuotationDate as formatDate } from "./QuotationsViewHelpers.jsx";
 
-export default function QuotationsProductionLists({ activeProductionTab, setActiveProductionTab, filtered, filteredProductionOrders, quotations, productionOrders, loading, ordersLoading, openQuotationModal, setSelectedProductionOrder, onCreateProductionOrder, creatingProductionOrderId, onDownloadQuotation, downloadingQuotationId, onSendQuotation, sendingQuotationId, onDeleteQuotation, onDeleteProductionOrder, clearFilters }) {
+const PAGE_SIZE = 15;
+
+export default function QuotationsProductionLists({ activeProductionTab, setActiveProductionTab, filtered, filteredProductionOrders, productionOrders, loading, ordersLoading, openQuotationModal, setSelectedProductionOrder, onCreateProductionOrder, creatingProductionOrderId, onDownloadQuotation, downloadingQuotationId, onSendQuotation, sendingQuotationId, onDeleteQuotation, onDeleteProductionOrder, clearFilters }) {
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [quotationPage, setQuotationPage] = useState(1);
+  const [orderPage, setOrderPage] = useState(1);
   const productionOrdersByQuotationId = new Map(
     productionOrders
       .filter((order) => order.quotationId)
@@ -22,6 +26,27 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
 
   const getQuotationId = (quotation) => quotation?.quotationId || quotation?.id;
   const getProductionOrderId = (order) => order?.productionOrderId || order?.id;
+  const getProductCount = (item) =>
+    Number(item?.productUnits ?? item?.productCount ?? item?.items?.reduce(
+      (sum, product) => sum + Number(product?.quantity || 0),
+      0,
+    ) ?? 0);
+  const quotationPageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const orderPageCount = Math.max(1, Math.ceil(filteredProductionOrders.length / PAGE_SIZE));
+  const currentQuotationPage = Math.min(quotationPage, quotationPageCount);
+  const currentOrderPage = Math.min(orderPage, orderPageCount);
+  const paginatedQuotations = filtered.slice(
+    (currentQuotationPage - 1) * PAGE_SIZE,
+    currentQuotationPage * PAGE_SIZE,
+  );
+  const paginatedProductionOrders = filteredProductionOrders.slice(
+    (currentOrderPage - 1) * PAGE_SIZE,
+    currentOrderPage * PAGE_SIZE,
+  );
+  const quotationStart = filtered.length ? (currentQuotationPage - 1) * PAGE_SIZE + 1 : 0;
+  const quotationEnd = Math.min(currentQuotationPage * PAGE_SIZE, filtered.length);
+  const orderStart = filteredProductionOrders.length ? (currentOrderPage - 1) * PAGE_SIZE + 1 : 0;
+  const orderEnd = Math.min(currentOrderPage * PAGE_SIZE, filteredProductionOrders.length);
 
   const renderDownloadButton = (quotation, compact = false) => {
     const quotationId = getQuotationId(quotation);
@@ -144,6 +169,43 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
     );
   };
 
+  const renderPagination = ({ page, pageCount, onPageChange }) => {
+    if (pageCount <= 1) return null;
+
+    const pageWindowStart = Math.max(1, Math.min(page - 2, pageCount - 4));
+    const pageWindowEnd = Math.min(pageCount, pageWindowStart + 4);
+    const pages = Array.from(
+      { length: pageWindowEnd - pageWindowStart + 1 },
+      (_, index) => pageWindowStart + index,
+    );
+
+    return (
+      <div className="flex items-center gap-1">
+        <PagBtn
+          icon={<RiArrowLeftSLine size={14} />}
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        />
+        <span className="sm:hidden"><PagBtn label={page} active /></span>
+        <span className="hidden sm:contents">
+          {pages.map((pageNumber) => (
+            <PagBtn
+              key={pageNumber}
+              label={pageNumber}
+              active={pageNumber === page}
+              onClick={() => onPageChange(pageNumber)}
+            />
+          ))}
+        </span>
+        <PagBtn
+          icon={<RiArrowRightSFill size={14} />}
+          disabled={page >= pageCount}
+          onClick={() => onPageChange(page + 1)}
+        />
+      </div>
+    );
+  };
+
   return <>
         {/* Listados de producción */}
         <div className="bg-[#141d2e] border border-[#2a3550] rounded-xl overflow-hidden mb-6">
@@ -198,6 +260,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Empresa</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Vigencia</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Productos</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Total</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Vendedor</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider text-right">Acciones</th>
@@ -205,7 +268,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                 </thead>
 
                 <tbody className="divide-y divide-[#2a3550]">
-                  {filtered.map((quotation) => (
+                  {paginatedQuotations.map((quotation) => (
                     <tr
                       key={quotation.id}
                       onClick={() => openQuotationModal(quotation)}
@@ -216,6 +279,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                       <td className="px-4 py-3 text-sm text-gray-300">{quotation.company}</td>
                       <td className="px-4 py-3 text-sm text-gray-400">{formatDate(quotation.date)}</td>
                       <td className="px-4 py-3 text-sm text-gray-400">{formatDate(quotation.validity)}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-white">{getProductCount(quotation)}</td>
                       <td className="px-4 py-3 text-sm text-white font-semibold">{formatCurrency(quotation.total)}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
@@ -255,7 +319,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
 
               {!loading && filtered.length > 0 && (
                 <div className="divide-y divide-[#2a3550] lg:hidden">
-                  {filtered.map((quotation) => (
+                  {paginatedQuotations.map((quotation) => (
                     <div
                       key={quotation.id}
                       role="button"
@@ -279,6 +343,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                       <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                         <div><p className="text-gray-500">Fecha</p><p className="mt-1 text-gray-300">{formatDate(quotation.date)}</p></div>
                         <div><p className="text-gray-500">Vigencia</p><p className="mt-1 text-gray-300">{formatDate(quotation.validity)}</p></div>
+                        <div><p className="text-gray-500">Productos</p><p className="mt-1 text-gray-300">{getProductCount(quotation)}</p></div>
                       </div>
                       <p className="mt-3 truncate text-xs text-gray-400">{quotation.agent}</p>
                       <div className="mt-3 flex gap-2">
@@ -323,14 +388,13 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#2a3550] px-4 py-3 sm:px-5">
                 <span className="text-xs text-gray-500">
-                  Mostrando {filtered.length === 0 ? 0 : 1} a {filtered.length} de {quotations.length} cotizaciones
+                  Mostrando {quotationStart} a {quotationEnd} de {filtered.length} cotizaciones
                 </span>
-                <div className="flex items-center gap-1">
-                  <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-                  <span className="sm:hidden"><PagBtn label={1} active /></span>
-                  <span className="hidden sm:contents">{[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}</span>
-                  <PagBtn icon={<RiArrowRightSFill size={14} />} />
-                </div>
+                {renderPagination({
+                  page: currentQuotationPage,
+                  pageCount: quotationPageCount,
+                  onPageChange: setQuotationPage,
+                })}
               </div>
             </>
           )}
@@ -344,6 +408,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cotización</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Cliente</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Productos</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Producción</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Pago</th>
                     <th className="px-4 py-3 text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Saldo</th>
@@ -353,7 +418,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                 </thead>
 
                 <tbody className="divide-y divide-[#2a3550]">
-                  {filteredProductionOrders.map((order) => (
+                  {paginatedProductionOrders.map((order) => (
                     <tr
                       key={order.id}
                       onClick={() => setSelectedProductionOrder(order)}
@@ -363,6 +428,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                       <td className="px-4 py-3 text-sm text-gray-300 font-mono">{order.quotationNumber}</td>
                       <td className="px-4 py-3 text-sm text-white">{order.client}</td>
                       <td className="px-4 py-3 text-sm text-gray-400">{formatDate(order.createdAt)}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-white">{getProductCount(order)}</td>
                       <td className="px-4 py-3"><StatusBadge status={order.productionStatusLabel} /></td>
                       <td className="px-4 py-3"><StatusBadge status={order.paymentStatusLabel} /></td>
                       <td className="px-4 py-3 text-sm text-white font-semibold">{formatCurrency(order.balance)}</td>
@@ -390,7 +456,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
 
               {!ordersLoading && filteredProductionOrders.length > 0 && (
                 <div className="divide-y divide-[#2a3550] lg:hidden">
-                  {filteredProductionOrders.map((order) => (
+                  {paginatedProductionOrders.map((order) => (
                     <button
                       key={order.id}
                       type="button"
@@ -410,6 +476,7 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
                       </div>
                       <div className="mt-3 flex items-center justify-between gap-3 text-xs text-gray-400">
                         <span>{formatDate(order.createdAt)}</span>
+                        <span>{getProductCount(order)} productos</span>
                         <span className="truncate">{order.agent}</span>
                       </div>
                       <div className="mt-3">
@@ -449,14 +516,13 @@ export default function QuotationsProductionLists({ activeProductionTab, setActi
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#2a3550] px-4 py-3 sm:px-5">
                 <span className="text-xs text-gray-500">
-                  Mostrando {filteredProductionOrders.length === 0 ? 0 : 1} a {filteredProductionOrders.length} de {productionOrders.length} órdenes
+                  Mostrando {orderStart} a {orderEnd} de {filteredProductionOrders.length} órdenes
                 </span>
-                <div className="flex items-center gap-1">
-                  <PagBtn icon={<RiArrowLeftSLine size={14} />} />
-                  <span className="sm:hidden"><PagBtn label={1} active /></span>
-                  <span className="hidden sm:contents">{[1, 2, 3, 4, 5].map((page) => <PagBtn key={page} label={page} active={page === 1} />)}</span>
-                  <PagBtn icon={<RiArrowRightSFill size={14} />} />
-                </div>
+                {renderPagination({
+                  page: currentOrderPage,
+                  pageCount: orderPageCount,
+                  onPageChange: setOrderPage,
+                })}
               </div>
             </>
           )}

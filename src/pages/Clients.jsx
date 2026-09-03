@@ -246,12 +246,60 @@ function hasRepresentativeContent(representative = {}) {
   );
 }
 
+function isBlankCoordinate(value) {
+  return value === "" || value === null || value === undefined;
+}
+
+function hasCoordinateContent(branch = {}) {
+  return (
+    !isBlankCoordinate(branch.latitude) ||
+    !isBlankCoordinate(branch.longitude) ||
+    !isBlankCoordinate(branch.locationAccuracy)
+  );
+}
+
+function getCoordinateValidationMessage(branch = {}) {
+  const hasLatitude = !isBlankCoordinate(branch.latitude);
+  const hasLongitude = !isBlankCoordinate(branch.longitude);
+
+  if (hasLatitude !== hasLongitude) {
+    return "Ingresa latitud y longitud para ubicar el pin del cliente.";
+  }
+
+  if (hasLatitude) {
+    const latitude = Number(branch.latitude);
+
+    if (
+      !Number.isFinite(latitude) ||
+      latitude < -90 ||
+      latitude > 90
+    ) {
+      return "La latitud del cliente debe estar entre -90 y 90.";
+    }
+  }
+
+  if (hasLongitude) {
+    const longitude = Number(branch.longitude);
+
+    if (
+      !Number.isFinite(longitude) ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      return "La longitud del cliente debe estar entre -180 y 180.";
+    }
+  }
+
+  return "";
+}
+
 function hasBranchContent(branch = {}) {
   return Boolean(
     branch.province?.trim() ||
       branch.city?.trim() ||
       branch.district?.trim() ||
       branch.address?.trim() ||
+      hasCoordinateContent(branch) ||
       branch.phones?.some(hasPhoneContent) ||
       branch.representatives?.some(hasRepresentativeContent),
   );
@@ -384,23 +432,13 @@ function normalizeClientForm(form = {}) {
       };
     }
 
-    if (
-      branch.latitude !== null &&
-      !Number.isFinite(branch.latitude)
-    ) {
-      return {
-        valid: false,
-        message: "La latitud del cliente no es válida.",
-      };
-    }
+    const coordinateValidationMessage =
+      getCoordinateValidationMessage(originalBranch);
 
-    if (
-      branch.longitude !== null &&
-      !Number.isFinite(branch.longitude)
-    ) {
+    if (coordinateValidationMessage) {
       return {
         valid: false,
-        message: "La longitud del cliente no es válida.",
+        message: coordinateValidationMessage,
       };
     }
 
@@ -430,6 +468,27 @@ function normalizeClientForm(form = {}) {
       clientPhones,
       branches,
     },
+  };
+}
+
+function normalizeClientLocationForm(form = {}) {
+  const branches = form.branches || [];
+
+  for (let index = 0; index < branches.length; index += 1) {
+    const coordinateValidationMessage =
+      getCoordinateValidationMessage(branches[index]);
+
+    if (coordinateValidationMessage) {
+      return {
+        valid: false,
+        message: coordinateValidationMessage,
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    value: branches,
   };
 }
 
@@ -649,7 +708,7 @@ export default function Clients() {
     const isLocationOnlyEditMode =
       drawerMode === "edit" && canEditClientLocationOnly;
     const normalizedResult = isLocationOnlyEditMode
-      ? null
+      ? normalizeClientLocationForm(form)
       : normalizeClientForm(form);
 
     if (normalizedResult && !normalizedResult.valid) {
@@ -674,7 +733,7 @@ export default function Clients() {
         } else if (isLocationOnlyEditMode) {
           await updateBusinessClientBranchLocations(
             editClient.businessId || editClient.id,
-            form.branches || [],
+            normalizedResult.value,
           );
         } else {
           throw new Error(

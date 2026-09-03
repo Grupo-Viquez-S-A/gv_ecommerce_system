@@ -42,6 +42,18 @@ const QUOTATION_ADJUSTMENT_ROLE_CODES = new Set([
   "president",
 ]);
 
+const AGENTS_PANEL_ROLE_CODES = new Set([
+  "brand_manager",
+  "brand manager",
+  "gerente_marca",
+  "gerente de marca",
+  "encargado",
+  "contador",
+  "accountant",
+  "presidente",
+  "president",
+]);
+
 function normalizeRoleValue(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -90,6 +102,16 @@ export function hasQuotationAdjustmentAccess(user) {
   return (
     QUOTATION_ADJUSTMENT_ROLE_CODES.has(roleCode) ||
     QUOTATION_ADJUSTMENT_ROLE_CODES.has(roleName)
+  );
+}
+
+export function hasAgentsPanelAccess(user) {
+  const roleCode = normalizeRoleValue(user?.role?.code);
+  const roleName = normalizeRoleValue(user?.role?.name);
+
+  return (
+    AGENTS_PANEL_ROLE_CODES.has(roleCode) ||
+    AGENTS_PANEL_ROLE_CODES.has(roleName)
   );
 }
 

@@ -14,8 +14,6 @@ import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
-import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
-import { hasPetCategoryProducts } from "../components/catalog/petCategoryUtils";
 import QuotationClientIdentityFields from "../components/catalog/QuotationClientIdentityFields.jsx";
 
 import {
@@ -71,6 +69,7 @@ import {
   getQuotationAdvancePercentageForItems,
   getQuotationAdvanceRuleLabel,
 } from "../utils/quotationAdvanceRules.js";
+import { downloadGtiProductsExcel } from "../utils/gtiProductExport.js";
 
 const PAGE_SIZE = 8;
 const CART_STORAGE_KEY = "gv-ecommerce:quotation-cart:v2";
@@ -244,6 +243,8 @@ export default function Catalog() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [catalogError, setCatalogError] = useState("");
   const [refreshError, setRefreshError] = useState("");
+  const [exportError, setExportError] = useState("");
+  const [isExportingGti, setIsExportingGti] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
 
   const [selectedProductDetails, setSelectedProductDetails] =
@@ -796,13 +797,6 @@ export default function Catalog() {
       startIndex + PAGE_SIZE,
     );
   }, [filteredProducts, safeCurrentPage]);
-
-  const shouldShowPetNotice = useMemo(
-    () =>
-      isTextileProductsCatalog &&
-      hasPetCategoryProducts(filteredProducts),
-    [filteredProducts, isTextileProductsCatalog],
-  );
 
   const hasActiveFilters = Boolean(
     filters.search.trim() ||
@@ -1445,6 +1439,23 @@ export default function Catalog() {
     loadCatalog();
   };
 
+  const handleExportGtiProducts = async () => {
+    setExportError("");
+    setIsExportingGti(true);
+
+    try {
+      await downloadGtiProductsExcel(products);
+    } catch (error) {
+      console.error("GTI product export error:", error);
+      setExportError(
+        error?.message ||
+          "No fue posible generar el Excel para GTI.",
+      );
+    } finally {
+      setIsExportingGti(false);
+    }
+  };
+
   const renderLocationCard = () => (
     <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -2004,7 +2015,19 @@ export default function Catalog() {
           totalProducts={
             loading ? 0 : filteredProducts.length
           }
+          onExportGti={handleExportGtiProducts}
+          isExportingGti={isExportingGti}
+          exportDisabled={loading || products.length === 0}
         />
+
+        {exportError && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+          >
+            {exportError}
+          </div>
+        )}
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
@@ -2056,7 +2079,6 @@ export default function Catalog() {
                   activeCategoryId={filters.categoryId}
                   onChange={handleProductCategoryChange}
                 />
-                {shouldShowPetNotice && <PetCostumeNotice />}
               </>
             )}
 

@@ -1,6 +1,11 @@
-﻿import { Boxes, PackageOpen } from 'lucide-react';
+import { Boxes, Download, PackageOpen } from "lucide-react";
 
-export default function CatalogHeader({ totalProducts = 0 }) {
+export default function CatalogHeader({
+  totalProducts = 0,
+  onExportGti,
+  isExportingGti = false,
+  exportDisabled = false,
+}) {
   return (
     <section className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
@@ -21,22 +26,40 @@ export default function CatalogHeader({ totalProducts = 0 }) {
         </p>
       </div>
 
-      <div
-        className="
-          flex min-w-[190px] items-center gap-3 rounded-xl border
-          border-[#2A4670] bg-[#0E2445] px-4 py-3
-        "
-      >
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#132F58]">
-          <PackageOpen className="h-5 w-5 text-[#D7A91D]" />
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={onExportGti}
+          disabled={exportDisabled || isExportingGti}
+          className="
+            inline-flex h-20 w-full items-center justify-center gap-2 rounded-xl
+            border border-[#45648D] bg-[#132F58] px-4 text-sm font-bold
+            text-white transition hover:border-[#D7A91D] hover:bg-[#1B3E6B]
+            hover:text-[#E9BC2D] sm:w-[190px]
+            disabled:cursor-not-allowed disabled:opacity-60
+          "
+        >
+          <Download className="h-4 w-4" />
+          {isExportingGti ? "Exportando..." : "Exportar catálogo"}
+        </button>
 
-        <div>
-          <p className="text-xs text-slate-400">Productos disponibles</p>
+        <div
+          className="
+            flex h-20 w-full items-center gap-3 rounded-xl border
+            border-[#2A4670] bg-[#0E2445] px-4 py-3 sm:w-[190px]
+          "
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#132F58]">
+            <PackageOpen className="h-5 w-5 text-[#D7A91D]" />
+          </div>
 
-          <p className="mt-0.5 text-lg font-extrabold leading-none text-white">
-            {totalProducts}
-          </p>
+          <div>
+            <p className="text-xs text-slate-400">Productos disponibles</p>
+
+            <p className="mt-0.5 text-lg font-extrabold leading-none text-white">
+              {totalProducts}
+            </p>
+          </div>
         </div>
       </div>
     </section>

@@ -35,7 +35,7 @@ export default function AgentsTable({
               Clientes
             </th>
             <th className="px-5 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider">
-              Ventas
+              Ventas último mes
             </th>
             <th className="px-5 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider">
               Estado

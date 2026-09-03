@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  hasAgentsPanelAccess,
   hasClientDeletionAccess,
   hasPaymentApprovalAccess,
   hasQuotationAdjustmentAccess,
@@ -107,6 +108,29 @@ test("solo roles autorizados pueden ajustar descuentos de cotizaciones", () => {
   );
   assert.equal(
     hasQuotationAdjustmentAccess({ role: { code: "sales_agent" } }),
+    false,
+  );
+});
+
+test("solo roles autorizados pueden ver el panel de agentes", () => {
+  assert.equal(
+    hasAgentsPanelAccess({ role: { code: "BRAND_MANAGER" } }),
+    true,
+  );
+  assert.equal(
+    hasAgentsPanelAccess({ role: { name: "Encargado" } }),
+    true,
+  );
+  assert.equal(
+    hasAgentsPanelAccess({ role: { code: "PRESIDENT" } }),
+    true,
+  );
+  assert.equal(
+    hasAgentsPanelAccess({ role: { code: "ACCOUNTANT" } }),
+    true,
+  );
+  assert.equal(
+    hasAgentsPanelAccess({ role: { code: "sales_agent" } }),
     false,
   );
 });

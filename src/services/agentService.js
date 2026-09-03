@@ -1,5 +1,8 @@
 import { supabase } from "./primarySupabaseClient.js";
-import { getTodayCRDateString } from "../utils/dateUtils.js";
+import {
+  addDaysCRDateString,
+  getTodayCRDateString,
+} from "../utils/dateUtils.js";
 
 const ECOMMERCE_APPLICATION_ID = "64c10718-fce7-42c6-a25f-d81c6b5cd51c";
 
@@ -96,12 +99,135 @@ function throwIfError(response, actionMessage) {
   throw new Error(`${actionMessage}: ${response.error.message}`);
 }
 
+function getNumber(value, fallback = 0) {
+  const numericValue = Number(value);
+
+  return Number.isFinite(numericValue) ? numericValue : fallback;
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("es-CR", {
+    style: "currency",
+    currency: "CRC",
+    maximumFractionDigits: 0,
+  }).format(getNumber(value, 0));
+}
+
+function createEmptyPerformance() {
+  return {
+    clientsCount: 0,
+    salesLastMonthAmount: 0,
+    totalQuotes: 0,
+    totalOrders: 0,
+  };
+}
+
+function getAgentPerformance(performanceByUserId, userId) {
+  return performanceByUserId[userId] || createEmptyPerformance();
+}
+
+const CANCELLED_ORDER_STATUSES = new Set([
+  "cancelado",
+  "cancelada",
+  "rechazado",
+  "rechazada",
+  "anulado",
+  "anulada",
+]);
+
+async function getAgentPerformanceByUserId(userIds = []) {
+  if (!userIds.length) {
+    return {};
+  }
+
+  const performanceByUserId = userIds.reduce((result, userId) => {
+    result[userId] = createEmptyPerformance();
+    return result;
+  }, {});
+
+  const lastMonthStartDate = addDaysCRDateString(-30);
+
+  const [customersResponse, quotationsResponse, productionOrdersResponse] =
+    await Promise.all([
+      supabase
+        .from("customers")
+        .select("customer_id, assigned_sales_agent_user_id, is_active, deleted_at")
+        .in("assigned_sales_agent_user_id", userIds)
+        .eq("is_active", true)
+        .is("deleted_at", null),
+      supabase
+        .from("quotations")
+        .select("quotation_id, user_id, total, is_active")
+        .in("user_id", userIds)
+        .eq("is_active", true),
+      supabase
+        .from("production_orders")
+        .select("production_order_id, quotation_id, production_order_status, is_active, created_at")
+        .eq("is_active", true)
+        .gte("created_at", lastMonthStartDate),
+    ]);
+
+  const customers = throwIfError(
+    customersResponse,
+    "No fue posible cargar los clientes asignados",
+  );
+  const quotations = throwIfError(
+    quotationsResponse,
+    "No fue posible cargar las cotizaciones de los agentes",
+  );
+  const productionOrders = throwIfError(
+    productionOrdersResponse,
+    "No fue posible cargar las ventas acumuladas de los agentes",
+  );
+
+  for (const customer of customers) {
+    const agentUserId = customer.assigned_sales_agent_user_id;
+
+    if (performanceByUserId[agentUserId]) {
+      performanceByUserId[agentUserId].clientsCount += 1;
+    }
+  }
+
+  const quotationsById = indexRowsByKey(quotations, "quotation_id");
+
+  for (const quotation of quotations) {
+    if (performanceByUserId[quotation.user_id]) {
+      performanceByUserId[quotation.user_id].totalQuotes += 1;
+    }
+  }
+
+  for (const order of productionOrders) {
+    const orderStatus = String(order.production_order_status || "")
+      .trim()
+      .toLowerCase();
+
+    if (CANCELLED_ORDER_STATUSES.has(orderStatus)) {
+      continue;
+    }
+
+    const quotation = quotationsById[order.quotation_id];
+
+    if (!quotation || !performanceByUserId[quotation.user_id]) {
+      continue;
+    }
+
+    performanceByUserId[quotation.user_id].totalOrders += 1;
+    performanceByUserId[quotation.user_id].salesLastMonthAmount += getNumber(
+      quotation.total,
+      0,
+    );
+  }
+
+  return performanceByUserId;
+}
+
 function createAgentItem({
   membership,
   profile,
   company,
   role,
   applicationAccess,
+  performance,
 }) {
   const fullName = [profile?.name, profile?.surname]
     .filter(Boolean)
@@ -115,6 +241,8 @@ function createAgentItem({
     isDateRangeActive(membership?.start_date, membership?.end_date) &&
     applicationAccess?.is_active !== false &&
     isDateRangeActive(applicationAccess?.start_date, applicationAccess?.end_date);
+
+  const agentPerformance = performance || createEmptyPerformance();
 
   return {
     id: membership.membership_id,
@@ -133,10 +261,12 @@ function createAgentItem({
     department: "Ventas",
     role: role?.role_name || "Agente de ventas",
     roleCode: role?.role_code || "",
-    sales: "Sin datos",
-    clientsCount: 0,
-    totalQuotes: 0,
-    totalOrders: 0,
+    sales: formatCurrency(agentPerformance.salesLastMonthAmount),
+    salesLastMonth: formatCurrency(agentPerformance.salesLastMonthAmount),
+    salesLastMonthAmount: agentPerformance.salesLastMonthAmount,
+    clientsCount: agentPerformance.clientsCount,
+    totalQuotes: agentPerformance.totalQuotes,
+    totalOrders: agentPerformance.totalOrders,
     commission: "No definida",
     status: isActive ? "Activo" : "Inactivo",
     notes:
@@ -223,6 +353,7 @@ export async function getSalesAgents() {
     applicationAccessRows,
     "user_id",
   );
+  const performanceByUserId = await getAgentPerformanceByUserId(userIds);
 
   return memberships
     .filter((membership) => applicationAccessByUserId[membership.user_id])
@@ -233,6 +364,10 @@ export async function getSalesAgents() {
         company: companiesById[membership.company_id],
         role: rolesById[membership.role_id],
         applicationAccess: applicationAccessByUserId[membership.user_id],
+        performance: getAgentPerformance(
+          performanceByUserId,
+          membership.user_id,
+        ),
       }),
     );
 }

@@ -14,8 +14,6 @@ import EmptyState from "../components/catalog/EmptyState";
 import Pagination from "../components/catalog/Pagination";
 import CatalogProductDetailsModal from "../components/catalog/CatalogProductDetailsModal";
 import ProductCategorySwitcher from "../components/catalog/ProductCategorySwitcher";
-import PetCostumeNotice from "../components/catalog/PetCostumeNotice";
-import { hasPetCategoryProducts } from "../components/catalog/petCategoryUtils";
 
 import ClientCatalogGrid from "../components/clientCatalog/ClientCatalogGrid";
 
@@ -436,13 +434,6 @@ export default function ClientCatalog({ showPrices = false }) {
     );
   }, [filteredProducts, safeCurrentPage]);
 
-  const shouldShowPetNotice = useMemo(
-    () =>
-      isTextileProductsCatalog &&
-      hasPetCategoryProducts(filteredProducts),
-    [filteredProducts, isTextileProductsCatalog],
-  );
-
   const hasActiveFilters = Boolean(
     filters.search.trim() ||
       filters.categoryId ||
@@ -565,8 +556,6 @@ export default function ClientCatalog({ showPrices = false }) {
           activeCatalog={activeCatalog}
           onChange={handleCatalogChange}
         />
-
-        {shouldShowPetNotice && <PetCostumeNotice />}
 
         {loading ? (
           <section className="flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#35547E] bg-[#102441]/60 px-6 py-12 text-center">
