@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.js";
 import { signInWithEmail } from "../services/loginService";
 import { isClientAccount } from "../utils/roles.js";
+import AppFooter from "../components/AppFooter.jsx";
 
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
@@ -79,10 +80,10 @@ function Login() {
 
   return (
     <div
-      className="min-h-dvh w-full overflow-y-auto bg-cover bg-center bg-no-repeat"
+      className="flex min-h-dvh w-full flex-col overflow-y-auto bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="flex min-h-dvh w-full items-center justify-center px-4 py-6 sm:px-6 lg:justify-start lg:gap-[clamp(4rem,8vw,10rem)] lg:pl-[clamp(14rem,18vw,21rem)] lg:pr-6">
+      <div className="flex w-full flex-1 items-center justify-center px-4 py-6 sm:px-6 lg:justify-start lg:gap-[clamp(4rem,8vw,10rem)] lg:pl-[clamp(14rem,18vw,21rem)] lg:pr-6">
         <div className="flex w-full max-w-md flex-col gap-5 rounded-3xl bg-white p-6 shadow-2xl sm:p-10">
           <div className="flex items-center gap-2">
             <img
@@ -313,6 +314,8 @@ function Login() {
           />
         </div>
       </div>
+
+      <AppFooter />
 
       {showForgotPasswordInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">

@@ -4,6 +4,7 @@ import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
 
 import { signOut, updatePasswordForCurrentUser } from "../services/loginService";
 import { supabase } from "../services/primarySupabaseClient";
+import AppFooter from "../components/AppFooter.jsx";
 
 import bgImage from "../assets/images/92F606BD-4990-462F-A3D2-124B6BE4B23F.jpg";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
@@ -97,10 +98,10 @@ function ResetPassword() {
 
   return (
     <div
-      className="min-h-screen w-screen bg-cover bg-center bg-no-repeat px-5 py-8"
+      className="flex min-h-dvh w-full flex-col bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${bgImage})` }}
     >
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="flex flex-1 items-center justify-center px-5 py-8">
         <section className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
           <div className="mb-7 flex items-center gap-3">
             <img src={logoImage} alt="Logo Grupo Víquez" className="h-10 w-auto" />
@@ -201,6 +202,7 @@ function ResetPassword() {
           </Link>
         </section>
       </div>
+      <AppFooter />
     </div>
   );
 }

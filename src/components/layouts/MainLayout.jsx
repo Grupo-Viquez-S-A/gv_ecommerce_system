@@ -4,6 +4,7 @@ import { Outlet } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.js";
 import DashSideBar from "../dashSideBar.jsx";
 import AppTopBar from "../AppTopBar.jsx";
+import AppFooter from "../AppFooter.jsx";
 
 const DEFAULT_COMPANY = {
   name: "Grupo Víquez S.A.",
@@ -91,9 +92,10 @@ export default function MainLayout() {
           userId={user?.id}
         />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="min-h-0 flex-1 overflow-y-auto">
           <Outlet context={{ currentCompany }} />
         </main>
+        <AppFooter />
       </div>
     </div>
   );
