@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 import ClientCatalog from "./ClientCatalog.jsx";
+import AppFooter from "../components/AppFooter.jsx";
 import { useAuth } from "../context/AuthContext.js";
 import { isClientAccount } from "../utils/roles.js";
 import logoImage from "../assets/images/0E7BFEE5-FB79-49F7-9E7D-DE47EBC12758.png";
@@ -35,6 +36,7 @@ export default function PublicClientCatalog() {
       <main className="min-h-0 flex-1 overflow-y-auto">
         <ClientCatalog showPrices />
       </main>
+      <AppFooter />
     </div>
   );
 }
