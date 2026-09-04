@@ -309,39 +309,6 @@ export type Database = {
         }
         Relationships: []
       }
-      dimensions: {
-        Row: {
-          created_at: string
-          dimension_id: string
-          dimension_name: string
-          display_order: number
-          heigth: string
-          lenght: string | null
-          updated_at: string
-          width: string | null
-        }
-        Insert: {
-          created_at?: string
-          dimension_id?: string
-          dimension_name: string
-          display_order?: number
-          heigth?: string
-          lenght?: string | null
-          updated_at?: string
-          width?: string | null
-        }
-        Update: {
-          created_at?: string
-          dimension_id?: string
-          dimension_name?: string
-          display_order?: number
-          heigth?: string
-          lenght?: string | null
-          updated_at?: string
-          width?: string | null
-        }
-        Relationships: []
-      }
       emails: {
         Row: {
           created_at: string
@@ -1988,7 +1955,6 @@ export type Database = {
       textiles_inventory: {
         Row: {
           created_at: string
-          dimension_id: string | null
           gtin: string | null
           is_active: boolean
           is_default: boolean
@@ -2005,7 +1971,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          dimension_id?: string | null
           gtin?: string | null
           is_active?: boolean
           is_default?: boolean
@@ -2022,7 +1987,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          dimension_id?: string | null
           gtin?: string | null
           is_active?: boolean
           is_default?: boolean
@@ -2038,13 +2002,6 @@ export type Database = {
           variant_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_textiles_inventory_dimension"
-            columns: ["dimension_id"]
-            isOneToOne: false
-            referencedRelation: "dimensions"
-            referencedColumns: ["dimension_id"]
-          },
           {
             foreignKeyName: "fk_textiles_inventory_product"
             columns: ["product_id"]

@@ -106,7 +106,6 @@ ALTER TABLE IF EXISTS public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.product_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.product_collections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.sizes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS public.dimensions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS public.product_colors ENABLE ROW LEVEL SECURITY;
 
 GRANT SELECT ON TABLE
@@ -120,7 +119,6 @@ GRANT SELECT ON TABLE
   public.product_types,
   public.product_collections,
   public.sizes,
-  public.dimensions,
   public.product_colors
 TO anon, authenticated;
 
@@ -229,13 +227,6 @@ USING (is_active = true);
 DROP POLICY IF EXISTS public_catalog_read_sizes ON public.sizes;
 CREATE POLICY public_catalog_read_sizes
 ON public.sizes
-FOR SELECT
-TO anon, authenticated
-USING (true);
-
-DROP POLICY IF EXISTS public_catalog_read_dimensions ON public.dimensions;
-CREATE POLICY public_catalog_read_dimensions
-ON public.dimensions
 FOR SELECT
 TO anon, authenticated
 USING (true);

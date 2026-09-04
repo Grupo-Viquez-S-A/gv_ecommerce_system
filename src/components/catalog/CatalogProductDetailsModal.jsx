@@ -13,7 +13,6 @@ import {
 
 import ColorDots from "./ColorDots";
 import CompositionBadges from "./CompositionBadges";
-import { shouldProductUseDimensions } from "./petCategoryUtils";
 import { formatCurrency } from "../../utils/formatCurrency.js";
 import { getInventorySizeLabel } from "../../utils/inventorySizes.js";
 
@@ -71,32 +70,6 @@ function getGalleryImages(product) {
   }
 
   return imageFiles;
-}
-
-function formatDimension(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  return `${value} cm`;
-}
-
-function getVariantDimensions(variant) {
-  const dimension = variant?.dimension || null;
-
-  return [
-    dimension?.heigth || dimension?.height
-      ? `Alto ${formatDimension(dimension.heigth || dimension.height)}`
-      : null,
-    dimension?.width
-      ? `Ancho ${formatDimension(dimension.width)}`
-      : null,
-    dimension?.lenght || dimension?.length
-      ? `Largo ${formatDimension(dimension.lenght || dimension.length)}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 function SummaryCard({ icon: Icon, label, value }) {
@@ -189,7 +162,6 @@ export default function CatalogProductDetailsModal({
   const productKey = product.product_id || product.id || product.sku || "product";
 
   const isTextileProduct = product.catalog_type === "textile_products";
-  const showDimensions = shouldProductUseDimensions(product);
   const entityName = isTextileProduct ? "producto" : "tela";
 
   const productName = product.product_name || product.fabric_name || "Sin nombre";
@@ -490,9 +462,6 @@ export default function CatalogProductDetailsModal({
                             <th className="px-4 py-2.5 font-semibold">Precio (sin IVA)</th>
                             <th className="px-4 py-2.5 font-semibold">Monto IVA</th>
                             <th className="px-4 py-2.5 font-semibold">Monto IVAI</th>
-                            {showDimensions && (
-                              <th className="px-4 py-2.5 font-semibold">Dimensiones</th>
-                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -521,11 +490,6 @@ export default function CatalogProductDetailsModal({
                                 <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
                                   {formatCurrency(basePrice + ivaAmount)}
                                 </td>
-                                {showDimensions && (
-                                  <td className="px-4 py-3 text-[0.88rem] text-[#D2DCEC]">
-                                    {getVariantDimensions(variant) || "-"}
-                                  </td>
-                                )}
                               </tr>
                             );
                           })}
