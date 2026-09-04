@@ -351,10 +351,6 @@ export default function ClientCatalog({ showPrices = false }) {
         ...(product.available_sizes || []).map(
           (size) => getInventorySizeLabel(size.size_name),
         ),
-        ...(product.measurements || []).map(
-          (measurement) =>
-            `${getInventorySizeLabel(measurement.size_name)} ${measurement.dimension_name}`,
-        ),
       ]
         .filter(Boolean)
         .join(" ")

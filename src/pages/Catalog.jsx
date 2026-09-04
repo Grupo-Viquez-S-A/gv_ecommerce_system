@@ -715,10 +715,6 @@ export default function Catalog() {
         ...(product.variants || []).flatMap(
           (variant) => [variant.sku, variant.gtin, variant.color],
         ),
-        ...(product.measurements || []).map(
-          (measurement) =>
-            `${getInventorySizeLabel(measurement.size_name)} ${measurement.dimension_name}`,
-        ),
       ]
         .filter(Boolean)
         .join(" ")

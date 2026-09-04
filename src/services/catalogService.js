@@ -321,7 +321,6 @@ function createTextileProductCatalogItem({
   filesByProduct,
   variantsByProduct,
   sizesById,
-  dimensionsById,
 }) {
   const productFiles = filesByProduct[product.product_id] || [];
   const productVariants = (variantsByProduct[product.product_id] || []).filter(
@@ -331,12 +330,6 @@ function createTextileProductCatalogItem({
     productVariants.find((variant) => variant.size_id) ||
     productVariants[0];
   const variants = productVariants.map((variant) => {
-    const dimension = dimensionsById[variant.dimension_id] || null;
-    const measurements = dimension ? [
-      { id: `${variant.variant_id}-height`, variant_id: variant.variant_id, size_id: variant.size_id, size_name: sizesById[variant.size_id]?.size_name || "Talla no definida", dimension_name: "Alto", measurement_value: dimension.heigth, unit: "cm" },
-      { id: `${variant.variant_id}-width`, variant_id: variant.variant_id, size_id: variant.size_id, size_name: sizesById[variant.size_id]?.size_name || "Talla no definida", dimension_name: "Ancho", measurement_value: dimension.width, unit: "cm" },
-      { id: `${variant.variant_id}-length`, variant_id: variant.variant_id, size_id: variant.size_id, size_name: sizesById[variant.size_id]?.size_name || "Talla no definida", dimension_name: "Largo", measurement_value: dimension.lenght, unit: "cm" },
-    ] : [];
     return {
       ...variant,
       tax_rate: variant.iva,
@@ -344,13 +337,10 @@ function createTextileProductCatalogItem({
       available_quantity: Number(variant.stock_quantity || 0) - Number(variant.reserved_quantity || 0),
       inventory_tracking_enabled: true,
       size: sizesById[variant.size_id] || null,
-      dimension,
-      measurements,
       files: [],
     };
   });
   const primaryCatalogVariant = variants.find((variant) => variant.variant_id === primaryVariant?.variant_id) || null;
-  const productMeasurements = variants.flatMap((variant) => variant.measurements);
 
   const category = categoriesById[product.category_id];
   const productType = typesById[product.type_id];
@@ -392,9 +382,9 @@ function createTextileProductCatalogItem({
     has_incomplete_legacy_variant: productVariants.some((variant) => !variant.size_id),
 
     size: primaryCatalogVariant?.size?.size_name || "",
-    length: primaryCatalogVariant?.dimension?.lenght || "",
-    width: primaryCatalogVariant?.dimension?.width || "",
-    height: primaryCatalogVariant?.dimension?.heigth || "",
+    length: "",
+    width: "",
+    height: "",
     unit: "cm",
     iva_percentage: normalizePrice(primaryVariant?.tax_rate ?? product.iva),
     iva_amount:
@@ -444,7 +434,7 @@ function createTextileProductCatalogItem({
         inventory_tracking_enabled: true,
       })),
 
-    measurements: productMeasurements,
+    measurements: [],
     variants,
     colors: [],
     compositions: [],
@@ -661,11 +651,7 @@ export async function getTextileProductCatalogProducts() {
     variantRows.map((variant) => variant.size_id),
   );
 
-  const dimensionIds = uniqueValues(
-    variantRows.map((variant) => variant.dimension_id),
-  );
-
-  const [sizesResponse, dimensionsResponse] = await Promise.all([
+  const [sizesResponse] = await Promise.all([
     sizeIds.length > 0
       ? supabase
           .from("sizes")
@@ -673,19 +659,11 @@ export async function getTextileProductCatalogProducts() {
           .in("size_id", sizeIds)
           .order("display_order", { ascending: true })
       : Promise.resolve({ data: [], error: null }),
-
-    dimensionIds.length > 0
-      ? supabase
-          .from("dimensions")
-          .select("*")
-          .in("dimension_id", dimensionIds)
-          .order("display_order", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
   ]);
 
   ensureNoErrors(
-    [sizesResponse, dimensionsResponse],
-    "No fue posible cargar las tallas y medidas de los productos",
+    [sizesResponse],
+    "No fue posible cargar las tallas de los productos",
   );
 
   const filesByProduct = groupRowsByKey(
@@ -709,11 +687,6 @@ export async function getTextileProductCatalogProducts() {
     "size_id",
   );
 
-  const dimensionsById = indexRowsByKey(
-    dimensionsResponse.data || [],
-    "dimension_id",
-  );
-
   return textileProducts.map((product) =>
     createTextileProductCatalogItem({
       product,
@@ -722,7 +695,6 @@ export async function getTextileProductCatalogProducts() {
       filesByProduct,
       variantsByProduct,
       sizesById,
-      dimensionsById,
     }),
   );
 }
