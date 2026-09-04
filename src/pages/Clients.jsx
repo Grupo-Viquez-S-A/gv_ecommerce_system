@@ -36,7 +36,7 @@ import {
   isSalesAgent,
 } from "../utils/roles.js";
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 8;
 
 function getInitials(name = "") {
   const initials = name
