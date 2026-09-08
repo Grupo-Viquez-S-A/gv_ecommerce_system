@@ -151,10 +151,9 @@ async function getAgentPerformanceByUserId(userIds = []) {
     await Promise.all([
       supabase
         .from("customers")
-        .select("customer_id, assigned_sales_agent_user_id, is_active, deleted_at")
+        .select("customer_id, assigned_sales_agent_user_id, is_active")
         .in("assigned_sales_agent_user_id", userIds)
-        .eq("is_active", true)
-        .is("deleted_at", null),
+        .eq("is_active", true),
       supabase
         .from("quotations")
         .select("quotation_id, user_id, total, is_active")

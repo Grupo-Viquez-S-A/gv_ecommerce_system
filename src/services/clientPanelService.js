@@ -1,4 +1,28 @@
 import { supabase } from "./primarySupabaseClient.js";
+import { getPrimaryClientLocation } from "./clientService.js";
+
+const CUSTOMER_LOCATION_RELATION_SELECT = `
+  locations!locations_customer_id_fkey(
+    location_id,
+    business_id:customer_id,
+    country_id,
+    province_id,
+    canton_id,
+    district_id,
+    location,
+    latitude,
+    longitude,
+    location_accuracy_meters,
+    is_primary,
+    is_active,
+    created_at,
+    updated_at,
+    country:countries!locations_country_id_fkey(country_id, country_code, country_name),
+    province:provinces!locations_province_id_fkey(province_id, province_code, province_name),
+    canton:cantons!locations_canton_id_fkey(canton_id, canton_code, canton_name),
+    district:districts!locations_district_id_fkey(district_id, district_code, district_name)
+  )
+`;
 
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
@@ -220,7 +244,7 @@ async function getQuotationRelations(quotation) {
       ? throwIfError(
           await supabase
             .from("customers")
-            .select("business_id:customer_id, legal_id, legal_name:company_name, business_name:commercial_name, activity_code, province, city, district, address")
+            .select(`business_id:customer_id, legal_id, legal_name:company_name, business_name:commercial_name, activity_code, ${CUSTOMER_LOCATION_RELATION_SELECT}`)
             .eq("customer_id", quotation.customer_id || quotation.business_id)
             .maybeSingle(),
           "No fue posible cargar el cliente",
@@ -249,15 +273,7 @@ async function getQuotationRelations(quotation) {
   const primaryEmail = emails.find((row) => row.is_primary)?.email || emails[0]?.email || "";
   const primaryPhone = phones.find((row) => row.is_primary)?.phone || phones[0]?.phone || "";
 
-  const branch = business
-    ? {
-        branch_id: business.business_id,
-        province: business.province || "",
-        city: business.city || "",
-        district: business.district || "",
-        address: business.address || "",
-      }
-    : null;
+  const branch = getPrimaryClientLocation(business);
 
   return {
     business: business

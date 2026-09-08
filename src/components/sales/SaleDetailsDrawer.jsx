@@ -362,6 +362,10 @@ export default function SaleDetailsDrawer({
                                 value={payment.referenceNumber || "No indicada"}
                               />
                               <PaymentSummaryCard
+                                label="Factura"
+                                value={payment.invoiceNumber || "No indicada"}
+                              />
+                              <PaymentSummaryCard
                                 label="Adjuntos"
                                 value={String(payment.receipts.length)}
                               />

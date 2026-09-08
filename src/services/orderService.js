@@ -1,4 +1,21 @@
 import { supabase } from "./primarySupabaseClient.js";
+import { getPrimaryClientLocation } from "./clientService.js";
+
+const CUSTOMER_LOCATION_RELATION_SELECT = `
+  locations!locations_customer_id_fkey(
+    location_id,
+    business_id:customer_id,
+    location,
+    latitude,
+    longitude,
+    location_accuracy_meters,
+    is_primary,
+    is_active,
+    province:provinces!locations_province_id_fkey(province_id, province_code, province_name),
+    canton:cantons!locations_canton_id_fkey(canton_id, canton_code, canton_name),
+    district:districts!locations_district_id_fkey(district_id, district_code, district_name)
+  )
+`;
 
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
@@ -291,7 +308,7 @@ export async function getSalesOrders({
       ? throwIfError(
           await supabase
             .from("customers")
-            .select("business_id:customer_id, business_name:commercial_name, legal_name:company_name, province, district")
+            .select(`business_id:customer_id, business_name:commercial_name, legal_name:company_name, ${CUSTOMER_LOCATION_RELATION_SELECT}`)
             .in("customer_id", businessIds),
           "No fue posible cargar los clientes",
         )
@@ -320,8 +337,9 @@ export async function getSalesOrders({
     const clientName =
       business?.business_name || business?.legal_name || "Cliente sin nombre";
 
-    const branchLabel = business
-      ? [business.district, business.province].filter(Boolean).join(", ")
+    const businessLocation = getPrimaryClientLocation(business);
+    const branchLabel = businessLocation
+      ? [businessLocation.district, businessLocation.province].filter(Boolean).join(", ")
       : null;
 
     const sellerName =

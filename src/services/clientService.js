@@ -21,16 +21,8 @@ const BUSINESS_COLUMNS = `
   owner_name,
   business_name:commercial_name,
   activity_code,
-  province,
-  city,
-  district,
-  address,
-  latitude,
-  longitude,
-  location_accuracy_meters,
   assigned_sales_agent_user_id,
   visit_route_day,
-  deleted_at,
   customer_code,
   tax_status,
   regime,
@@ -38,6 +30,28 @@ const BUSINESS_COLUMNS = `
   is_active,
   created_at,
   updated_at
+`;
+
+const LOCATION_COLUMNS = `
+  location_id,
+  business_id:customer_id,
+  supplier_id,
+  country_id,
+  province_id,
+  canton_id,
+  district_id,
+  location,
+  latitude,
+  longitude,
+  location_accuracy_meters,
+  is_primary,
+  is_active,
+  created_at,
+  updated_at,
+  country:countries!locations_country_id_fkey(country_id, country_code, country_name),
+  province:provinces!locations_province_id_fkey(province_id, province_code, province_name),
+  canton:cantons!locations_canton_id_fkey(canton_id, canton_code, canton_name),
+  district:districts!locations_district_id_fkey(district_id, district_code, district_name)
 `;
 
 const COMPANY_COLUMNS = `
@@ -140,6 +154,57 @@ function getPrimaryValue(rows = [], valueKey) {
   const primaryRow = rows.find((row) => row.is_primary) || rows[0];
 
   return primaryRow?.[valueKey] || "";
+}
+
+function getFirstRelation(relation) {
+  if (Array.isArray(relation)) {
+    return relation[0] || null;
+  }
+
+  return relation || null;
+}
+
+function normalizeLookupText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+centro$/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function toClientBranch(location) {
+  const province = getFirstRelation(location.province);
+  const canton = getFirstRelation(location.canton);
+  const district = getFirstRelation(location.district);
+
+  return {
+    ...location,
+    id: location.location_id,
+    branchId: location.location_id,
+    branch_id: location.location_id,
+    locationId: location.location_id,
+    location_id: location.location_id,
+    name:
+      [province?.province_name, district?.district_name]
+        .filter(Boolean)
+        .join(", ") || "Dirección principal",
+    province: province?.province_name || "",
+    city: canton?.canton_name || "",
+    district: district?.district_name || "",
+    address: location.location || "",
+    latitude: location.latitude ?? null,
+    longitude: location.longitude ?? null,
+    locationAccuracy: location.location_accuracy_meters ?? null,
+    location_accuracy_meters: location.location_accuracy_meters ?? null,
+    phone: "",
+    phones: [],
+    sales: formatSalesAmount(0),
+    lastPurchase: "Sin compras",
+    status: normalizeStatus(location.is_active),
+    representatives: [],
+  };
 }
 
 const CANCELLED_ORDER_STATUSES = ["cancelado", "cancelada", "rechazado", "rechazada"];
@@ -366,6 +431,7 @@ function createClientItem({
   company,
   emails,
   phones,
+  branches,
   index,
   salesByBusinessId = {},
 }) {
@@ -381,32 +447,15 @@ function createClientItem({
     )
     .map(toClientPhone);
 
-  const clientBranches = business.address
-    ? [
-        {
-          id: business.business_id,
-          branchId: business.business_id,
-          branch_id: business.business_id,
-          name:
-            [business.province, business.district].filter(Boolean).join(", ") ||
-            "Dirección principal",
-          province: business.province || "",
-          city: business.city || "",
-          district: business.district || "",
-          address: business.address || "",
-          latitude: business.latitude ?? null,
-          longitude: business.longitude ?? null,
-          locationAccuracy: business.location_accuracy_meters ?? null,
-          location_accuracy_meters: business.location_accuracy_meters ?? null,
-          phone: getPrimaryValue(clientPhones, "phone"),
-          phones: clientPhones,
-          sales: formatSalesAmount(0),
-          lastPurchase: "Sin compras",
-          status: normalizeStatus(business.is_active),
-          representatives: [],
-        },
-      ]
-    : [];
+  const clientBranches = (branches || []).map((branch) => ({
+    ...branch,
+    phone: getPrimaryValue(clientPhones, "phone"),
+    phones: clientPhones,
+  }));
+  const primaryBranch =
+    clientBranches.find((branch) => branch.is_primary === true) ||
+    clientBranches[0] ||
+    {};
 
   return {
     id: business.business_id,
@@ -429,14 +478,14 @@ function createClientItem({
     ownerName: business.owner_name || "",
     activityCode: business.activity_code || "",
     taxStatus: business.tax_status || "",
-    province: business.province || "",
-    city: business.city || "",
-    district: business.district || "",
-    address: business.address || "",
-    latitude: business.latitude ?? null,
-    longitude: business.longitude ?? null,
-    locationAccuracy: business.location_accuracy_meters ?? null,
-    location_accuracy_meters: business.location_accuracy_meters ?? null,
+    province: primaryBranch.province || "",
+    city: primaryBranch.city || "",
+    district: primaryBranch.district || "",
+    address: primaryBranch.address || "",
+    latitude: primaryBranch.latitude ?? null,
+    longitude: primaryBranch.longitude ?? null,
+    locationAccuracy: primaryBranch.locationAccuracy ?? null,
+    location_accuracy_meters: primaryBranch.location_accuracy_meters ?? null,
 
     email: getPrimaryValue(emails, "email"),
     phone: getPrimaryValue(clientPhones, "phone"),
@@ -468,6 +517,7 @@ async function getRelatedRowsByBusinessIds(businessIds = []) {
   const [
     emailsResponse,
     businessPhonesResponse,
+    locationsResponse,
   ] = await Promise.all([
     supabase
       .from("emails")
@@ -478,6 +528,14 @@ async function getRelatedRowsByBusinessIds(businessIds = []) {
       .from("phones")
       .select(PHONE_COLUMNS)
       .in("customer_id", businessIds),
+
+    supabase
+      .from("locations")
+      .select(LOCATION_COLUMNS)
+      .in("customer_id", businessIds)
+      .eq("is_active", true)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true }),
   ]);
 
   throwIfError(
@@ -490,10 +548,15 @@ async function getRelatedRowsByBusinessIds(businessIds = []) {
     "No fue posible cargar los teléfonos generales de los clientes",
   );
 
+  throwIfError(
+    locationsResponse,
+    "No fue posible cargar las ubicaciones de los clientes",
+  );
+
   return {
     emails: emailsResponse.data || [],
     phones: businessPhonesResponse.data || [],
-    branches: [],
+    branches: (locationsResponse.data || []).map(toClientBranch),
     representatives: [],
   };
 }
@@ -502,7 +565,6 @@ export async function getBusinessClients() {
   const businessesResponse = await supabase
     .from("customers")
     .select(BUSINESS_COLUMNS)
-    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   const businesses = throwIfError(
@@ -602,6 +664,229 @@ async function deleteRowsByIds(tableName, idColumn, ids = []) {
     response,
     `No fue posible eliminar registros de ${tableName}`,
   );
+}
+
+let geographyLookupPromise = null;
+
+function buildGeoKey(...parts) {
+  return parts.map(normalizeLookupText).join("|");
+}
+
+async function getGeographyLookup() {
+  if (!geographyLookupPromise) {
+    geographyLookupPromise = (async () => {
+      const [
+        countriesResponse,
+        provincesResponse,
+        cantonsResponse,
+        districtsResponse,
+      ] = await Promise.all([
+        supabase
+          .from("countries")
+          .select("country_id, country_code, country_name")
+          .eq("is_active", true),
+        supabase
+          .from("provinces")
+          .select("province_id, country_id, province_code, province_name"),
+        supabase
+          .from("cantons")
+          .select("canton_id, province_id, canton_code, canton_name"),
+        supabase
+          .from("districts")
+          .select("district_id, canton_id, district_code, district_name"),
+      ]);
+
+      const countries = throwIfError(
+        countriesResponse,
+        "No fue posible cargar el país para la ubicación",
+      );
+      const provinces = throwIfError(
+        provincesResponse,
+        "No fue posible cargar las provincias para la ubicación",
+      );
+      const cantons = throwIfError(
+        cantonsResponse,
+        "No fue posible cargar los cantones para la ubicación",
+      );
+      const districts = throwIfError(
+        districtsResponse,
+        "No fue posible cargar los distritos para la ubicación",
+      );
+
+      const country =
+        (countries || []).find((currentCountry) =>
+          ["cr", "506"].includes(normalizeLookupText(currentCountry.country_code)) ||
+          normalizeLookupText(currentCountry.country_name) === "costa rica",
+        ) ||
+        countries?.[0] ||
+        null;
+
+      return {
+        country,
+        provincesByName: new Map(
+          (provinces || []).map((province) => [
+            buildGeoKey(province.province_name),
+            province,
+          ]),
+        ),
+        cantonsByProvinceAndName: new Map(
+          (cantons || []).map((canton) => [
+            buildGeoKey(canton.province_id, canton.canton_name),
+            canton,
+          ]),
+        ),
+        districtsByCantonAndName: new Map(
+          (districts || []).map((district) => [
+            buildGeoKey(district.canton_id, district.district_name),
+            district,
+          ]),
+        ),
+      };
+    })();
+  }
+
+  return geographyLookupPromise;
+}
+
+async function resolveLocationGeoIds(branch = {}) {
+  const lookup = await getGeographyLookup();
+
+  if (!lookup.country) {
+    throw new Error("No se encontró Costa Rica en la tabla de países.");
+  }
+
+  const province = lookup.provincesByName.get(
+    buildGeoKey(branch.province),
+  );
+
+  if (!province) {
+    throw new Error(`No se encontró la provincia "${branch.province}" en la tabla provinces.`);
+  }
+
+  const canton = lookup.cantonsByProvinceAndName.get(
+    buildGeoKey(province.province_id, branch.city),
+  );
+
+  if (!canton) {
+    throw new Error(`No se encontró el cantón "${branch.city}" para la provincia "${branch.province}".`);
+  }
+
+  const district =
+    lookup.districtsByCantonAndName.get(
+      buildGeoKey(canton.canton_id, branch.district),
+    ) ||
+    lookup.districtsByCantonAndName.get(
+      buildGeoKey(canton.canton_id, String(branch.district || "").replace(/\s+centro$/i, "")),
+    );
+
+  if (!district) {
+    throw new Error(`No se encontró el distrito "${branch.district}" para el cantón "${branch.city}".`);
+  }
+
+  return {
+    country_id: lookup.country.country_id,
+    province_id: province.province_id,
+    canton_id: canton.canton_id,
+    district_id: district.district_id,
+  };
+}
+
+async function syncPrimaryLocation({
+  businessId,
+  branch,
+  existingBranches = [],
+}) {
+  if (!branch) {
+    return null;
+  }
+
+  const geoIds = await resolveLocationGeoIds(branch);
+  const locationId =
+    branch.location_id ||
+    branch.locationId ||
+    branch.branch_id ||
+    branch.branchId ||
+    existingBranches.find((existingBranch) => existingBranch.is_primary)?.location_id ||
+    existingBranches[0]?.location_id ||
+    null;
+
+  const payload = {
+    customer_id: businessId,
+    supplier_id: null,
+    ...geoIds,
+    location: branch.address,
+    latitude: branch.latitude,
+    longitude: branch.longitude,
+    location_accuracy_meters: branch.locationAccuracy,
+    is_primary: true,
+    is_active: true,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (locationId) {
+    const response = await supabase
+      .from("locations")
+      .update(payload)
+      .eq("location_id", locationId)
+      .select("location_id")
+      .single();
+
+    return throwIfError(
+      response,
+      "No fue posible actualizar la ubicación del cliente",
+    );
+  }
+
+  const response = await supabase
+    .from("locations")
+    .insert(payload)
+    .select("location_id")
+    .single();
+
+  return throwIfError(
+    response,
+    "No fue posible guardar la ubicación del cliente",
+  );
+}
+
+export async function saveBusinessClientPrimaryLocation(
+  businessId,
+  branchForm,
+) {
+  if (!businessId) {
+    throw new Error("No se recibió el identificador del cliente.");
+  }
+
+  const normalizedBranches = normalizeBranches([branchForm]);
+  const primaryBranch = normalizedBranches[0];
+
+  if (!primaryBranch) {
+    return null;
+  }
+
+  const existingRelations = await getExistingClientRelations(businessId);
+
+  return syncPrimaryLocation({
+    businessId,
+    branch: primaryBranch,
+    existingBranches: existingRelations.branches,
+  });
+}
+
+export function getPrimaryClientLocation(customer = {}) {
+  const locations = Array.isArray(customer.locations)
+    ? customer.locations
+    : [];
+  const location =
+    locations.find((currentLocation) => (
+      currentLocation.is_active !== false &&
+      currentLocation.is_primary === true
+    )) ||
+    locations.find((currentLocation) => currentLocation.is_active !== false) ||
+    locations[0] ||
+    null;
+
+  return location ? toClientBranch(location) : null;
 }
 
 async function syncMainEmail({
@@ -751,8 +1036,6 @@ async function syncPhoneGroup({
 }
 
 function buildBusinessPayload(client) {
-  const primaryBranch = client.branches[0] || {};
-
   return {
     company_id: client.companyId,
     identification_type: client.identificationType,
@@ -761,13 +1044,6 @@ function buildBusinessPayload(client) {
     owner_name: client.ownerName,
     commercial_name: client.name,
     activity_code: client.activityCode,
-    province: primaryBranch.province || "",
-    city: primaryBranch.city || "",
-    district: primaryBranch.district || "",
-    address: primaryBranch.address || null,
-    latitude: primaryBranch.latitude,
-    longitude: primaryBranch.longitude,
-    location_accuracy_meters: primaryBranch.locationAccuracy,
     regime: client.regime || "general",
     tax_status: client.taxStatus || null,
     customer_code: client.customerCode || null,
@@ -794,6 +1070,12 @@ async function createClientDependencies({
     phones: [...client.clientPhones, ...branchPhones],
     existingPhones: [],
   });
+
+  await syncPrimaryLocation({
+    businessId,
+    branch: client.branches[0],
+    existingBranches: [],
+  });
 }
 
 async function rollbackCreatedClient(businessId) {
@@ -812,6 +1094,12 @@ async function rollbackCreatedClient(businessId) {
       "emails",
       "email_id",
       existingRelations.emails.map((email) => email.email_id),
+    );
+
+    await deleteRowsByIds(
+      "locations",
+      "location_id",
+      existingRelations.branches.map((branch) => branch.location_id),
     );
 
     const response = await supabase
@@ -933,6 +1221,12 @@ export async function updateBusinessClient(
     phoneIdsToDelete,
   );
 
+  await syncPrimaryLocation({
+    businessId,
+    branch: client.branches[0],
+    existingBranches: existingRelations.branches,
+  });
+
   return {
     businessId,
   };
@@ -950,19 +1244,13 @@ export async function updateBusinessClientBranchLocations(
   const primaryBranch = normalizedBranches[0];
 
   if (primaryBranch) {
-    const response = await supabase
-      .from("customers")
-      .update({
-        latitude: primaryBranch.latitude,
-        longitude: primaryBranch.longitude,
-        location_accuracy_meters: primaryBranch.locationAccuracy,
-      })
-      .eq("customer_id", businessId);
+    const existingRelations = await getExistingClientRelations(businessId);
 
-    throwIfError(
-      response,
-      "No fue posible actualizar la ubicación del cliente",
-    );
+    await syncPrimaryLocation({
+      businessId,
+      branch: primaryBranch,
+      existingBranches: existingRelations.branches,
+    });
   }
 
   return {
@@ -1099,11 +1387,10 @@ export async function deleteBusinessClient(
       is_active: false,
       assigned_sales_agent_user_id: null,
       visit_route_day: null,
-      deleted_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("customer_id", businessId)
-    .select("customer_id, deleted_at")
+    .select("customer_id, is_active")
     .single();
 
   return throwIfError(

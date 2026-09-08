@@ -21,6 +21,7 @@ export default function PaymentForm({
   const [methodId, setMethodId] = useState("");
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(getTodayCRDateString());
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [receiptFile, setReceiptFile] = useState(null);
@@ -60,6 +61,10 @@ export default function PaymentForm({
       alert("Selecciona la fecha de pago.");
       return;
     }
+    if (!invoiceNumber.trim()) {
+      alert("Ingresa el numero de factura asociado.");
+      return;
+    }
     if (!referenceNumber.trim()) {
       alert("Ingresa el numero de referencia del pago.");
       return;
@@ -73,6 +78,7 @@ export default function PaymentForm({
       methodId,
       amount,
       paymentDate,
+      invoiceNumber: invoiceNumber.trim(),
       referenceNumber,
       notes,
       receiptFile,
@@ -166,6 +172,20 @@ export default function PaymentForm({
             value={referenceNumber}
             onChange={(e) => setReferenceNumber(e.target.value)}
             placeholder="Ej. 123456789"
+            className="w-full rounded-lg border border-[#2a3550] bg-[#222e44] py-2 px-3 text-sm text-white placeholder-gray-400 focus:border-[#C9A227] focus:outline-none transition-colors"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-[10px] text-gray-500 uppercase tracking-wider">
+            Numero de factura <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="text"
+            required
+            value={invoiceNumber}
+            onChange={(e) => setInvoiceNumber(e.target.value)}
+            placeholder="Ej. FAC-001245"
             className="w-full rounded-lg border border-[#2a3550] bg-[#222e44] py-2 px-3 text-sm text-white placeholder-gray-400 focus:border-[#C9A227] focus:outline-none transition-colors"
           />
         </div>

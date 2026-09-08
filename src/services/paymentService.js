@@ -1,5 +1,7 @@
 import { supabase } from "./primarySupabaseClient.js";
 
+const PAYMENT_FILES_BUCKET = "Ecommerce";
+
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
     return response?.data ?? [];
@@ -148,7 +150,7 @@ export async function getOrderPayments(productionOrderId) {
     await supabase
       .from("payments")
       .select(
-        "payment_id, production_order_id, method_id, amount, payment_date, reference_number, notes, is_valid, created_by, created_at, updated_at",
+        "payment_id, production_order_id, method_id, amount, payment_date, invoice_number, reference_number, notes, is_valid, created_by, created_at, updated_at",
       )
       .eq("production_order_id", productionOrderId)
       .order("payment_date", { ascending: false }),
@@ -165,15 +167,25 @@ export async function getOrderPayments(productionOrderId) {
     ...new Set(payments.map((payment) => payment.method_id).filter(Boolean)),
   ];
 
-  const [receipts, methods] = await Promise.all([
+  const [receipts, files, methods] = await Promise.all([
     throwIfError(
       await supabase
         .from("payment_receipts")
         .select(
-          "payment_receipt_id, payment_id, bucket_name, folder_name, object_path, file_name, mime_type, file_size, is_valid, created_at",
+          "payment_receipt_id, payment_id, customer_id, production_order_id, created_by, created_at, updated_at",
         )
         .in("payment_id", paymentIds),
-      "No fue posible cargar los comprobantes de pago",
+      "No fue posible cargar los recibos de dinero",
+    ),
+    throwIfError(
+      await supabase
+        .from("files")
+        .select(
+          "file_id, payment_id, payment_receipt_id, file_type, file_name, file_path, public_url, file_format, file_size, created_at",
+        )
+        .in("payment_id", paymentIds)
+        .order("created_at", { ascending: true }),
+      "No fue posible cargar los archivos de pago",
     ),
     methodIds.length
       ? throwIfError(
@@ -187,28 +199,34 @@ export async function getOrderPayments(productionOrderId) {
   ]);
 
   const receiptsByPaymentId = groupRowsByKey(receipts, "payment_id");
+  const filesByPaymentId = groupRowsByKey(files, "payment_id");
   const methodsById = indexRowsByKey(methods, "method_id");
 
-  const receiptPaths = receipts.map((receipt) => ({
-    receiptId: receipt.payment_receipt_id,
-    bucketName: receipt.bucket_name || "Ecommerce",
-    objectPath: receipt.object_path,
+  const filePaths = files.map((file) => ({
+    fileId: file.file_id,
+    objectPath: file.file_path,
+    publicUrl: file.public_url,
   }));
 
-  const signedUrlByReceiptId = {};
+  const urlByFileId = {};
 
   await Promise.all(
-    receiptPaths.map(async ({ receiptId, bucketName, objectPath }) => {
+    filePaths.map(async ({ fileId, objectPath, publicUrl }) => {
+      if (publicUrl) {
+        urlByFileId[fileId] = publicUrl;
+        return;
+      }
+
       if (!objectPath) {
         return;
       }
 
       const signedResult = await supabase.storage
-        .from(bucketName)
+        .from(PAYMENT_FILES_BUCKET)
         .createSignedUrl(objectPath, 60 * 30);
 
       if (!signedResult.error) {
-        signedUrlByReceiptId[receiptId] = signedResult.data?.signedUrl || null;
+        urlByFileId[fileId] = signedResult.data?.signedUrl || null;
       }
     }),
   );
@@ -216,18 +234,30 @@ export async function getOrderPayments(productionOrderId) {
   return payments.map((payment) => {
     const method = methodsById[payment.method_id] || null;
 
-    const paymentReceipts = (receiptsByPaymentId[payment.payment_id] || []).map(
-      (receipt) => ({
-        receiptId: receipt.payment_receipt_id,
-        fileName: receipt.file_name,
-        mimeType: receipt.mime_type,
-        fileSize: receipt.file_size,
-        isValid: receipt.is_valid,
-        createdAt: receipt.created_at,
-        objectPath: receipt.object_path,
-        bucketName: receipt.bucket_name,
-        signedUrl: signedUrlByReceiptId[receipt.payment_receipt_id] || null,
-      }),
+    const moneyReceipts = receiptsByPaymentId[payment.payment_id] || [];
+    const paymentFiles = (filesByPaymentId[payment.payment_id] || []).map(
+      (file) => {
+        const fileFormat = file.file_format || "";
+
+        return {
+          receiptId: file.file_id,
+          fileId: file.file_id,
+          paymentReceiptId: file.payment_receipt_id,
+          fileType: file.file_type,
+          fileName: file.file_name,
+          mimeType: fileFormat.includes("/")
+            ? fileFormat
+            : file.file_name?.toLowerCase().endsWith(".png")
+              ? "image/png"
+              : "",
+          fileSize: file.file_size,
+          isValid: true,
+          createdAt: file.created_at,
+          objectPath: file.file_path,
+          bucketName: PAYMENT_FILES_BUCKET,
+          signedUrl: urlByFileId[file.file_id] || null,
+        };
+      },
     );
 
     return {
@@ -235,13 +265,23 @@ export async function getOrderPayments(productionOrderId) {
       productionOrderId: payment.production_order_id,
       amount: getNumber(payment.amount, 0),
       paymentDate: payment.payment_date,
+      invoiceNumber: payment.invoice_number,
       referenceNumber: payment.reference_number,
       notes: payment.notes,
       isValid: payment.is_valid,
       methodName: method?.method_name || "Sin metodo",
       createdAt: payment.created_at,
       updatedAt: payment.updated_at,
-      receipts: paymentReceipts,
+      moneyReceipts: moneyReceipts.map((receipt) => ({
+        receiptId: receipt.payment_receipt_id,
+        paymentReceiptId: receipt.payment_receipt_id,
+        createdBy: receipt.created_by,
+        customerId: receipt.customer_id,
+        productionOrderId: receipt.production_order_id,
+        createdAt: receipt.created_at,
+        updatedAt: receipt.updated_at,
+      })),
+      receipts: paymentFiles,
     };
   });
 }

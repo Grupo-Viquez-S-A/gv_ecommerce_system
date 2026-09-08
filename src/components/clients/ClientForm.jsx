@@ -23,6 +23,7 @@ import {
   formatPhoneNumber,
 } from "../../utils/inputMasks.js";
 import BranchLocationMap from "./BranchLocationMap.jsx";
+import { getCostaRicaGeographyCatalog } from "../../services/geographyService.js";
 
 const PHONE_TYPES = [
   "General",
@@ -57,6 +58,14 @@ function isValidCoordinate(value, min, max) {
     numericValue >= min &&
     numericValue <= max
   );
+}
+
+function normalizeGeoName(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 }
 
 function normalizePhone(phone = {}, index = 0, prefix = "phone") {
@@ -321,6 +330,13 @@ export default function ClientForm({
   const [companies, setCompanies] = useState([]);
   const [companiesLoading, setCompaniesLoading] = useState(true);
   const [companiesError, setCompaniesError] = useState("");
+  const [geographyCatalog, setGeographyCatalog] = useState({
+    provinces: [],
+    cantons: [],
+    districts: [],
+  });
+  const [geographyLoading, setGeographyLoading] = useState(true);
+  const [geographyError, setGeographyError] = useState("");
   const [customerLocationLoading, setCustomerLocationLoading] = useState(false);
   const [customerLocationError, setCustomerLocationError] = useState("");
   const [taxpayerLookupLoading, setTaxpayerLookupLoading] = useState(false);
@@ -350,6 +366,30 @@ export default function ClientForm({
     hasCoordinateInput &&
     (isBlankCoordinate(customerLocation.latitude) ||
       isBlankCoordinate(customerLocation.longitude));
+  const selectedProvince = useMemo(() => {
+    return geographyCatalog.provinces.find(
+      (province) =>
+        normalizeGeoName(province.province_name) ===
+        normalizeGeoName(customerLocation.province),
+    );
+  }, [geographyCatalog.provinces, customerLocation.province]);
+  const availableCantons = useMemo(() => {
+    return geographyCatalog.cantons.filter(
+      (canton) => canton.province_id === selectedProvince?.province_id,
+    );
+  }, [geographyCatalog.cantons, selectedProvince?.province_id]);
+  const selectedCanton = useMemo(() => {
+    return availableCantons.find(
+      (canton) =>
+        normalizeGeoName(canton.canton_name) ===
+        normalizeGeoName(customerLocation.city),
+    );
+  }, [availableCantons, customerLocation.city]);
+  const availableDistricts = useMemo(() => {
+    return geographyCatalog.districts.filter(
+      (district) => district.canton_id === selectedCanton?.canton_id,
+    );
+  }, [geographyCatalog.districts, selectedCanton?.canton_id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -397,6 +437,47 @@ export default function ClientForm({
     }
 
     loadCompanies();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadGeographyCatalog() {
+      try {
+        setGeographyLoading(true);
+        setGeographyError("");
+
+        const catalog = await getCostaRicaGeographyCatalog();
+
+        if (isMounted) {
+          setGeographyCatalog(catalog);
+        }
+      } catch (error) {
+        console.error("Error cargando ubicaciones:", error);
+
+        if (isMounted) {
+          setGeographyCatalog({
+            provinces: [],
+            cantons: [],
+            districts: [],
+          });
+          setGeographyError(
+            error.message ||
+              "No fue posible cargar las provincias, cantones y distritos.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setGeographyLoading(false);
+        }
+      }
+    }
+
+    loadGeographyCatalog();
 
     return () => {
       isMounted = false;
@@ -525,6 +606,43 @@ export default function ClientForm({
 
   const updateCustomerLocationField = (field, value) => {
     updateBranch(0, field, value);
+  };
+
+  const updateCustomerProvince = (value) => {
+    const province = geographyCatalog.provinces.find(
+      (currentProvince) => currentProvince.province_name === value,
+    );
+
+    updateForm({
+      branches: currentForm.branches.map((branch, index) =>
+        index === 0
+          ? {
+              ...branch,
+              province: province?.province_name || "",
+              city: "",
+              district: "",
+            }
+          : branch,
+      ),
+    });
+  };
+
+  const updateCustomerCanton = (value) => {
+    const canton = availableCantons.find(
+      (currentCanton) => currentCanton.canton_name === value,
+    );
+
+    updateForm({
+      branches: currentForm.branches.map((branch, index) =>
+        index === 0
+          ? {
+              ...branch,
+              city: canton?.canton_name || "",
+              district: "",
+            }
+          : branch,
+      ),
+    });
   };
 
   const updateCustomerCoordinateField = (field, value) => {
@@ -953,48 +1071,87 @@ export default function ClientForm({
             <div>
               <FieldLabel required>Provincia</FieldLabel>
 
-              <input
-                type="text"
+              <select
                 value={customerLocation.province}
-                disabled={fieldsDisabled}
+                disabled={fieldsDisabled || geographyLoading}
                 onChange={(event) =>
-                  updateCustomerLocationField("province", event.target.value)
+                  updateCustomerProvince(event.target.value)
                 }
-                placeholder="Ej. Alajuela"
-                className={inputClassName}
-              />
+                className={selectClassName}
+              >
+                <option value="">
+                  {geographyLoading ? "Cargando provincias..." : "Seleccionar provincia"}
+                </option>
+                {geographyCatalog.provinces.map((province) => (
+                  <option
+                    key={province.province_id}
+                    value={province.province_name}
+                  >
+                    {province.province_name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
               <FieldLabel required>Cantón</FieldLabel>
 
-              <input
-                type="text"
+              <select
                 value={customerLocation.city}
-                disabled={fieldsDisabled}
-                onChange={(event) =>
-                  updateCustomerLocationField("city", event.target.value)
+                disabled={
+                  fieldsDisabled ||
+                  geographyLoading ||
+                  !selectedProvince
                 }
-                placeholder="Ej. Grecia"
-                className={inputClassName}
-              />
+                onChange={(event) =>
+                  updateCustomerCanton(event.target.value)
+                }
+                className={selectClassName}
+              >
+                <option value="">
+                  {selectedProvince ? "Seleccionar cantón" : "Selecciona una provincia"}
+                </option>
+                {availableCantons.map((canton) => (
+                  <option key={canton.canton_id} value={canton.canton_name}>
+                    {canton.canton_name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="sm:col-span-2">
               <FieldLabel required>Distrito</FieldLabel>
 
-              <input
-                type="text"
+              <select
                 value={customerLocation.district}
-                disabled={fieldsDisabled}
+                disabled={
+                  fieldsDisabled ||
+                  geographyLoading ||
+                  !selectedCanton
+                }
                 onChange={(event) =>
                   updateCustomerLocationField("district", event.target.value)
                 }
-                placeholder="Ej. San Roque"
-                className={inputClassName}
-              />
+                className={selectClassName}
+              >
+                <option value="">
+                  {selectedCanton ? "Seleccionar distrito" : "Selecciona un cantón"}
+                </option>
+                {availableDistricts.map((district) => (
+                  <option
+                    key={district.district_id}
+                    value={district.district_name}
+                  >
+                    {district.district_name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
+
+          {geographyError && (
+            <p className="text-xs text-red-300">{geographyError}</p>
+          )}
 
           <div>
             <FieldLabel required>Dirección exacta</FieldLabel>

@@ -6,8 +6,41 @@ import {
 import { normalizeQuotationPayload } from "../utils/quotationPayload.js";
 import { getCurrentCustomerRouteAssignment } from "./customerRouteAssignmentService.js";
 import { getQuotationAdvancePercentageForItems } from "../utils/quotationAdvanceRules.js";
+import {
+  getPrimaryClientLocation,
+  saveBusinessClientPrimaryLocation,
+} from "./clientService.js";
+import {
+  createPaymentReceiptPngBlob,
+  downloadPaymentReceiptBlob,
+} from "../utils/paymentReceiptImage.js";
 
 const QUOTATION_VALIDITY_BUSINESS_DAYS = 15;
+const PAYMENT_FILES_BUCKET = "Ecommerce";
+const PAYMENT_PROOF_FOLDER = "Comprobantes/Pagos";
+const PAYMENT_RECEIPT_FOLDER = "Comprobantes/RecibosDinero";
+const CUSTOMER_LOCATION_RELATION_SELECT = `
+  locations!locations_customer_id_fkey(
+    location_id,
+    business_id:customer_id,
+    country_id,
+    province_id,
+    canton_id,
+    district_id,
+    location,
+    latitude,
+    longitude,
+    location_accuracy_meters,
+    is_primary,
+    is_active,
+    created_at,
+    updated_at,
+    country:countries!locations_country_id_fkey(country_id, country_code, country_name),
+    province:provinces!locations_province_id_fkey(province_id, province_code, province_name),
+    canton:cantons!locations_canton_id_fkey(canton_id, canton_code, canton_name),
+    district:districts!locations_district_id_fkey(district_id, district_code, district_name)
+  )
+`;
 
 function getText(value) {
   const normalizedValue = String(value || "").trim();
@@ -29,6 +62,181 @@ function normalizeDateInput(value) {
   const text = String(value || "").trim();
 
   return text || null;
+}
+
+function sanitizeFileSegment(value, fallback = "archivo") {
+  return String(value || fallback)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90) || fallback;
+}
+
+function getFileExtension(fileName = "", fallback = "bin") {
+  const extension = String(fileName).split(".").pop();
+
+  return sanitizeFileSegment(extension || fallback, fallback).toLowerCase();
+}
+
+function getPublicStorageUrl(bucketName, filePath) {
+  const { data } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+
+  return data?.publicUrl || "";
+}
+
+async function uploadPaymentFile({
+  file,
+  folder,
+  fileType,
+  paymentId,
+  paymentReceiptId = null,
+  contentType = file?.type || "application/octet-stream",
+  fileName = file?.name,
+}) {
+  const originalName = sanitizeFileSegment(fileName || "archivo");
+  const extension = getFileExtension(originalName, "bin");
+  const storedName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${originalName}`;
+  const filePath = [
+    folder,
+    sanitizeFileSegment(paymentId, "payment"),
+    paymentReceiptId ? sanitizeFileSegment(paymentReceiptId, "receipt") : null,
+    storedName,
+  ]
+    .filter(Boolean)
+    .join("/");
+
+  const uploadResult = await supabase.storage
+    .from(PAYMENT_FILES_BUCKET)
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      contentType,
+      upsert: false,
+    });
+
+  if (uploadResult.error) {
+    throw new Error(
+      `No fue posible subir ${fileType.toLowerCase()}: ${uploadResult.error.message}`,
+    );
+  }
+
+  const publicUrl = getPublicStorageUrl(PAYMENT_FILES_BUCKET, uploadResult.data.path);
+
+  return throwIfError(
+    await supabase
+      .from("files")
+      .insert({
+        payment_id: paymentId,
+        payment_receipt_id: paymentReceiptId,
+        file_type: fileType,
+        file_name: fileName || storedName,
+        file_path: uploadResult.data.path,
+        public_url: publicUrl,
+        file_format: contentType || extension,
+        file_size: file?.size ?? null,
+      })
+      .select("file_id, file_path, public_url")
+      .single(),
+    `No fue posible registrar ${fileType.toLowerCase()}`,
+  );
+}
+
+function formatReceiptAddress(location) {
+  if (!location) {
+    return "No registrada";
+  }
+
+  return [
+    location.province,
+    location.city,
+    location.district,
+    location.address,
+  ]
+    .filter(Boolean)
+    .join(", ") || "No registrada";
+}
+
+async function getPaymentReceiptContext({ quotationId, amount }) {
+  const order = throwIfError(
+    await supabase
+      .from("production_orders")
+      .select("production_order_id, quotation_id, production_order_code, balance")
+      .eq("quotation_id", quotationId)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle(),
+    "No fue posible encontrar la orden de produccion",
+  );
+
+  if (!order?.production_order_id) {
+    throw new Error(
+      "No existe una orden de produccion activa para esta cotizacion",
+    );
+  }
+
+  const quotation = throwIfError(
+    await supabase
+      .from("quotations")
+      .select("quotation_id, customer_id, total")
+      .eq("quotation_id", quotationId)
+      .maybeSingle(),
+    "No fue posible cargar la cotizacion del pago",
+  );
+
+  if (!quotation?.customer_id) {
+    throw new Error("La cotizacion no tiene un cliente asociado.");
+  }
+
+  const customer = throwIfError(
+    await supabase
+      .from("customers")
+      .select(
+        `customer_id, identification_type, legal_id, company_name, commercial_name, owner_name, ${CUSTOMER_LOCATION_RELATION_SELECT}`,
+      )
+      .eq("customer_id", quotation.customer_id)
+      .maybeSingle(),
+    "No fue posible cargar los datos del cliente para el recibo",
+  );
+
+  const previousBalance = getNumber(order.balance, getNumber(quotation.total, 0));
+  const receivedAmount = getNumber(amount, 0);
+  const primaryLocation = getPrimaryClientLocation(customer);
+
+  return {
+    productionOrderId: order.production_order_id,
+    orderCode: order.production_order_code || "Sin codigo",
+    customerId: quotation.customer_id,
+    customerName:
+      customer?.commercial_name ||
+      customer?.company_name ||
+      customer?.owner_name ||
+      "Cliente sin nombre",
+    customerLegalId: customer?.legal_id || "No registrada",
+    customerIdentificationType: customer?.identification_type || "No indicado",
+    customerAddress: formatReceiptAddress(primaryLocation),
+    previousBalance,
+    pendingAmount: Math.max(
+      Math.round((previousBalance - receivedAmount) * 100) / 100,
+      0,
+    ),
+  };
+}
+
+async function getPaymentMethodName(methodId) {
+  if (!methodId) {
+    return "No indicado";
+  }
+
+  const method = throwIfError(
+    await supabase
+      .from("payment_methods")
+      .select("method_name")
+      .eq("method_id", methodId)
+      .maybeSingle(),
+    "No fue posible cargar el metodo de pago para el recibo",
+  );
+
+  return method?.method_name || "No indicado";
 }
 
 function roundCurrency(value) {
@@ -443,6 +651,7 @@ export async function reportPayment({
   methodId,
   amount,
   paymentDate,
+  invoiceNumber,
   referenceNumber,
   notes,
   receiptFile,
@@ -467,73 +676,98 @@ export async function reportPayment({
     throw new Error("Debes iniciar sesion para reportar un pago.");
   }
 
-  const orders = throwIfError(
-    await supabase
-      .from("production_orders")
-      .select("production_order_id")
-      .eq("quotation_id", quotationId)
-      .eq("is_active", true)
-      .limit(1),
-    "No fue posible encontrar la orden de produccion",
-  );
+  const normalizedInvoiceNumber = String(invoiceNumber || "").trim();
 
-  if (!orders?.length) {
-    throw new Error(
-      "No existe una orden de produccion activa para esta cotizacion",
-    );
+  if (!normalizedInvoiceNumber) {
+    throw new Error("Debes ingresar el numero de factura asociado.");
   }
 
-  const productionOrderId = orders[0].production_order_id;
+  const receiptContext = await getPaymentReceiptContext({
+    quotationId,
+    amount,
+  });
+  const paymentMethodName = await getPaymentMethodName(methodId);
 
   const paymentResult = throwIfError(
-    await supabase.rpc("insert_payment", {
-      p_production_order_id: productionOrderId,
-      p_method_id: methodId,
-      p_amount: Number(amount),
-      p_payment_date: paymentDate,
-      p_reference_number: referenceNumber || null,
-      p_notes: notes || null,
-      p_created_by: authUserId,
-    }),
+    await supabase
+      .from("payments")
+      .insert({
+        production_order_id: receiptContext.productionOrderId,
+        method_id: methodId || null,
+        amount: Number(amount),
+        payment_date: paymentDate,
+        invoice_number: normalizedInvoiceNumber,
+        reference_number: referenceNumber || null,
+        notes: notes || null,
+        is_valid: false,
+        created_by: authUserId,
+      })
+      .select("payment_id")
+      .single(),
     "No fue posible registrar el pago",
   );
 
-  const paymentId = paymentResult;
+  const paymentId = paymentResult.payment_id;
 
   if (receiptFile) {
-    const fileExt = receiptFile.name.split(".").pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
-    const filePath = `Comprobantes/${fileName}`;
-
-    const uploadResult = await supabase.storage
-      .from("Ecommerce")
-      .upload(filePath, receiptFile, {
-        cacheControl: "3600",
-        upsert: false,
-      });
-
-    if (uploadResult.error) {
-      throw new Error(
-        `No fue posible subir el comprobante: ${uploadResult.error.message}`,
-      );
-    }
-
-    throwIfError(
-      await supabase.rpc("insert_payment_receipt", {
-        p_payment_id: paymentId,
-        p_bucket_name: "Ecommerce",
-        p_folder_name: "Comprobantes",
-        p_object_path: uploadResult.data.path,
-        p_file_name: receiptFile.name,
-        p_mime_type: receiptFile.type,
-        p_file_size: receiptFile.size,
-        p_created_by: authUserId,
-      }),
-      "No fue posible registrar el comprobante",
-    );
+    await uploadPaymentFile({
+      file: receiptFile,
+      folder: PAYMENT_PROOF_FOLDER,
+      fileType: "Comprobante de pago",
+      paymentId,
+    });
   }
 
-  return { paymentId, productionOrderId };
+  const paymentReceipt = throwIfError(
+    await supabase
+      .from("payment_receipts")
+      .insert({
+        payment_id: paymentId,
+        customer_id: receiptContext.customerId,
+        production_order_id: receiptContext.productionOrderId,
+        created_by: authUserId,
+      })
+      .select("payment_receipt_id")
+      .single(),
+    "No fue posible registrar el recibo de dinero",
+  );
+
+  const receiptFileName = `recibo-dinero-${sanitizeFileSegment(
+    receiptContext.orderCode,
+    "orden",
+  )}.png`;
+  const receiptBlob = await createPaymentReceiptPngBlob({
+    orderCode: receiptContext.orderCode,
+    clientName: receiptContext.customerName,
+    clientLegalId: receiptContext.customerLegalId,
+    clientIdentificationType: receiptContext.customerIdentificationType,
+    clientAddress: receiptContext.customerAddress,
+    amount,
+    previousBalance: receiptContext.previousBalance,
+    pendingAmount: receiptContext.pendingAmount,
+    paymentDate,
+    invoiceNumber: normalizedInvoiceNumber,
+    referenceNumber,
+    paymentMethod: paymentMethodName,
+  });
+
+  await uploadPaymentFile({
+    file: receiptBlob,
+    folder: PAYMENT_RECEIPT_FOLDER,
+    fileType: "Recibo de dinero",
+    paymentId,
+    paymentReceiptId: paymentReceipt.payment_receipt_id,
+    contentType: "image/png",
+    fileName: receiptFileName,
+  });
+
+  downloadPaymentReceiptBlob(receiptBlob, receiptFileName);
+
+  return {
+    paymentId,
+    paymentReceiptId: paymentReceipt.payment_receipt_id,
+    productionOrderId: receiptContext.productionOrderId,
+  };
 }
 
 export async function getQuotationCompanies() {
@@ -557,7 +791,7 @@ export async function getQuotationClientByLegalId(legalId) {
     await supabase
       .from("customers")
       .select(
-        "customer_id, company_id, identification_type, legal_id, company_name, owner_name, commercial_name, activity_code, tax_status, province, city, district, address, latitude, longitude, location_accuracy_meters, is_active",
+        `customer_id, company_id, identification_type, legal_id, company_name, owner_name, commercial_name, activity_code, tax_status, is_active, ${CUSTOMER_LOCATION_RELATION_SELECT}`,
       )
       .eq("legal_id", normalizedLegalId)
       .maybeSingle(),
@@ -604,14 +838,15 @@ export async function getQuotationClientByLegalId(legalId) {
     businessEmail: getPrimaryValue(emails, "email"),
     businessPhone: getPrimaryValue(customerPhones, "phone"),
 
-    branchProvince: customer.province || "",
-    branchCity: customer.city || "",
-    branchDistrict: customer.district || "",
-    branchAddress: customer.address || "",
+    branchProvince: getPrimaryClientLocation(customer)?.province || "",
+    branchCity: getPrimaryClientLocation(customer)?.city || "",
+    branchDistrict: getPrimaryClientLocation(customer)?.district || "",
+    branchAddress: getPrimaryClientLocation(customer)?.address || "",
     branchPhone: getPrimaryValue(customerPhones, "phone"),
-    branchLatitude: customer.latitude ?? "",
-    branchLongitude: customer.longitude ?? "",
-    branchLocationAccuracy: customer.location_accuracy_meters ?? "",
+    branchLatitude: getPrimaryClientLocation(customer)?.latitude ?? "",
+    branchLongitude: getPrimaryClientLocation(customer)?.longitude ?? "",
+    branchLocationAccuracy:
+      getPrimaryClientLocation(customer)?.location_accuracy_meters ?? "",
 
     representativeName: "",
     representativeEmail: "",
@@ -692,7 +927,7 @@ export async function getQuotations({ ownerUserId } = {}) {
             await supabase
               .from("customers")
               .select(
-                "customer_id, company_id, legal_id, company_name, commercial_name, activity_code, province, city, district, address, latitude, longitude, location_accuracy_meters, is_active",
+                `customer_id, company_id, legal_id, company_name, commercial_name, activity_code, is_active, ${CUSTOMER_LOCATION_RELATION_SELECT}`,
               )
               .in("customer_id", customerIds),
             "No fue posible cargar los clientes de las cotizaciones",
@@ -853,6 +1088,7 @@ export async function getQuotations({ ownerUserId } = {}) {
       phonesByCustomerId[quotation.customer_id] || [],
       "phone",
     );
+    const customerLocation = getPrimaryClientLocation(customer);
     const quotationProducts = (
       quoteProductsByQuotationId[quotation.quotation_id] || []
     ).map((item) => ({
@@ -879,13 +1115,13 @@ export async function getQuotations({ ownerUserId } = {}) {
         companiesById[quotation.company_id] || companiesById[customer?.company_id],
       branch: customer
         ? {
-            province: customer.province || "",
-            city: customer.city || "",
-            district: customer.district || "",
-            address: customer.address || "",
-            latitude: customer.latitude,
-            longitude: customer.longitude,
-            location_accuracy_meters: customer.location_accuracy_meters,
+            province: customerLocation?.province || "",
+            city: customerLocation?.city || "",
+            district: customerLocation?.district || "",
+            address: customerLocation?.address || "",
+            latitude: customerLocation?.latitude,
+            longitude: customerLocation?.longitude,
+            location_accuracy_meters: customerLocation?.location_accuracy_meters,
           }
         : null,
       representative: null,
@@ -931,13 +1167,6 @@ export async function createBusinessQuotation(payload) {
           activity_code: client.activityCode,
           tax_status: client.taxStatus,
           regime: "general",
-          province: client.branchProvince || "",
-          city: client.branchCity || "",
-          district: client.branchDistrict || "",
-          address: client.branchAddress,
-          latitude: client.branchLatitude,
-          longitude: client.branchLongitude,
-          location_accuracy_meters: client.branchLocationAccuracy,
           "isValidForCredit": "pending",
           ...routeAssignment,
           is_active: true,
@@ -952,6 +1181,16 @@ export async function createBusinessQuotation(payload) {
 
       businessId = customer.customer_id;
       createdBusinessId = businessId;
+
+      await saveBusinessClientPrimaryLocation(businessId, {
+        province: client.branchProvince,
+        city: client.branchCity,
+        district: client.branchDistrict,
+        address: client.branchAddress,
+        latitude: client.branchLatitude,
+        longitude: client.branchLongitude,
+        locationAccuracy: client.branchLocationAccuracy,
+      });
 
       if (client.businessEmail) {
         throwIfError(
@@ -987,19 +1226,22 @@ export async function createBusinessQuotation(payload) {
             commercial_name: client.businessName,
             activity_code: client.activityCode,
             tax_status: client.taxStatus,
-            province: client.branchProvince || "",
-            city: client.branchCity || "",
-            district: client.branchDistrict || "",
-            address: client.branchAddress,
-            latitude: client.branchLatitude,
-            longitude: client.branchLongitude,
-            location_accuracy_meters: client.branchLocationAccuracy,
             is_active: true,
             updated_at: new Date().toISOString(),
           })
           .eq("customer_id", businessId),
         "No fue posible actualizar la empresa del grupo del cliente",
       );
+
+      await saveBusinessClientPrimaryLocation(businessId, {
+        province: client.branchProvince,
+        city: client.branchCity,
+        district: client.branchDistrict,
+        address: client.branchAddress,
+        latitude: client.branchLatitude,
+        longitude: client.branchLongitude,
+        locationAccuracy: client.branchLocationAccuracy,
+      });
     }
 
     const subtotal = items.reduce(

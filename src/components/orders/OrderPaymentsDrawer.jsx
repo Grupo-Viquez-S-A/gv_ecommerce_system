@@ -186,6 +186,10 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
                           </DetailRow>
                         )}
 
+                        <DetailRow label="Factura">
+                          {payment.invoiceNumber || "No indicada"}
+                        </DetailRow>
+
                         <DetailRow label="Archivos adjuntos">
                           {payment.receipts.length}
                         </DetailRow>

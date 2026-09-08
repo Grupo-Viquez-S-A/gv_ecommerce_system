@@ -70,9 +70,18 @@ import {
   getQuotationAdvanceRuleLabel,
 } from "../utils/quotationAdvanceRules.js";
 import { downloadGtiProductsExcel } from "../utils/gtiProductExport.js";
+import { getCostaRicaGeographyCatalog } from "../services/geographyService.js";
 
 const PAGE_SIZE = 8;
 const CART_STORAGE_KEY = "gv-ecommerce:quotation-cart:v2";
+
+function normalizeGeoName(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
 
 function loadPersistedCart() {
   try {
@@ -282,6 +291,13 @@ export default function Catalog() {
   const [existingClientsLoading, setExistingClientsLoading] = useState(false);
   const [existingClientsError, setExistingClientsError] = useState("");
   const [existingClientSearch, setExistingClientSearch] = useState("");
+  const [geographyCatalog, setGeographyCatalog] = useState({
+    provinces: [],
+    cantons: [],
+    districts: [],
+  });
+  const [geographyLoading, setGeographyLoading] = useState(true);
+  const [geographyError, setGeographyError] = useState("");
 
   useEffect(() => {
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
@@ -414,6 +430,42 @@ export default function Catalog() {
   useEffect(() => {
     let isMounted = true;
 
+    getCostaRicaGeographyCatalog()
+      .then((catalog) => {
+        if (isMounted) {
+          setGeographyCatalog(catalog);
+          setGeographyError("");
+        }
+      })
+      .catch((error) => {
+        console.error("Geography catalog loading error:", error);
+
+        if (isMounted) {
+          setGeographyCatalog({
+            provinces: [],
+            cantons: [],
+            districts: [],
+          });
+          setGeographyError(
+            error?.message ||
+              "No fue posible cargar provincias, cantones y distritos.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setGeographyLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
     const loadExistingClients = async () => {
       try {
         setExistingClientsLoading(true);
@@ -502,6 +554,36 @@ export default function Catalog() {
       ) || null
     );
   }, [existingClients, quotationClientForm.businessId]);
+
+  const selectedQuotationProvince = useMemo(() => {
+    return geographyCatalog.provinces.find(
+      (province) =>
+        normalizeGeoName(province.province_name) ===
+        normalizeGeoName(quotationClientForm.branchProvince),
+    );
+  }, [geographyCatalog.provinces, quotationClientForm.branchProvince]);
+
+  const availableQuotationCantons = useMemo(() => {
+    return geographyCatalog.cantons.filter(
+      (canton) =>
+        canton.province_id === selectedQuotationProvince?.province_id,
+    );
+  }, [geographyCatalog.cantons, selectedQuotationProvince?.province_id]);
+
+  const selectedQuotationCanton = useMemo(() => {
+    return availableQuotationCantons.find(
+      (canton) =>
+        normalizeGeoName(canton.canton_name) ===
+        normalizeGeoName(quotationClientForm.branchCity),
+    );
+  }, [availableQuotationCantons, quotationClientForm.branchCity]);
+
+  const availableQuotationDistricts = useMemo(() => {
+    return geographyCatalog.districts.filter(
+      (district) =>
+        district.canton_id === selectedQuotationCanton?.canton_id,
+    );
+  }, [geographyCatalog.districts, selectedQuotationCanton?.canton_id]);
 
   const categories = useMemo(() => {
     const uniqueCategories = new Map();
@@ -1452,6 +1534,39 @@ export default function Catalog() {
     }
   };
 
+  const handleQuotationProvinceChange = (value) => {
+    const province = geographyCatalog.provinces.find(
+      (currentProvince) => currentProvince.province_name === value,
+    );
+
+    setQuotationClientForm((currentForm) => ({
+      ...currentForm,
+      branchProvince: province?.province_name || "",
+      branchCity: "",
+      branchDistrict: "",
+      branchLatitude: "",
+      branchLongitude: "",
+      branchLocationAccuracy: "",
+    }));
+    setBranchLocationError("");
+  };
+
+  const handleQuotationCantonChange = (value) => {
+    const canton = availableQuotationCantons.find(
+      (currentCanton) => currentCanton.canton_name === value,
+    );
+
+    setQuotationClientForm((currentForm) => ({
+      ...currentForm,
+      branchCity: canton?.canton_name || "",
+      branchDistrict: "",
+      branchLatitude: "",
+      branchLongitude: "",
+      branchLocationAccuracy: "",
+    }));
+    setBranchLocationError("");
+  };
+
   const renderLocationCard = () => (
     <div className="md:col-span-2 rounded-xl border border-[#35547E] bg-[#102441]/70 p-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1643,39 +1758,50 @@ export default function Catalog() {
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
               Provincia
             </span>
-            <input
+            <select
               value={quotationClientForm.branchProvince}
-              onChange={(event) =>
-                handleQuotationClientFormChange(
-                  "branchProvince",
-                  event.target.value,
-                )
-              }
+              onChange={(event) => handleQuotationProvinceChange(event.target.value)}
               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-              placeholder="Ej. San Jose"
-            />
+              disabled={geographyLoading}
+            >
+              <option value="">
+                {geographyLoading ? "Cargando provincias..." : "Seleccionar provincia"}
+              </option>
+              {geographyCatalog.provinces.map((province) => (
+                <option
+                  key={province.province_id}
+                  value={province.province_name}
+                >
+                  {province.province_name}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
               Cantón
             </span>
-            <input
+            <select
               value={quotationClientForm.branchCity}
-              onChange={(event) =>
-                handleQuotationClientFormChange(
-                  "branchCity",
-                  event.target.value,
-                )
-              }
+              onChange={(event) => handleQuotationCantonChange(event.target.value)}
               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-              placeholder="Ej. Central"
-            />
+              disabled={geographyLoading || !selectedQuotationProvince}
+            >
+              <option value="">
+                {selectedQuotationProvince ? "Seleccionar cantón" : "Selecciona una provincia"}
+              </option>
+              {availableQuotationCantons.map((canton) => (
+                <option key={canton.canton_id} value={canton.canton_name}>
+                  {canton.canton_name}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
               Distrito
             </span>
-            <input
+            <select
               value={quotationClientForm.branchDistrict}
               onChange={(event) =>
                 handleQuotationClientFormChange(
@@ -1684,8 +1810,20 @@ export default function Catalog() {
                 )
               }
               className="mt-2 h-11 w-full rounded-xl border border-[#35547E] bg-[#102441] px-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#D7A91D]"
-              placeholder="Ej. Carmen"
-            />
+              disabled={geographyLoading || !selectedQuotationCanton}
+            >
+              <option value="">
+                {selectedQuotationCanton ? "Seleccionar distrito" : "Selecciona un cantón"}
+              </option>
+              {availableQuotationDistricts.map((district) => (
+                <option
+                  key={district.district_id}
+                  value={district.district_name}
+                >
+                  {district.district_name}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
@@ -1703,6 +1841,11 @@ export default function Catalog() {
               placeholder="Direccion exacta"
             />
           </label>
+          {geographyError && (
+            <p className="text-xs text-red-300 sm:col-span-2">
+              {geographyError}
+            </p>
+          )}
           <label>
             <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#9BB3D3]">
               Teléfono del cliente
