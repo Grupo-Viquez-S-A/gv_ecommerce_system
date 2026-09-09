@@ -9,7 +9,7 @@ import SalesPageHeader from "../components/sales/SalesPageHeader.jsx";
 import { buildDailySalesData, formatSalesCurrency, formatSalesDate } from "../components/sales/salesViewConfig.js";
 import { useAuth } from "../context/AuthContext.js";
 import { getSalesAgentNames } from "../services/agentService.js";
-import { getOrderPayments, importOrderPayments } from "../services/paymentService.js";
+import { getOrderPayments, updatePaymentReportState } from "../services/paymentService.js";
 import { getPaidSales } from "../services/salesService.js";
 import { hasPaymentApprovalAccess } from "../utils/roles.js";
 
@@ -138,7 +138,7 @@ export default function Sales() {
     }, 300);
   };
 
-  const handleApprovePayments = async () => {
+  const handleUpdatePaymentState = async (paymentId, nextState) => {
     if (!selectedSale || !canApprovePayments) {
       return;
     }
@@ -148,7 +148,7 @@ export default function Sales() {
     setApprovalSuccess(null);
 
     try {
-      await importOrderPayments(selectedSale.productionOrderId);
+      await updatePaymentReportState(paymentId, nextState);
       const [updatedSales, updatedPayments] = await Promise.all([
         getPaidSales(),
         getOrderPayments(selectedSale.productionOrderId),
@@ -166,10 +166,14 @@ export default function Sales() {
         ) || selectedSale;
 
       setSelectedSale(refreshedSale);
-      setApprovalSuccess("Reporte de pago aprobado correctamente.");
+      setApprovalSuccess(
+        nextState === "Aprobado"
+          ? "Reporte de pago aprobado correctamente."
+          : "Reporte de pago denegado correctamente.",
+      );
     } catch (error) {
       setApprovalError(
-        error?.message || "No fue posible aprobar el reporte de pago.",
+        error?.message || "No fue posible actualizar el reporte de pago.",
       );
     } finally {
       setApprovalLoading(false);
@@ -199,7 +203,7 @@ export default function Sales() {
       approvalSuccess={approvalSuccess}
       expandedPaymentId={expandedPaymentId}
       setExpandedPaymentId={setExpandedPaymentId}
-      onApprovePayments={handleApprovePayments}
+      onUpdatePaymentState={handleUpdatePaymentState}
       onClose={closeDrawer}
     />
   </>;

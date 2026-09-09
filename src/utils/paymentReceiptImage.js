@@ -199,7 +199,7 @@ export async function createPaymentReceiptPngBlob({
   });
 }
 
-export function downloadPaymentReceiptBlob(blob, fileName) {
+export function downloadPaymentReceiptBlob(blob, fileName, fallbackUrl = "") {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -207,5 +207,12 @@ export function downloadPaymentReceiptBlob(blob, fileName) {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+
+  if (/Android/i.test(window.navigator.userAgent) && fallbackUrl) {
+    window.setTimeout(() => {
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    }, 500);
+  }
 }

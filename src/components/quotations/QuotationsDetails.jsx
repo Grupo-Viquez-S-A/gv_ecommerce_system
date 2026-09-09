@@ -17,6 +17,16 @@ import {
   formatQuotationDate as formatDate,
 } from "./QuotationsViewHelpers.jsx";
 
+function getPaymentErrorMessage(error) {
+  const message = error?.message || "";
+
+  if (/failed to fetch|networkerror|network request failed/i.test(message)) {
+    return "No fue posible conectar con Supabase Storage desde este dispositivo. Revisa la conexion de la tablet, actualiza la pagina e intenta subir el comprobante nuevamente.";
+  }
+
+  return message || "No fue posible reportar el pago. Intenta de nuevo.";
+}
+
 export default function QuotationsDetails({
   manageProduction = false,
   drawerOpen,
@@ -242,10 +252,7 @@ export default function QuotationsDetails({
             }, 1800);
           } catch (err) {
             console.error(err);
-            setPaymentError(
-              err?.message ||
-                "No fue posible reportar el pago. Intenta de nuevo.",
-            );
+            setPaymentError(getPaymentErrorMessage(err));
           } finally {
             setPaymentLoading(false);
           }

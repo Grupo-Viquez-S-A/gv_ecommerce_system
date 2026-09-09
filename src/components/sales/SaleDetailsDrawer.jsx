@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   RiArrowDownSFill,
   RiBankCardFill,
@@ -56,6 +58,87 @@ function PaymentSummaryCard({ label, value }) {
   );
 }
 
+function PaymentStateBadge({ state, isValid }) {
+  const normalizedState = state || (isValid ? "Aprobado" : "Pendiente de aprobación");
+  const className =
+    normalizedState === "Aprobado"
+      ? "border-green-500/20 bg-green-500/10 text-green-400"
+      : normalizedState === "Denegado"
+        ? "border-red-500/20 bg-red-500/10 text-red-300"
+        : "border-yellow-500/20 bg-yellow-500/10 text-yellow-400";
+
+  return (
+    <span className={`rounded-md border px-2.5 py-1 text-xs font-medium ${className}`}>
+      {normalizedState}
+    </span>
+  );
+}
+
+function PaymentFileGrid({ files, emptyMessage, setPreviewReceipt }) {
+  if (!files.length) {
+    return (
+      <div className="rounded-lg border border-[#2a3550] bg-[#141d2e] px-5 py-6 text-sm text-gray-400">
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {files.map((receipt) => {
+        const isImage = (receipt.mimeType || "").startsWith("image/");
+
+        if (isImage && receipt.signedUrl) {
+          return (
+            <button
+              key={receipt.fileId || receipt.receiptId}
+              type="button"
+              onClick={() => setPreviewReceipt(receipt)}
+              className="group relative aspect-[4/3] min-h-36 overflow-hidden rounded-lg border border-[#2a3550] bg-black/20 transition-colors hover:border-[#C9A227]"
+              title={receipt.fileName || "Archivo"}
+            >
+              <img
+                src={receipt.signedUrl}
+                alt={receipt.fileName || "Archivo de pago"}
+                className="h-full w-full object-contain"
+              />
+
+              <span className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/30" />
+              <span className="absolute bottom-0 left-0 right-0 flex items-center gap-1 bg-black/75 px-2 py-1 text-left text-[11px] text-white">
+                <RiImage2Line size={12} />
+                <span className="truncate">
+                  {receipt.fileName || "Archivo"}
+                </span>
+              </span>
+            </button>
+          );
+        }
+
+        return (
+          <a
+            key={receipt.fileId || receipt.receiptId}
+            href={receipt.signedUrl || "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="flex min-h-24 flex-col justify-between rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-3 text-xs text-[#C9A227] transition-colors hover:border-[#C9A227]"
+          >
+            <span className="inline-flex items-center gap-1">
+              <RiDownloadFill size={12} />
+              Descargar archivo
+            </span>
+            <span className="break-all text-gray-300">
+              {receipt.fileName || "Archivo"}
+            </span>
+            <span className="text-gray-500">
+              {formatOrderFileSize(receipt.fileSize)}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SaleDetailsDrawer({
   open,
   sale,
@@ -70,27 +153,43 @@ export default function SaleDetailsDrawer({
   approvalSuccess = null,
   expandedPaymentId = null,
   setExpandedPaymentId,
-  onApprovePayments,
+  onUpdatePaymentState,
   onClose,
 }) {
+  const [activePaymentsTab, setActivePaymentsTab] = useState("reports");
+
   if (!open || !sale) {
     return null;
   }
 
+  const paymentReports = payments.map((payment) => ({
+    ...payment,
+    proofFiles: (payment.receipts || []).filter(
+      (file) => file.fileType !== "Recibo de dinero",
+    ),
+    receiptFiles: (payment.receipts || []).filter(
+      (file) => file.fileType === "Recibo de dinero",
+    ),
+  }));
   const amountReported = payments.reduce(
     (sum, payment) => sum + (Number(payment.amount) || 0),
     0,
   );
-  const validatedPayments = payments.filter((payment) => payment.isValid);
+  const validatedPayments = payments.filter((payment) => payment.state === "Aprobado" || payment.isValid);
   const amountValidated = validatedPayments.reduce(
     (sum, payment) => sum + (Number(payment.amount) || 0),
     0,
   );
-  const pendingPayments = payments.filter((payment) => !payment.isValid).length;
-  const receiptCount = payments.reduce(
-    (sum, payment) => sum + (payment.receipts?.length || 0),
+  const pendingPayments = payments.filter((payment) => payment.state === "Pendiente de aprobación").length;
+  const proofCount = paymentReports.reduce(
+    (sum, payment) => sum + payment.proofFiles.length,
     0,
   );
+  const moneyReceiptCount = paymentReports.reduce(
+    (sum, payment) => sum + payment.receiptFiles.length,
+    0,
+  );
+  const isReportsTab = activePaymentsTab === "reports";
 
   return (
     <>
@@ -228,6 +327,27 @@ export default function SaleDetailsDrawer({
                   </div>
                 </div>
 
+                <div className="mt-4 flex overflow-hidden rounded-lg border border-[#2a3550] bg-[#141d2e]">
+                  {[
+                    ["reports", "Reportes de pagos", payments.length],
+                    ["receipts", "Recibos de dinero", moneyReceiptCount],
+                  ].map(([tabId, label, count]) => (
+                    <button
+                      key={tabId}
+                      type="button"
+                      onClick={() => setActivePaymentsTab(tabId)}
+                      className={`border-r border-[#2a3550] px-4 py-2.5 text-sm font-semibold transition-colors last:border-r-0 ${
+                        activePaymentsTab === tabId
+                          ? "bg-[#C9A227]/15 text-white shadow-[inset_0_-2px_0_#C9A227]"
+                          : "text-gray-400 hover:bg-[#1d2940] hover:text-white"
+                      }`}
+                    >
+                      {label}{" "}
+                      <span className="ml-1 text-[#C9A227]">{count}</span>
+                    </button>
+                  ))}
+                </div>
+
                 {!paymentsLoading && !paymentsError && (
                   <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <PaymentSummaryCard
@@ -244,7 +364,7 @@ export default function SaleDetailsDrawer({
                     />
                     <PaymentSummaryCard
                       label="Comprobantes"
-                      value={String(receiptCount)}
+                      value={String(proofCount)}
                     />
                   </div>
                 )}
@@ -261,15 +381,15 @@ export default function SaleDetailsDrawer({
                   </div>
                 )}
 
-                {!paymentsLoading && !paymentsError && payments.length === 0 && (
+                {!paymentsLoading && !paymentsError && paymentReports.length === 0 && (
                   <div className="mt-4 rounded-lg border border-[#2a3550] bg-[#141d2e] px-5 py-6 text-sm text-gray-400">
                     Esta venta todavia no tiene pagos reportados.
                   </div>
                 )}
 
-                {!paymentsLoading && !paymentsError && payments.length > 0 && (
+                {!paymentsLoading && !paymentsError && paymentReports.length > 0 && isReportsTab && (
                   <div className="mt-4 space-y-3">
-                    {payments.map((payment) => (
+                    {paymentReports.map((payment) => (
                       <article
                         key={payment.paymentId}
                         className="overflow-hidden rounded-xl border border-[#2a3550] bg-[#182235]"
@@ -328,7 +448,7 @@ export default function SaleDetailsDrawer({
                                   Adjuntos
                                 </p>
                                 <p className="mt-1 text-sm text-gray-300">
-                                  {payment.receipts.length}
+                                  {payment.proofFiles.length}
                                 </p>
                               </div>
                             </div>
@@ -338,15 +458,7 @@ export default function SaleDetailsDrawer({
                             <span className="rounded-md border border-[#2a3550] bg-[#141d2e] px-2.5 py-1 text-xs font-medium text-gray-300">
                               {payment.methodName}
                             </span>
-                            <span
-                              className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
-                                payment.isValid
-                                  ? "border-green-500/20 bg-green-500/10 text-green-400"
-                                  : "border-yellow-500/20 bg-yellow-500/10 text-yellow-400"
-                              }`}
-                            >
-                              {payment.isValid ? "Validado" : "Pendiente de validar"}
-                            </span>
+                            <PaymentStateBadge state={payment.state} isValid={payment.isValid} />
                           </div>
                         </button>
 
@@ -367,7 +479,7 @@ export default function SaleDetailsDrawer({
                               />
                               <PaymentSummaryCard
                                 label="Adjuntos"
-                                value={String(payment.receipts.length)}
+                                value={String(payment.proofFiles.length)}
                               />
                               <PaymentSummaryCard
                                 label="Actualizado"
@@ -386,7 +498,33 @@ export default function SaleDetailsDrawer({
                               </div>
                             )}
 
-                            {payment.receipts.length > 0 && (
+                            {canApprovePayments && payment.state === "Pendiente de aprobación" && (
+                              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-[#2a3550] bg-[#141d2e] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-xs text-gray-500">
+                                  Revisa el comprobante y resuelve este reporte de forma individual.
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => onUpdatePaymentState?.(payment.paymentId, "Denegado")}
+                                    disabled={approvalLoading}
+                                    className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Denegar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => onUpdatePaymentState?.(payment.paymentId, "Aprobado")}
+                                    disabled={approvalLoading}
+                                    className="rounded-lg bg-[#C9A227] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B8921F] disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Aprobar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {payment.proofFiles.length > 0 && (
                               <div className="mt-4 space-y-3">
                                 <div>
                                   <p className="text-xs font-semibold uppercase tracking-wider text-[#C9A227]">
@@ -397,58 +535,11 @@ export default function SaleDetailsDrawer({
                                   </p>
                                 </div>
 
-                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                  {payment.receipts.map((receipt) => {
-                                    const isImage = (receipt.mimeType || "").startsWith("image/");
-
-                                    if (isImage && receipt.signedUrl) {
-                                      return (
-                                        <button
-                                          key={receipt.receiptId}
-                                          type="button"
-                                          onClick={() => setPreviewReceipt(receipt)}
-                                          className="group relative aspect-[4/3] min-h-36 overflow-hidden rounded-lg border border-[#2a3550] bg-black/20 transition-colors hover:border-[#C9A227]"
-                                          title={receipt.fileName || "Comprobante"}
-                                        >
-                                          <img
-                                            src={receipt.signedUrl}
-                                            alt={receipt.fileName || "Comprobante de pago"}
-                                            className="h-full w-full object-contain"
-                                          />
-
-                                          <span className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/30" />
-                                          <span className="absolute bottom-0 left-0 right-0 flex items-center gap-1 bg-black/75 px-2 py-1 text-left text-[11px] text-white">
-                                            <RiImage2Line size={12} />
-                                            <span className="truncate">
-                                              {receipt.fileName || "Comprobante"}
-                                            </span>
-                                          </span>
-                                        </button>
-                                      );
-                                    }
-
-                                    return (
-                                      <a
-                                        key={receipt.receiptId}
-                                        href={receipt.signedUrl || "#"}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex min-h-24 flex-col justify-between rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-3 text-xs text-[#C9A227] transition-colors hover:border-[#C9A227]"
-                                      >
-                                        <span className="inline-flex items-center gap-1">
-                                          <RiDownloadFill size={12} />
-                                          Descargar archivo
-                                        </span>
-                                        <span className="break-all text-gray-300">
-                                          {receipt.fileName || "Comprobante"}
-                                        </span>
-                                        <span className="text-gray-500">
-                                          {formatOrderFileSize(receipt.fileSize)}
-                                        </span>
-                                      </a>
-                                    );
-                                  })}
-                                </div>
+                                <PaymentFileGrid
+                                  files={payment.proofFiles}
+                                  emptyMessage="Este reporte no tiene comprobantes adjuntos."
+                                  setPreviewReceipt={setPreviewReceipt}
+                                />
                               </div>
                             )}
                           </div>
@@ -458,7 +549,35 @@ export default function SaleDetailsDrawer({
                   </div>
                 )}
 
-                {!paymentsLoading && !paymentsError && pendingPayments > 0 && (
+                {!paymentsLoading && !paymentsError && paymentReports.length > 0 && !isReportsTab && (
+                  <div className="mt-4 space-y-4">
+                    {paymentReports.map((payment) => (
+                      <article
+                        key={`receipt-${payment.paymentId}`}
+                        className="rounded-xl border border-[#2a3550] bg-[#182235] p-4"
+                      >
+                        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-white">
+                              {formatSalesCurrency(payment.amount)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Factura {payment.invoiceNumber || "No indicada"} - {payment.methodName}
+                            </p>
+                          </div>
+                          <PaymentStateBadge state={payment.state} isValid={payment.isValid} />
+                        </div>
+                        <PaymentFileGrid
+                          files={payment.receiptFiles}
+                          emptyMessage="Este pago no tiene recibo de dinero guardado."
+                          setPreviewReceipt={setPreviewReceipt}
+                        />
+                      </article>
+                    ))}
+                  </div>
+                )}
+
+                {!paymentsLoading && !paymentsError && pendingPayments > 0 && isReportsTab && (
                   <div className="mt-4 border-t border-[#2a3550] pt-4">
                     {approvalError && (
                       <div className="mb-3 rounded-lg border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -478,17 +597,10 @@ export default function SaleDetailsDrawer({
                         Presidente/PRESIDENT pueden aprobar reportes de pago.
                       </p>
 
-                      {canApprovePayments && (
-                        <button
-                          type="button"
-                          onClick={onApprovePayments}
-                          disabled={approvalLoading}
-                          className="rounded-lg bg-[#C9A227] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#B8921F] disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {approvalLoading
-                            ? "Aprobando..."
-                            : "Aprobar reportes de pago"}
-                        </button>
+                      {canApprovePayments && approvalLoading && (
+                        <p className="text-sm font-medium text-[#C9A227]">
+                          Actualizando reporte...
+                        </p>
                       )}
                     </div>
                   </div>

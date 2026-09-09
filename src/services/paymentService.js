@@ -1,6 +1,11 @@
 import { supabase } from "./primarySupabaseClient.js";
 
 const PAYMENT_FILES_BUCKET = "Ecommerce";
+export const PAYMENT_REPORT_STATES = {
+  pending: "Pendiente de aprobación",
+  approved: "Aprobado",
+  denied: "Denegado",
+};
 
 function throwIfError(response, actionMessage) {
   if (!response?.error) {
@@ -136,6 +141,18 @@ function buildDerivedPaymentState(total, amountPaid, currentStatus = "") {
   };
 }
 
+function normalizePaymentReportState(state, isValid = false) {
+  const normalizedState = String(state || "").trim();
+
+  if (Object.values(PAYMENT_REPORT_STATES).includes(normalizedState)) {
+    return normalizedState;
+  }
+
+  return isValid
+    ? PAYMENT_REPORT_STATES.approved
+    : PAYMENT_REPORT_STATES.pending;
+}
+
 /**
  * Loads every payment reported for a production order (through the linked
  * quotation), together with its payment method and any uploaded receipts.
@@ -150,7 +167,7 @@ export async function getOrderPayments(productionOrderId) {
     await supabase
       .from("payments")
       .select(
-        "payment_id, production_order_id, method_id, amount, payment_date, invoice_number, reference_number, notes, is_valid, created_by, created_at, updated_at",
+        "payment_id, production_order_id, method_id, amount, payment_date, invoice_number, reference_number, notes, state, is_valid, created_by, created_at, updated_at",
       )
       .eq("production_order_id", productionOrderId)
       .order("payment_date", { ascending: false }),
@@ -268,6 +285,7 @@ export async function getOrderPayments(productionOrderId) {
       invoiceNumber: payment.invoice_number,
       referenceNumber: payment.reference_number,
       notes: payment.notes,
+      state: normalizePaymentReportState(payment.state, payment.is_valid),
       isValid: payment.is_valid,
       methodName: method?.method_name || "Sin metodo",
       createdAt: payment.created_at,
@@ -325,9 +343,13 @@ export async function importOrderPayments(productionOrderId) {
   throwIfError(
     await supabase
       .from("payments")
-      .update({ is_valid: true })
+      .update({
+        is_valid: true,
+        state: PAYMENT_REPORT_STATES.approved,
+        updated_at: new Date().toISOString(),
+      })
       .eq("production_order_id", productionOrderId)
-      .eq("is_valid", false),
+      .eq("state", PAYMENT_REPORT_STATES.pending),
     "No fue posible validar los pagos reportados",
   );
 
@@ -392,6 +414,130 @@ export async function importOrderPayments(productionOrderId) {
 
   return {
     productionOrderId,
+    total,
+    amountPaid,
+    balance: getNumber(updatedOrder.balance, balance),
+    paymentStatus:
+      String(updatedOrder.payment_status || paymentStatus).toLowerCase(),
+    movedToSales: paymentStatus === "pagado",
+    emailNotification,
+  };
+}
+
+export async function updatePaymentReportState(paymentId, nextState) {
+  if (!paymentId) {
+    throw new Error("Se requiere el identificador del reporte de pago");
+  }
+
+  if (![PAYMENT_REPORT_STATES.approved, PAYMENT_REPORT_STATES.denied].includes(nextState)) {
+    throw new Error("Estado de pago no permitido.");
+  }
+
+  const payment = throwIfError(
+    await supabase
+      .from("payments")
+      .select("payment_id, production_order_id")
+      .eq("payment_id", paymentId)
+      .maybeSingle(),
+    "No fue posible cargar el reporte de pago",
+  );
+
+  if (!payment?.production_order_id) {
+    throw new Error("No se encontro el reporte de pago seleccionado.");
+  }
+
+  throwIfError(
+    await supabase
+      .from("payments")
+      .update({
+        state: nextState,
+        is_valid: nextState === PAYMENT_REPORT_STATES.approved,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("payment_id", paymentId),
+    "No fue posible actualizar el estado del reporte de pago",
+  );
+
+  const order = throwIfError(
+    await supabase
+      .from("production_orders")
+      .select("production_order_id, quotation_id, payment_status")
+      .eq("production_order_id", payment.production_order_id)
+      .maybeSingle(),
+    "No fue posible cargar la orden de produccion",
+  );
+
+  const quotation = throwIfError(
+    await supabase
+      .from("quotations")
+      .select("quotation_id, total")
+      .eq("quotation_id", order.quotation_id)
+      .maybeSingle(),
+    "No fue posible cargar la cotizacion asociada",
+  );
+
+  const approvedPayments = throwIfError(
+    await supabase
+      .from("payments")
+      .select("amount")
+      .eq("production_order_id", payment.production_order_id)
+      .eq("state", PAYMENT_REPORT_STATES.approved)
+      .eq("is_valid", true),
+    "No fue posible recalcular los pagos aprobados",
+  );
+
+  const amountPaid = approvedPayments.reduce(
+    (sum, currentPayment) => sum + getNumber(currentPayment.amount, 0),
+    0,
+  );
+  const total = getNumber(quotation?.total, 0);
+  const { balance, paymentStatus } = buildDerivedPaymentState(
+    total,
+    amountPaid,
+    order.payment_status,
+  );
+
+  const updatedOrder = throwIfError(
+    await supabase
+      .from("production_orders")
+      .update({
+        balance,
+        payment_status: paymentStatus,
+      })
+      .eq("production_order_id", payment.production_order_id)
+      .select("production_order_id, balance, payment_status")
+      .maybeSingle(),
+    "No fue posible actualizar el saldo de la orden",
+  );
+
+  let emailNotification = null;
+
+  if (nextState === PAYMENT_REPORT_STATES.approved) {
+    try {
+      const notificationResult = await notifyPaymentSuccess(
+        payment.production_order_id,
+      );
+
+      emailNotification = {
+        sent: true,
+        error: null,
+        recipient: notificationResult?.recipient || null,
+      };
+    } catch (error) {
+      emailNotification = {
+        sent: false,
+        error:
+          error?.message ||
+          "El pago fue aprobado, pero no fue posible enviar el correo.",
+        recipient: null,
+      };
+    }
+  }
+
+  return {
+    paymentId,
+    productionOrderId: payment.production_order_id,
+    state: nextState,
     total,
     amountPaid,
     balance: getNumber(updatedOrder.balance, balance),

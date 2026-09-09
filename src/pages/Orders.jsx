@@ -6,7 +6,7 @@ import {
 } from "../services/orderService.js";
 import {
   getOrderPayments,
-  importOrderPayments,
+  updatePaymentReportState,
 } from "../services/paymentService.js";
 import { useAuth } from "../context/AuthContext.js";
 import { hasPaymentApprovalAccess, hasSystemAccess } from "../utils/roles.js";
@@ -96,10 +96,10 @@ export default function Orders() {
       0,
     );
     const amountValidated = orderPayments
-      .filter((payment) => payment.isValid)
+      .filter((payment) => payment.state === "Aprobado" || payment.isValid)
       .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
     const pendingPayments = orderPayments.filter(
-      (payment) => !payment.isValid,
+      (payment) => payment.state === "Pendiente de aprobación",
     ).length;
     const receiptCount = orderPayments.reduce(
       (sum, payment) => sum + (payment.receipts?.length || 0),
@@ -301,7 +301,7 @@ export default function Orders() {
     }, 300);
   };
 
-  const handleImportPayments = async () => {
+  const handleUpdatePaymentState = async (paymentId, nextState) => {
     if (!viewOrder) {
       return;
     }
@@ -310,7 +310,7 @@ export default function Orders() {
     setPaymentsError(null);
 
     try {
-      const result = await importOrderPayments(viewOrder.productionOrderId);
+      const result = await updatePaymentReportState(paymentId, nextState);
       setImportResult(result);
 
       const payments = await getOrderPayments(viewOrder.productionOrderId);
@@ -319,7 +319,7 @@ export default function Orders() {
       await loadOrders();
     } catch (error) {
       setPaymentsError(
-        error?.message || "No fue posible importar los comprobantes de pago.",
+        error?.message || "No fue posible actualizar el reporte de pago.",
       );
     } finally {
       setImporting(false);
@@ -405,7 +405,7 @@ export default function Orders() {
         setPreviewReceipt={setPreviewReceipt}
         importing={importing}
         importResult={importResult}
-        handleImportPayments={handleImportPayments}
+        handleUpdatePaymentState={handleUpdatePaymentState}
         previewReceipt={previewReceipt}
         canApprovePayments={canApprovePayments}
       />

@@ -1416,6 +1416,7 @@ export type Database = {
           payment_id: string
           production_order_id: string
           reference_number: string | null
+          state: string
           updated_at: string
         }
         Insert: {
@@ -1430,6 +1431,7 @@ export type Database = {
           payment_id?: string
           production_order_id: string
           reference_number?: string | null
+          state?: string
           updated_at?: string
         }
         Update: {
@@ -1444,6 +1446,7 @@ export type Database = {
           payment_id?: string
           production_order_id?: string
           reference_number?: string | null
+          state?: string
           updated_at?: string
         }
         Relationships: [

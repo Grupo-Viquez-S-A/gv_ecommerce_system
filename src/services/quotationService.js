@@ -85,34 +85,71 @@ function getPublicStorageUrl(bucketName, filePath) {
   return data?.publicUrl || "";
 }
 
-async function uploadPaymentFile({
+function createUploadToken() {
+  return (
+    globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
+}
+
+async function prepareUploadAsset(file, fallbackFileName = "archivo.bin") {
+  if (!file) {
+    return null;
+  }
+
+  const fileName = file.name || fallbackFileName;
+  const contentType = file.type || "application/octet-stream";
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  return {
+    bytes,
+    fileName,
+    contentType,
+    fileSize: file.size ?? bytes.byteLength,
+  };
+}
+
+async function uploadPaymentObject({
   file,
   folder,
   fileType,
-  paymentId,
+  pathSegment,
   paymentReceiptId = null,
   contentType = file?.type || "application/octet-stream",
   fileName = file?.name,
+  fileSize = file?.size,
 }) {
   const originalName = sanitizeFileSegment(fileName || "archivo");
   const extension = getFileExtension(originalName, "bin");
   const storedName = `${Date.now()}_${Math.random().toString(36).slice(2)}_${originalName}`;
   const filePath = [
     folder,
-    sanitizeFileSegment(paymentId, "payment"),
+    sanitizeFileSegment(pathSegment, "payment"),
     paymentReceiptId ? sanitizeFileSegment(paymentReceiptId, "receipt") : null,
     storedName,
   ]
     .filter(Boolean)
     .join("/");
 
-  const uploadResult = await supabase.storage
-    .from(PAYMENT_FILES_BUCKET)
-    .upload(filePath, file, {
-      cacheControl: "3600",
-      contentType,
-      upsert: false,
-    });
+  let uploadResult;
+
+  try {
+    uploadResult = await supabase.storage
+      .from(PAYMENT_FILES_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        contentType,
+        upsert: false,
+      });
+  } catch (error) {
+    throw new Error(
+      `No fue posible subir ${fileType.toLowerCase()} a Storage: ${
+        error?.message || "fallo de red"
+      }`,
+      { cause: error },
+    );
+  }
 
   if (uploadResult.error) {
     throw new Error(
@@ -122,23 +159,101 @@ async function uploadPaymentFile({
 
   const publicUrl = getPublicStorageUrl(PAYMENT_FILES_BUCKET, uploadResult.data.path);
 
+  return {
+    filePath: uploadResult.data.path,
+    publicUrl,
+    fileType,
+    fileName: fileName || storedName,
+    fileFormat: contentType || extension,
+    fileSize: fileSize ?? file?.size ?? null,
+  };
+}
+
+async function removePaymentStorageObjects(filePaths = []) {
+  const paths = filePaths.filter(Boolean);
+
+  if (paths.length) {
+    await supabase.storage.from(PAYMENT_FILES_BUCKET).remove(paths);
+  }
+}
+
+async function registerPaymentFile({
+  paymentId,
+  paymentReceiptId = null,
+  uploadedFile,
+}) {
   return throwIfError(
     await supabase
       .from("files")
       .insert({
         payment_id: paymentId,
         payment_receipt_id: paymentReceiptId,
-        file_type: fileType,
-        file_name: fileName || storedName,
-        file_path: uploadResult.data.path,
-        public_url: publicUrl,
-        file_format: contentType || extension,
-        file_size: file?.size ?? null,
+        file_type: uploadedFile.fileType,
+        file_name: uploadedFile.fileName,
+        file_path: uploadedFile.filePath,
+        public_url: uploadedFile.publicUrl,
+        file_format: uploadedFile.fileFormat,
+        file_size: uploadedFile.fileSize,
       })
       .select("file_id, file_path, public_url")
       .single(),
-    `No fue posible registrar ${fileType.toLowerCase()}`,
+    `No fue posible registrar ${uploadedFile.fileType.toLowerCase()}`,
   );
+}
+
+async function uploadPaymentFile({
+  file,
+  folder,
+  fileType,
+  paymentId,
+  paymentReceiptId = null,
+  contentType = file?.type || "application/octet-stream",
+  fileName = file?.name,
+  fileSize = file?.size,
+}) {
+  const uploadedFile = await uploadPaymentObject({
+    file,
+    folder,
+    fileType,
+    pathSegment: paymentId,
+    paymentReceiptId,
+    contentType,
+    fileName,
+    fileSize,
+  });
+
+  return registerPaymentFile({
+    paymentId,
+    paymentReceiptId,
+    uploadedFile,
+  });
+}
+
+async function rollbackPaymentReport(paymentId) {
+  if (!paymentId) {
+    return;
+  }
+
+  try {
+    const files = throwIfError(
+      await supabase
+        .from("files")
+        .select("file_path")
+        .eq("payment_id", paymentId),
+      "No fue posible cargar archivos para revertir el pago",
+    );
+    const filePaths = (files || [])
+      .map((file) => file.file_path)
+      .filter(Boolean);
+
+    await removePaymentStorageObjects(filePaths);
+
+    await supabase.from("files").delete().eq("payment_id", paymentId);
+    await supabase.from("payment_receipts").delete().eq("payment_id", paymentId);
+    await supabase.from("payments").delete().eq("payment_id", paymentId);
+  } catch (error) {
+    console.error("No fue posible revertir el pago incompleto:", error);
+  }
 }
 
 function formatReceiptAddress(location) {
@@ -687,87 +802,147 @@ export async function reportPayment({
     amount,
   });
   const paymentMethodName = await getPaymentMethodName(methodId);
+  let preparedReceiptFile;
+  let uploadedProofFile = null;
 
-  const paymentResult = throwIfError(
-    await supabase
-      .from("payments")
-      .insert({
-        production_order_id: receiptContext.productionOrderId,
-        method_id: methodId || null,
-        amount: Number(amount),
-        payment_date: paymentDate,
-        invoice_number: normalizedInvoiceNumber,
-        reference_number: referenceNumber || null,
-        notes: notes || null,
-        is_valid: false,
-        created_by: authUserId,
-      })
-      .select("payment_id")
-      .single(),
-    "No fue posible registrar el pago",
-  );
-
-  const paymentId = paymentResult.payment_id;
-
-  if (receiptFile) {
-    await uploadPaymentFile({
-      file: receiptFile,
-      folder: PAYMENT_PROOF_FOLDER,
-      fileType: "Comprobante de pago",
-      paymentId,
-    });
+  try {
+    preparedReceiptFile = await prepareUploadAsset(
+      receiptFile,
+      "comprobante-pago.bin",
+    );
+  } catch (error) {
+    throw new Error(
+      `No fue posible leer el comprobante adjunto en este dispositivo: ${
+        error?.message || "archivo no disponible"
+      }`,
+      { cause: error },
+    );
   }
 
-  const paymentReceipt = throwIfError(
-    await supabase
-      .from("payment_receipts")
-      .insert({
-        payment_id: paymentId,
-        customer_id: receiptContext.customerId,
-        production_order_id: receiptContext.productionOrderId,
-        created_by: authUserId,
-      })
-      .select("payment_receipt_id")
-      .single(),
-    "No fue posible registrar el recibo de dinero",
-  );
+  if (preparedReceiptFile) {
+    try {
+      uploadedProofFile = await uploadPaymentObject({
+        file: preparedReceiptFile.bytes,
+        folder: PAYMENT_PROOF_FOLDER,
+        fileType: "Comprobante de pago",
+        pathSegment: `Pendientes/${createUploadToken()}`,
+        contentType: preparedReceiptFile.contentType,
+        fileName: preparedReceiptFile.fileName,
+        fileSize: preparedReceiptFile.fileSize,
+      });
+    } catch (error) {
+      throw new Error(
+        `No fue posible subir el comprobante antes de registrar el pago: ${
+          error?.message || "fallo de red"
+        }`,
+        { cause: error },
+      );
+    }
+  }
 
-  const receiptFileName = `recibo-dinero-${sanitizeFileSegment(
-    receiptContext.orderCode,
-    "orden",
-  )}.png`;
-  const receiptBlob = await createPaymentReceiptPngBlob({
-    orderCode: receiptContext.orderCode,
-    clientName: receiptContext.customerName,
-    clientLegalId: receiptContext.customerLegalId,
-    clientIdentificationType: receiptContext.customerIdentificationType,
-    clientAddress: receiptContext.customerAddress,
-    amount,
-    previousBalance: receiptContext.previousBalance,
-    pendingAmount: receiptContext.pendingAmount,
-    paymentDate,
-    invoiceNumber: normalizedInvoiceNumber,
-    referenceNumber,
-    paymentMethod: paymentMethodName,
-  });
+  let paymentResult;
 
-  await uploadPaymentFile({
-    file: receiptBlob,
-    folder: PAYMENT_RECEIPT_FOLDER,
-    fileType: "Recibo de dinero",
-    paymentId,
-    paymentReceiptId: paymentReceipt.payment_receipt_id,
-    contentType: "image/png",
-    fileName: receiptFileName,
-  });
+  try {
+    paymentResult = throwIfError(
+      await supabase
+        .from("payments")
+        .insert({
+          production_order_id: receiptContext.productionOrderId,
+          method_id: methodId || null,
+          amount: Number(amount),
+          payment_date: paymentDate,
+          invoice_number: normalizedInvoiceNumber,
+          reference_number: referenceNumber || null,
+          notes: notes || null,
+          state: "Pendiente de aprobación",
+          is_valid: false,
+          created_by: authUserId,
+        })
+        .select("payment_id")
+        .single(),
+      "No fue posible registrar el pago",
+    );
+  } catch (error) {
+    await removePaymentStorageObjects([uploadedProofFile?.filePath]);
+    throw error;
+  }
 
-  downloadPaymentReceiptBlob(receiptBlob, receiptFileName);
+  const paymentId = paymentResult.payment_id;
+  let proofFileRegistered = false;
 
-  return {
-    paymentId,
-    paymentReceiptId: paymentReceipt.payment_receipt_id,
-    productionOrderId: receiptContext.productionOrderId,
-  };
+  try {
+    if (uploadedProofFile) {
+      await registerPaymentFile({
+        paymentId,
+        uploadedFile: uploadedProofFile,
+      });
+      proofFileRegistered = true;
+    }
+
+    const paymentReceipt = throwIfError(
+      await supabase
+        .from("payment_receipts")
+        .insert({
+          payment_id: paymentId,
+          customer_id: receiptContext.customerId,
+          production_order_id: receiptContext.productionOrderId,
+          created_by: authUserId,
+        })
+        .select("payment_receipt_id")
+        .single(),
+      "No fue posible registrar el recibo de dinero",
+    );
+
+    const receiptFileName = `recibo-dinero-${sanitizeFileSegment(
+      receiptContext.orderCode,
+      "orden",
+    )}.png`;
+    const receiptBlob = await createPaymentReceiptPngBlob({
+      orderCode: receiptContext.orderCode,
+      clientName: receiptContext.customerName,
+      clientLegalId: receiptContext.customerLegalId,
+      clientIdentificationType: receiptContext.customerIdentificationType,
+      clientAddress: receiptContext.customerAddress,
+      amount,
+      previousBalance: receiptContext.previousBalance,
+      pendingAmount: receiptContext.pendingAmount,
+      paymentDate,
+      invoiceNumber: normalizedInvoiceNumber,
+      referenceNumber,
+      paymentMethod: paymentMethodName,
+    });
+    const receiptBytes = new Uint8Array(await receiptBlob.arrayBuffer());
+
+    const receiptFileRecord = await uploadPaymentFile({
+      file: receiptBytes,
+      folder: PAYMENT_RECEIPT_FOLDER,
+      fileType: "Recibo de dinero",
+      paymentId,
+      paymentReceiptId: paymentReceipt.payment_receipt_id,
+      contentType: "image/png",
+      fileName: receiptFileName,
+      fileSize: receiptBlob.size,
+    });
+
+    downloadPaymentReceiptBlob(
+      receiptBlob,
+      receiptFileName,
+      receiptFileRecord.public_url,
+    );
+
+    return {
+      paymentId,
+      paymentReceiptId: paymentReceipt.payment_receipt_id,
+      productionOrderId: receiptContext.productionOrderId,
+      receiptUrl: receiptFileRecord.public_url,
+    };
+  } catch (error) {
+    if (!proofFileRegistered) {
+      await removePaymentStorageObjects([uploadedProofFile?.filePath]);
+    }
+    await rollbackPaymentReport(paymentId);
+    throw error;
+  }
 }
 
 export async function getQuotationCompanies() {

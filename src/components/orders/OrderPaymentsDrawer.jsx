@@ -1,7 +1,102 @@
+import { useState } from "react";
+
 import { RiArrowDownSFill, RiCheckboxCircleFill, RiDownloadFill, RiFileTextLine } from "react-icons/ri";
 import { OrderDetailRow as DetailRow, formatOrderCurrency as formatCurrency, formatOrderDate as formatDate, formatOrderFileSize as formatFileSize } from "./OrdersViewHelpers.jsx";
 
-export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsDrawer, viewOrder, paymentSummary, paymentsLoading, paymentsError, orderPayments, expandedPaymentId, setExpandedPaymentId, setPreviewReceipt, importing, importResult, handleImportPayments, previewReceipt, canApprovePayments }) {
+function PaymentStateBadge({ state, isValid }) {
+  const normalizedState = state || (isValid ? "Aprobado" : "Pendiente de aprobación");
+  const className =
+    normalizedState === "Aprobado"
+      ? "bg-green-500/10 text-green-400 border-green-500/20"
+      : normalizedState === "Denegado"
+        ? "bg-red-500/10 text-red-300 border-red-500/20"
+        : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+
+  return (
+    <span className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-md border ${className}`}>
+      {normalizedState}
+    </span>
+  );
+}
+
+function PaymentFileList({ files, emptyMessage, setPreviewReceipt }) {
+  if (!files.length) {
+    return (
+      <div className="rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-4 text-xs text-gray-400">
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {files.map((receipt) => {
+        const isImage = (receipt.mimeType || "").startsWith("image/");
+
+        if (isImage && receipt.signedUrl) {
+          return (
+            <button
+              key={receipt.fileId || receipt.receiptId}
+              type="button"
+              onClick={() => setPreviewReceipt(receipt)}
+              className="group relative aspect-[4/3] min-h-36 rounded-lg overflow-hidden border border-[#2a3550] hover:border-[#C9A227] transition-colors cursor-pointer bg-black/20"
+              title={receipt.fileName || "Archivo"}
+            >
+              <img
+                src={receipt.signedUrl}
+                alt={receipt.fileName || "Archivo de pago"}
+                className="w-full h-full object-contain"
+              />
+
+              <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+              <span className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-left text-[11px] text-white truncate">
+                {receipt.fileName || "Archivo"}
+              </span>
+            </button>
+          );
+        }
+
+        return (
+          <a
+            key={receipt.fileId || receipt.receiptId}
+            href={receipt.signedUrl || "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="min-h-24 rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2 text-xs text-[#C9A227] hover:border-[#C9A227] transition-colors flex flex-col justify-between"
+          >
+            <span className="inline-flex items-center gap-1">
+              <RiDownloadFill size={12} />
+              Descargar archivo
+            </span>
+            <span className="text-gray-300 break-all">
+              {receipt.fileName || "Archivo"}
+            </span>
+            <span className="text-gray-500">
+              {formatFileSize(receipt.fileSize)}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsDrawer, viewOrder, paymentSummary, paymentsLoading, paymentsError, orderPayments, expandedPaymentId, setExpandedPaymentId, setPreviewReceipt, importing, importResult, handleUpdatePaymentState, previewReceipt, canApprovePayments }) {
+  const [activeTab, setActiveTab] = useState("reports");
+  const paymentReports = orderPayments.map((payment) => ({
+    ...payment,
+    proofFiles: (payment.receipts || []).filter(
+      (file) => file.fileType !== "Recibo de dinero",
+    ),
+    receiptFiles: (payment.receipts || []).filter(
+      (file) => file.fileType === "Recibo de dinero",
+    ),
+  }));
+  const moneyReceiptCount = paymentReports.reduce(
+    (sum, payment) => sum + payment.receiptFiles.length,
+    0,
+  );
+
   return <>
       {/* Fondo del drawer de pagos */}
       {paymentsDrawerOpen && (
@@ -94,11 +189,33 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
             </p>
           )}
 
+          {!paymentsLoading && !paymentsError && orderPayments.length > 0 && (
+            <div className="flex overflow-hidden rounded-lg border border-[#2a3550] bg-[#10192b]">
+              {[
+                ["reports", "Reportes de pagos", orderPayments.length],
+                ["receipts", "Recibos de dinero", moneyReceiptCount],
+              ].map(([tabId, label, count]) => (
+                <button
+                  key={tabId}
+                  type="button"
+                  onClick={() => setActiveTab(tabId)}
+                  className={`border-r border-[#2a3550] px-4 py-2.5 text-sm font-semibold transition-colors last:border-r-0 ${
+                    activeTab === tabId
+                      ? "bg-[#C9A227]/15 text-white shadow-[inset_0_-2px_0_#C9A227]"
+                      : "text-gray-400 hover:bg-[#1d2940] hover:text-white"
+                  }`}
+                >
+                  {label} <span className="ml-1 text-[#C9A227]">{count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {importResult && (
             <div className="rounded-lg border border-[#C9A227]/40 bg-[#C9A227]/10 px-4 py-3 space-y-1">
               <p className="text-sm text-white font-medium flex items-center gap-2">
                 <RiCheckboxCircleFill className="text-[#C9A227]" size={16} />
-                Comprobantes importados correctamente
+                Reporte de pago actualizado correctamente
               </p>
 
               <p className="text-xs text-gray-300">
@@ -109,24 +226,24 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
               <p className="text-xs text-gray-300">
                 {importResult.movedToSales
                   ? "El pago cubre el total, la orden se movio a Ventas."
-                  : "Pago parcial registrado, la orden quedo en Pago adelantado."}
+                  : "El saldo de la orden fue recalculado con los pagos aprobados."}
               </p>
 
               {importResult.emailNotification?.sent ? (
                 <p className="text-xs text-green-300">
                   Correo enviado a {importResult.emailNotification.recipient}.
                 </p>
-              ) : (
+              ) : importResult.emailNotification?.error ? (
                 <p className="text-xs text-yellow-300">
-                  El pago se importo, pero no se pudo enviar el correo:{" "}
+                  El reporte se actualizo, pero no se pudo enviar el correo:{" "}
                   {importResult.emailNotification?.error || "error no indicado"}
                 </p>
-              )}
+              ) : null}
             </div>
           )}
 
-          {!paymentsLoading &&
-            orderPayments.map((payment) => {
+          {!paymentsLoading && activeTab === "reports" &&
+            paymentReports.map((payment) => {
               const isExpanded = expandedPaymentId === payment.paymentId;
 
               return (
@@ -161,15 +278,7 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
                       </div>
                     </div>
 
-                    <span
-                      className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-md border ${
-                        payment.isValid
-                          ? "bg-green-500/10 text-green-400 border-green-500/20"
-                          : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                      }`}
-                    >
-                      {payment.isValid ? "Validado" : "Pendiente de validar"}
-                    </span>
+                    <PaymentStateBadge state={payment.state} isValid={payment.isValid} />
                   </button>
 
                   {isExpanded && (
@@ -191,7 +300,7 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
                         </DetailRow>
 
                         <DetailRow label="Archivos adjuntos">
-                          {payment.receipts.length}
+                          {payment.proofFiles.length}
                         </DetailRow>
 
                         {payment.notes && (
@@ -206,7 +315,33 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
                         )}
                       </div>
 
-                      {payment.receipts.length > 0 && (
+                      {canApprovePayments && payment.state === "Pendiente de aprobación" && (
+                        <div className="rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-3">
+                          <p className="mb-3 text-xs text-gray-500">
+                            Resuelve este reporte de pago de forma individual.
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdatePaymentState?.(payment.paymentId, "Denegado")}
+                              disabled={importing}
+                              className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Denegar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdatePaymentState?.(payment.paymentId, "Aprobado")}
+                              disabled={importing}
+                              className="rounded-lg bg-[#C9A227] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#B8921F] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Aprobar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {payment.proofFiles.length > 0 && (
                         <div className="space-y-3 pt-1">
                           <div>
                             <span className="text-xs font-medium uppercase tracking-widest text-[#C9A227]/80">
@@ -219,60 +354,11 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
                             </p>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {payment.receipts.map((receipt) => {
-                              const isImage = (
-                                receipt.mimeType || ""
-                              ).startsWith("image/");
-
-                              if (isImage && receipt.signedUrl) {
-                                return (
-                                  <button
-                                    key={receipt.receiptId}
-                                    type="button"
-                                    onClick={() => setPreviewReceipt(receipt)}
-                                    className="group relative aspect-[4/3] min-h-36 rounded-lg overflow-hidden border border-[#2a3550] hover:border-[#C9A227] transition-colors cursor-pointer bg-black/20"
-                                    title={receipt.fileName || "Comprobante"}
-                                  >
-                                    <img
-                                      src={receipt.signedUrl}
-                                      alt={
-                                        receipt.fileName ||
-                                        "Comprobante de pago"
-                                      }
-                                      className="w-full h-full object-contain"
-                                    />
-
-                                    <span className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
-                                    <span className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-left text-[11px] text-white truncate">
-                                      {receipt.fileName || "Comprobante"}
-                                    </span>
-                                  </button>
-                                );
-                              }
-
-                              return (
-                                <a
-                                  key={receipt.receiptId}
-                                  href={receipt.signedUrl || "#"}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="min-h-24 rounded-lg border border-[#2a3550] bg-[#141d2e] px-3 py-2 text-xs text-[#C9A227] hover:border-[#C9A227] transition-colors flex flex-col justify-between"
-                                >
-                                  <span className="inline-flex items-center gap-1">
-                                    <RiDownloadFill size={12} />
-                                    Descargar archivo
-                                  </span>
-                                  <span className="text-gray-300 break-all">
-                                    {receipt.fileName || "Comprobante"}
-                                  </span>
-                                  <span className="text-gray-500">
-                                    {formatFileSize(receipt.fileSize)}
-                                  </span>
-                                </a>
-                              );
-                            })}
-                          </div>
+                          <PaymentFileList
+                            files={payment.proofFiles}
+                            emptyMessage="Este reporte no tiene comprobantes adjuntos."
+                            setPreviewReceipt={setPreviewReceipt}
+                          />
                         </div>
                       )}
                     </div>
@@ -280,6 +366,31 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
                 </div>
               );
             })}
+
+          {!paymentsLoading && activeTab === "receipts" &&
+            paymentReports.map((payment) => (
+              <div
+                key={`receipt-${payment.paymentId}`}
+                className="rounded-xl border border-[#2a3550] bg-[#1c2538] p-4"
+              >
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {formatCurrency(payment.amount)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Factura {payment.invoiceNumber || "No indicada"} - {payment.methodName}
+                    </p>
+                  </div>
+                  <PaymentStateBadge state={payment.state} isValid={payment.isValid} />
+                </div>
+                <PaymentFileList
+                  files={payment.receiptFiles}
+                  emptyMessage="Este pago no tiene recibo de dinero guardado."
+                  setPreviewReceipt={setPreviewReceipt}
+                />
+              </div>
+            ))}
         </div>
 
         <div className="flex flex-shrink-0 flex-col-reverse gap-3 border-t border-[#2a3550] px-4 py-4 sm:flex-row sm:px-6">
@@ -291,19 +402,11 @@ export default function OrderPaymentsDrawer({ paymentsDrawerOpen, closePaymentsD
             Cerrar
           </button>
 
-          <button
-            type="button"
-            disabled={
-              !canApprovePayments ||
-              importing ||
-              paymentsLoading ||
-              !orderPayments.some((payment) => !payment.isValid)
-            }
-            onClick={handleImportPayments}
-            className="flex-1 bg-[#C9A227] text-white text-sm font-medium py-2.5 rounded-lg hover:bg-[#b8931f] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {importing ? "Importando..." : "Importar comprobantes"}
-          </button>
+          {canApprovePayments && importing && (
+            <p className="flex-1 rounded-lg border border-[#C9A227]/30 bg-[#C9A227]/10 px-4 py-2.5 text-center text-sm font-medium text-[#C9A227]">
+              Actualizando reporte...
+            </p>
+          )}
         </div>
 
         {!canApprovePayments && (

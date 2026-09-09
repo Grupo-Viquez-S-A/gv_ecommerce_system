@@ -161,7 +161,7 @@ export async function getPaidSales() {
       await supabase
         .from("payments")
         .select(
-          "payment_id, production_order_id, method_id, amount, payment_date, invoice_number, reference_number, notes, is_valid, created_at",
+          "payment_id, production_order_id, method_id, amount, payment_date, invoice_number, reference_number, notes, state, is_valid, created_at",
         )
         .in("production_order_id", productionOrderIds)
         .eq("is_valid", true),

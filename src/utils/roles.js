@@ -14,6 +14,7 @@ const SYSTEM_ACCESS_ROLE_CODES = new Set([
 ]);
 
 const CLIENT_DELETE_ROLE_CODES = new Set([
+  "super_admin",
   "brand_manager",
   "brand manager",
   "gerente_marca",
@@ -26,6 +27,7 @@ const CLIENT_DELETE_ROLE_CODES = new Set([
 ]);
 
 const PAYMENT_APPROVAL_ROLE_CODES = new Set([
+  "super_admin",
   "contador",
   "accountant",
   "presidente",
@@ -33,6 +35,7 @@ const PAYMENT_APPROVAL_ROLE_CODES = new Set([
 ]);
 
 const QUOTATION_ADJUSTMENT_ROLE_CODES = new Set([
+  "super_admin",
   "brand_manager",
   "brand manager",
   "gerente_marca",
@@ -43,6 +46,7 @@ const QUOTATION_ADJUSTMENT_ROLE_CODES = new Set([
 ]);
 
 const AGENTS_PANEL_ROLE_CODES = new Set([
+  "super_admin",
   "brand_manager",
   "brand manager",
   "gerente_marca",
