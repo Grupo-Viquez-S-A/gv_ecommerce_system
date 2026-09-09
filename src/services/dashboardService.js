@@ -59,6 +59,16 @@ function formatCurrency(amount) {
   return `₡${Math.round(Number(amount) || 0).toLocaleString("es-CR")}`;
 }
 
+function roundUpToNearest(amount, step = 500_000) {
+  const numericAmount = getNumber(amount, 0);
+
+  if (numericAmount <= 0) {
+    return step;
+  }
+
+  return Math.ceil(numericAmount / step) * step;
+}
+
 function indexRowsByKey(rows = [], keyName) {
   return rows.reduce((indexedRows, row) => {
     const key = row?.[keyName];
@@ -363,6 +373,70 @@ export async function getAdvisorRanking(limit = 5) {
 }
 
 /**
+ * SalesGoals: prototype goal board for seller visibility. Until there is a
+ * persisted goals table, goals are estimated from current sales performance so
+ * the dashboard can validate the management workflow without schema changes.
+ */
+export async function getSalesGoals(limit = 5) {
+  const { sales } = await getPaidSalesWithCompany();
+
+  const totalsByAdvisor = new Map();
+
+  sales.forEach((sale) => {
+    const key = sale.representative || "Sin asignar";
+    const existing = totalsByAdvisor.get(key) || {
+      name: key,
+      company: sale.companyName,
+      soldRaw: 0,
+    };
+
+    existing.soldRaw += getNumber(sale.total, 0);
+    totalsByAdvisor.set(key, existing);
+  });
+
+  const ranked = [...totalsByAdvisor.values()].sort(
+    (a, b) => b.soldRaw - a.soldRaw,
+  );
+
+  const visibleAdvisors = ranked.slice(0, limit);
+  const topAmount = visibleAdvisors[0]?.soldRaw || 0;
+  const averageAmount =
+    visibleAdvisors.length > 0
+      ? visibleAdvisors.reduce((sum, advisor) => sum + advisor.soldRaw, 0) /
+        visibleAdvisors.length
+      : 0;
+
+  return visibleAdvisors.map((advisor, index) => {
+    const baseGoal =
+      index === 0
+        ? topAmount * 1.12
+        : Math.max(advisor.soldRaw * 1.18, averageAmount * 0.95);
+    const goalRaw = roundUpToNearest(baseGoal || 5_000_000);
+    const remainingRaw = Math.max(goalRaw - advisor.soldRaw, 0);
+    const progress = goalRaw > 0 ? Math.round((advisor.soldRaw / goalRaw) * 100) : 0;
+
+    return {
+      id: `${advisor.name}-${index}`,
+      name: advisor.name,
+      company: advisor.company,
+      sold: formatCurrency(advisor.soldRaw),
+      goal: formatCurrency(goalRaw),
+      remaining: formatCurrency(remainingRaw),
+      soldRaw: advisor.soldRaw,
+      goalRaw,
+      remainingRaw,
+      progress,
+      status:
+        progress >= 100
+          ? "Meta cumplida"
+          : progress >= 75
+            ? "En cierre"
+            : "En progreso",
+    };
+  });
+}
+
+/**
  * CompanyPerformance: paid sales grouped by company. `percentage` is
  * relative to the best-performing company in the list.
  */
@@ -563,6 +637,7 @@ export async function getDashboardOverview() {
     salesChartResult,
     distributionResult,
     topClientsResult,
+    salesGoalsResult,
     advisorRankingResult,
     companyPerformanceResult,
     recentActivityResult,
@@ -571,6 +646,7 @@ export async function getDashboardOverview() {
     getConsolidatedSalesByMonth(),
     getSalesDistributionByCompany(),
     getTopClients(),
+    getSalesGoals(),
     getAdvisorRanking(),
     getCompanyPerformance(),
     getRecentActivity(),
@@ -589,6 +665,7 @@ export async function getDashboardOverview() {
     salesChart: unwrap(salesChartResult),
     distribution: unwrap(distributionResult),
     topClients: unwrap(topClientsResult),
+    salesGoals: unwrap(salesGoalsResult),
     advisorRanking: unwrap(advisorRankingResult),
     companyPerformance: unwrap(companyPerformanceResult),
     recentActivity: unwrap(recentActivityResult),

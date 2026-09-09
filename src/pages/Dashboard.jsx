@@ -16,6 +16,7 @@ import DashboardStats from "../components/dashboard/DashboardStats.jsx";
 import ConsolidatedSalesChart from "../components/dashboard/ConsolidatedSalesChart.jsx";
 import SalesDistributionChart from "../components/dashboard/SalesDistributionChart.jsx";
 import TopClients from "../components/dashboard/TopClients.jsx";
+import SalesGoals from "../components/dashboard/SalesGoals.jsx";
 import CompanyPerformance from "../components/dashboard/CompanyPerformance.jsx";
 import AdvisorRanking from "../components/dashboard/AdvisorRanking.jsx";
 import RecentActivity from "../components/dashboard/RecentActivity.jsx";
@@ -135,6 +136,12 @@ export default function Dashboard() {
         onViewAll={handlePlaceholderAction}
         isLoading={isLoading}
         error={overview?.topClients?.error}
+      />
+
+      <SalesGoals
+        goals={overview?.salesGoals?.data || []}
+        isLoading={isLoading}
+        error={overview?.salesGoals?.error}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
